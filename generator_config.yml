@@ -1,0 +1,18 @@
+provider:
+  name: cycloid
+
+resources:
+  credential:
+    create:
+      path: /organizations/{organization_canonical}/credentials
+      method: POST
+    read:
+      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      method: GET
+    update:
+      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      method: PUT
+    delete:
+      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      method: DELETE
+
