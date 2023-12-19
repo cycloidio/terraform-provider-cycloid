@@ -1,5 +1,6 @@
 provider:
   name: cycloid
+  schema_ref: '#/components/schemas/TerraformProviderCycloid'
 
 resources:
   credential:

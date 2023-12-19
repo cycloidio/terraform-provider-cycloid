@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/cycloidio/terraform-provider-cycloid/provider/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,7 +20,7 @@ func New() func() provider.Provider {
 type cycloidProvider struct{}
 
 func (p *cycloidProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-
+	resp.Schema = provider_cycloid.CycloidProviderSchema(ctx)
 }
 
 func (p *cycloidProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -36,6 +37,6 @@ func (p *cycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 
 func (p *cycloidProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewCredentialsResource(),
+		NewCredentialResource(p),
 	}
 }

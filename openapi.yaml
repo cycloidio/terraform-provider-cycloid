@@ -32800,6 +32800,19 @@ paths:
       x-codegen-request-body-name: body
 components:
   schemas:
+    TerraformProviderCycloid:
+      title: TerraformProviderCycloid
+      required:
+        - url
+        - jwt
+        - organization_canonical
+      properties:
+        url:
+          type: string
+        jwt:
+          type: string
+        organization_canonical:
+          type: string
     AppVersion:
       title: AppVersion
       required:
@@ -36101,7 +36114,7 @@ components:
       - keys
       - name
       - path
-      - raw
+      #- body
       - type
       type: object
       properties:
@@ -36131,8 +36144,8 @@ components:
           - vmware
         path:
           type: string
-        raw:
-          $ref: '#/components/schemas/CredentialRaw'
+        #body:
+          #$ref: '#/components/schemas/CredentialRaw'
         description:
           type: string
         keys:
@@ -36158,7 +36171,7 @@ components:
       required:
       - name
       - path
-      - raw
+      - body
       - type
       type: object
       properties:
@@ -36185,7 +36198,7 @@ components:
         path:
           pattern: "[a-zA-z0-9_\\-./]"
           type: string
-        raw:
+        body:
           $ref: '#/components/schemas/CredentialRaw'
         description:
           type: string
@@ -36202,7 +36215,7 @@ components:
       - canonical
       - name
       - path
-      - raw
+      - body
       - type
       type: object
       properties:
@@ -36228,7 +36241,7 @@ components:
         path:
           pattern: "[a-zA-z0-9_\\-./]"
           type: string
-        raw:
+        body:
           $ref: '#/components/schemas/CredentialRaw'
         description:
           type: string
