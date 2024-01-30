@@ -3,17 +3,16 @@ provider:
   schema_ref: '#/components/schemas/TerraformProviderCycloid'
 
 resources:
-  credential:
+  organization:
     create:
-      path: /organizations/{organization_canonical}/credentials
+      path: /organizations
       method: POST
     read:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      path: /organizations/{organization_canonical}
       method: GET
     update:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      path: /organizations/{organization_canonical}
       method: PUT
     delete:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
+      path: /organizations/{organization_canonical}
       method: DELETE
-

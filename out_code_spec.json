@@ -26,108 +26,9 @@
 	},
 	"resources": [
 		{
-			"name": "credential",
+			"name": "organization",
 			"schema": {
 				"attributes": [
-					{
-						"name": "body",
-						"single_nested": {
-							"computed_optional_required": "required",
-							"attributes": [
-								{
-									"name": "access_key",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "account_name",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "auth_url",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "ca_cert",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "client_id",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "client_secret",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "domain_id",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "json_key",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "password",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "raw",
-									"single_nested": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "secret_key",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "ssh_key",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "subscription_id",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "tenant_id",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								},
-								{
-									"name": "username",
-									"string": {
-										"computed_optional_required": "computed_optional"
-									}
-								}
-							],
-							"description": "All the possible fields inside it"
-						}
-					},
 					{
 						"name": "canonical",
 						"string": {
@@ -160,48 +61,8 @@
 						}
 					},
 					{
-						"name": "description",
-						"string": {
-							"computed_optional_required": "computed_optional"
-						}
-					},
-					{
 						"name": "name",
 						"string": {
-							"computed_optional_required": "required"
-						}
-					},
-					{
-						"name": "owner",
-						"string": {
-							"computed_optional_required": "computed_optional",
-							"description": "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n"
-						}
-					},
-					{
-						"name": "path",
-						"string": {
-							"computed_optional_required": "required",
-							"validators": [
-								{
-									"custom": {
-										"imports": [
-											{
-												"path": "regexp"
-											},
-											{
-												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-											}
-										],
-										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"[a-zA-z0-9_\\\\-./]\"), \"\")"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "type",
-						"string": {
 							"computed_optional_required": "required",
 							"validators": [
 								{
@@ -211,7 +72,7 @@
 												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 											}
 										],
-										"schema_definition": "stringvalidator.OneOf(\n\"ssh\",\n\"aws\",\n\"custom\",\n\"azure\",\n\"azure_storage\",\n\"gcp\",\n\"basic_auth\",\n\"elasticsearch\",\n\"swift\",\n\"vmware\",\n)"
+										"schema_definition": "stringvalidator.LengthAtLeast(3)"
 									}
 								}
 							]
@@ -223,7 +84,144 @@
 							"computed_optional_required": "computed",
 							"attributes": [
 								{
+									"name": "appearance",
+									"single_nested": {
+										"computed_optional_required": "computed",
+										"attributes": [
+											{
+												"name": "canonical",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "color",
+												"single_nested": {
+													"computed_optional_required": "computed",
+													"attributes": [
+														{
+															"name": "b",
+															"int64": {
+																"computed_optional_required": "computed",
+																"description": "Blue color value of the RGB color"
+															}
+														},
+														{
+															"name": "g",
+															"int64": {
+																"computed_optional_required": "computed",
+																"description": "Green color value of the RGB color"
+															}
+														},
+														{
+															"name": "r",
+															"int64": {
+																"computed_optional_required": "computed",
+																"description": "Red color value of the RGB color"
+															}
+														}
+													]
+												}
+											},
+											{
+												"name": "created_at",
+												"int64": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "display_name",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "favicon",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "footer",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "is_active",
+												"bool": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "logo",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "name",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "tab_title",
+												"string": {
+													"computed_optional_required": "computed"
+												}
+											},
+											{
+												"name": "updated_at",
+												"int64": {
+													"computed_optional_required": "computed"
+												}
+											}
+										],
+										"description": "An Appearance holds the values of the branding configuration, which are rendered across an organization"
+									}
+								},
+								{
+									"name": "blocked",
+									"list": {
+										"computed_optional_required": "computed",
+										"element_type": {
+											"string": {}
+										}
+									}
+								},
+								{
+									"name": "can_children_create_appearance",
+									"bool": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
+									"name": "can_create_appearance",
+									"bool": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
 									"name": "canonical",
+									"string": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
+									"name": "ci_port",
+									"string": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
+									"name": "ci_team_name",
+									"string": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
+									"name": "ci_url",
 									"string": {
 										"computed_optional_required": "computed"
 									}
@@ -235,8 +233,8 @@
 									}
 								},
 								{
-									"name": "description",
-									"string": {
+									"name": "has_children",
+									"bool": {
 										"computed_optional_required": "computed"
 									}
 								},
@@ -247,124 +245,9 @@
 									}
 								},
 								{
-									"name": "in_use",
-									"single_nested": {
-										"computed_optional_required": "computed",
-										"attributes": [
-											{
-												"name": "config_repositories",
-												"list_nested": {
-													"computed_optional_required": "computed",
-													"nested_object": {
-														"attributes": [
-															{
-																"name": "canonical",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															},
-															{
-																"name": "name",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															}
-														]
-													}
-												}
-											},
-											{
-												"name": "external_backends",
-												"list_nested": {
-													"computed_optional_required": "computed",
-													"nested_object": {
-														"attributes": [
-															{
-																"name": "engine",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															},
-															{
-																"name": "environment",
-																"single_nested": {
-																	"computed_optional_required": "computed",
-																	"attributes": [
-																		{
-																			"name": "canonical",
-																			"string": {
-																				"computed_optional_required": "computed"
-																			}
-																		}
-																	],
-																	"description": "Represents an environment that's using credential"
-																}
-															},
-															{
-																"name": "project",
-																"single_nested": {
-																	"computed_optional_required": "computed",
-																	"attributes": [
-																		{
-																			"name": "canonical",
-																			"string": {
-																				"computed_optional_required": "computed"
-																			}
-																		},
-																		{
-																			"name": "name",
-																			"string": {
-																				"computed_optional_required": "computed"
-																			}
-																		}
-																	],
-																	"description": "Represents a project that's using credential"
-																}
-															},
-															{
-																"name": "purpose",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															}
-														]
-													}
-												}
-											},
-											{
-												"name": "service_catalog_sources",
-												"list_nested": {
-													"computed_optional_required": "computed",
-													"nested_object": {
-														"attributes": [
-															{
-																"name": "canonical",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															},
-															{
-																"name": "name",
-																"string": {
-																	"computed_optional_required": "computed"
-																}
-															}
-														]
-													}
-												}
-											}
-										],
-										"description": "InUse represents the resources that are using provided credential.\n"
-									}
-								},
-								{
-									"name": "keys",
-									"list": {
-										"computed_optional_required": "computed",
-										"element_type": {
-											"string": {}
-										},
-										"description": "List of all the keys available for the Credential"
+									"name": "mfa_enabled",
+									"bool": {
+										"computed_optional_required": "computed"
 									}
 								},
 								{
@@ -374,102 +257,57 @@
 									}
 								},
 								{
-									"name": "owner",
+									"name": "quotas",
+									"bool": {
+										"computed_optional_required": "computed"
+									}
+								},
+								{
+									"name": "subscription",
 									"single_nested": {
 										"computed_optional_required": "computed",
 										"attributes": [
 											{
-												"name": "country_code",
-												"string": {
-													"computed_optional_required": "computed",
-													"description": "Code of a country the user is from"
-												}
-											},
-											{
-												"name": "created_at",
-												"int64": {
-													"computed_optional_required": "computed",
-													"description": "When the user became a member."
-												}
-											},
-											{
-												"name": "email",
-												"string": {
-													"computed_optional_required": "computed",
-													"description": "User's primary email."
-												}
-											},
-											{
-												"name": "family_name",
-												"string": {
-													"computed_optional_required": "computed"
-												}
-											},
-											{
-												"name": "given_name",
-												"string": {
-													"computed_optional_required": "computed"
-												}
-											},
-											{
-												"name": "id",
+												"name": "current_members",
 												"int64": {
 													"computed_optional_required": "computed"
 												}
 											},
 											{
-												"name": "last_login_at",
+												"name": "expires_at",
 												"int64": {
-													"computed_optional_required": "computed",
-													"description": "When the user logged in last time."
-												}
-											},
-											{
-												"name": "locale",
-												"string": {
-													"computed_optional_required": "computed",
-													"description": "The local that the user prefer."
-												}
-											},
-											{
-												"name": "mfa_enabled",
-												"bool": {
 													"computed_optional_required": "computed"
 												}
 											},
 											{
-												"name": "picture_url",
-												"string": {
-													"computed_optional_required": "computed"
-												}
-											},
-											{
-												"name": "updated_at",
+												"name": "members_count",
 												"int64": {
-													"computed_optional_required": "computed",
-													"description": "When the user had the role modified."
+													"computed_optional_required": "computed"
 												}
 											},
 											{
-												"name": "username",
-												"string": {
-													"computed_optional_required": "computed"
+												"name": "plan",
+												"single_nested": {
+													"computed_optional_required": "computed",
+													"attributes": [
+														{
+															"name": "canonical",
+															"string": {
+																"computed_optional_required": "computed"
+															}
+														},
+														{
+															"name": "name",
+															"string": {
+																"computed_optional_required": "computed"
+															}
+														}
+													],
+													"description": "It reflects the Plan used for the subscription"
 												}
 											}
 										],
-										"description": "A summary of a user to be used in places where only the basic information are need or are enough."
-									}
-								},
-								{
-									"name": "path",
-									"string": {
-										"computed_optional_required": "computed"
-									}
-								},
-								{
-									"name": "type",
-									"string": {
-										"computed_optional_required": "computed"
+										"description": "It reflects the relation between an Organization and a Plan which\ncould be the Free Trial or others, for more info check https://www.cycloid.io/pricing\n"
 									}
 								},
 								{
@@ -479,7 +317,7 @@
 									}
 								}
 							],
-							"description": "Represents the Credential"
+							"description": "The entity which holds all the direct information attached to an organization."
 						}
 					},
 					{
@@ -487,38 +325,6 @@
 						"string": {
 							"computed_optional_required": "computed_optional",
 							"description": "A canonical of an organization.",
-							"validators": [
-								{
-									"custom": {
-										"imports": [
-											{
-												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-											}
-										],
-										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
-									}
-								},
-								{
-									"custom": {
-										"imports": [
-											{
-												"path": "regexp"
-											},
-											{
-												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-											}
-										],
-										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "credential_canonical",
-						"string": {
-							"computed_optional_required": "computed_optional",
-							"description": "A Credential canonical",
 							"validators": [
 								{
 									"custom": {

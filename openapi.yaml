@@ -33120,10 +33120,10 @@ components:
           minimum: 0
           type: integer
           format: uint64
-        admins:
-          type: array
-          items:
-            $ref: '#/components/schemas/MemberOrg'
+        #admins:
+          #type: array
+          #items:
+            #$ref: '#/components/schemas/MemberOrg'
         subscription:
           $ref: '#/components/schemas/Subscription'
         appearance:
