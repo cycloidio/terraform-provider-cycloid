@@ -10,7 +10,7 @@ import (
 
 func main() {
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/cycloid/cycloid",
+		Address: "registry.terraform.io/cycloidio/cycloid",
 	}
 
 	err := providerserver.Serve(context.Background(), provider.New(), opts)
