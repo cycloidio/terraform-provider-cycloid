@@ -116,4 +116,14 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	// Delete API call logic
+	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	mid := middleware.NewMiddleware(api)
+	err := mid.DeleteOrganization(data.Canonical.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable delete organization",
+			err.Error(),
+		)
+		return
+	}
 }

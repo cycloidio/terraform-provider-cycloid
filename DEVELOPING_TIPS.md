@@ -19,7 +19,7 @@ KNOWN BUGS:
 
 **Credentials**
 
-Renamed `raw` to `body` on the main Credentials. I've commented the `body` from the `Credential` because it's causing issues as it's generating multiple types and it does not compile. We should investigate this.
+Renamed `raw` to `body` on the main NewCredentials. I've commented the `body` from the `Credential` because it's causing issues as it's generating multiple types and it does not compile. We should investigate this.
 
 From the [docs](https://github.com/hashicorp/terraform-plugin-codegen-openapi/blob/main/DESIGN.md#resources) it should not be doing this
 
@@ -56,6 +56,12 @@ To *update* an already created resource run:
 
 ```
 tfplugingen-framework generate resources --input ./out_code_spec.json --output .
+```
+
+To regenerate the documentation just use:
+
+```
+tfplugindocs generate ./...
 ```
 
 ## How to run it locally
