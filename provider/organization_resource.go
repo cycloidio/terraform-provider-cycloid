@@ -84,6 +84,18 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Read API call logic
+	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	mid := middleware.NewMiddleware(api)
+	org, err := mid.GetOrganization(data.Canonical.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable get organization",
+			err.Error(),
+		)
+		return
+	}
+
+	data.Name = types.StringPointerValue(org.Name)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -116,4 +128,14 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	// Delete API call logic
+	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	mid := middleware.NewMiddleware(api)
+	err := mid.DeleteOrganization(data.Canonical.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable delete organization",
+			err.Error(),
+		)
+		return
+	}
 }
