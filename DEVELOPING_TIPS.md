@@ -26,7 +26,7 @@ From the [docs](https://github.com/hashicorp/terraform-plugin-codegen-openapi/bl
 > Arrays and Objects will have their child attributes merged, so example_object.string_field and example_object.bool_field will be merged into the same SingleNestedAttribute schema.
 
 
-**Organizaitons**
+**Organizations**
 
 On Organization the `admins` are `MemberOrg` which itself has a `invited_by` which is also `MemberOrg` so it's a buckle and it needs to be broken
 

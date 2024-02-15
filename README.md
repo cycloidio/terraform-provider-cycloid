@@ -6,7 +6,7 @@ How it works:
 terraform {
   required_providers {
     cycloid = {
-      source = "registry.terraform.io/cycloid/cycloid"
+      source = "cycloidio/cycloid"
     }
   }
 }
