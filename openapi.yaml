@@ -36314,7 +36314,8 @@ components:
       properties:
         raw:
           type: object
-          properties: {}
+          additionalProperties: true
+          #properties: {}
         ssh_key:
           type: string
         access_key:
