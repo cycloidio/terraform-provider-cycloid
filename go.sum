@@ -108,6 +108,10 @@ github.com/cycloidio/cycloid-cli v1.0.98-0.20240201134523-5b2eeaab1a05 h1:BPvpYm
 github.com/cycloidio/cycloid-cli v1.0.98-0.20240201134523-5b2eeaab1a05/go.mod h1:eI5O+rpBYCJQxy0NFu5UgU5AzFG+RkCTTi3kr/RHReg=
 github.com/cycloidio/cycloid-cli v1.0.98-0.20240305164015-c12162039e5c h1:5adsFyer3S8T1PiTXLe/ejD1TepIqQMRDVQamd6eiHI=
 github.com/cycloidio/cycloid-cli v1.0.98-0.20240305164015-c12162039e5c/go.mod h1:eI5O+rpBYCJQxy0NFu5UgU5AzFG+RkCTTi3kr/RHReg=
+github.com/cycloidio/cycloid-cli v1.0.98-0.20240314102650-e003b99bb4d3 h1:xjU+kUCeqWvVQHgoOK0TLVq8bAmSoAe2BF2cEhNe51E=
+github.com/cycloidio/cycloid-cli v1.0.98-0.20240314102650-e003b99bb4d3/go.mod h1:eI5O+rpBYCJQxy0NFu5UgU5AzFG+RkCTTi3kr/RHReg=
+github.com/cycloidio/cycloid-cli v1.0.98-0.20240314113358-3129ff260090 h1:boSOhTkk2CsTOayHXWPqAAAbF/SPK5kt9FJOa6WmUDM=
+github.com/cycloidio/cycloid-cli v1.0.98-0.20240314113358-3129ff260090/go.mod h1:eI5O+rpBYCJQxy0NFu5UgU5AzFG+RkCTTi3kr/RHReg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -9,6 +9,7 @@ import (
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -53,7 +54,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -81,7 +81,9 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	can := data.Canonical.ValueString()
 	des := data.Description.ValueString()
 
-	cred, err := mid.CreateCredential(r.provider.OrganizationCanonical.ValueString(), name, ct, rawCred, path, can, des)
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
+	cred, err := mid.CreateCredential(orgCan, name, ct, rawCred, path, can, des)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create credential",
@@ -90,7 +92,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, r.provider.OrganizationCanonical.ValueString(), cred, &data)
+	credentialCYModelToData(ctx, orgCan, cred, &data)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -112,7 +114,9 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	can := data.Canonical.ValueString()
 
-	cred, err := mid.GetCredential(r.provider.OrganizationCanonical.ValueString(), can)
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
+	cred, err := mid.GetCredential(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read credential",
@@ -121,7 +125,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	credentialCYModelToData(ctx, r.provider.OrganizationCanonical.ValueString(), cred, &data)
+	credentialCYModelToData(ctx, orgCan, cred, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -165,7 +169,10 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		can = plandata.Canonical.ValueString()
 	}
 
-	cred, err := mid.UpdateCredential(r.provider.OrganizationCanonical.ValueString(), name, ct, rawCred, path, can, des)
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	spew.Dump(data.OrganizationCanonical)
+
+	cred, err := mid.UpdateCredential(orgCan, name, ct, rawCred, path, can, des)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create credential",
@@ -174,7 +181,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, r.provider.OrganizationCanonical.ValueString(), cred, &data)
+	credentialCYModelToData(ctx, orgCan, cred, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -192,11 +199,13 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	can := data.Canonical.ValueString()
 
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
 	// Delete API call logic
 	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
 	mid := middleware.NewMiddleware(api)
 
-	err := mid.DeleteCredential(r.provider.OrganizationCanonical.ValueString(), can)
+	err := mid.DeleteCredential(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete credential",
