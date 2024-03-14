@@ -1,2 +1,3 @@
 *.tf
 *.tfstate*
+main.tf

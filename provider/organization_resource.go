@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
@@ -56,7 +57,9 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 
 	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
 	mid := middleware.NewMiddleware(api)
-	co, err := mid.CreateOrganizationChild(data.Name.ValueString(), r.provider.OrganizationCanonical.ValueString())
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
+	co, err := mid.CreateOrganizationChild(data.Name.ValueString(), orgCan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create organization child",
@@ -64,10 +67,8 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		)
 		return
 	}
-	data.Canonical = types.StringPointerValue(co.Canonical)
-	data.Name = types.StringPointerValue(co.Name)
-	data.Data = resource_organization.NewDataValueNull()
-	data.OrganizationCanonical = r.provider.OrganizationCanonical
+
+	organizationCYModelToData(orgCan, co, &data)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -86,7 +87,19 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	// Read API call logic
 	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
 	mid := middleware.NewMiddleware(api)
-	org, err := mid.GetOrganization(data.Canonical.ValueString())
+
+	can := data.Canonical.ValueString()
+	if can == "" {
+		var plandata organizationResourceModel
+		// Read Terraform prior state data into the model
+		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		can = plandata.Canonical.ValueString()
+	}
+
+	org, err := mid.GetOrganization(can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable get organization",
@@ -95,7 +108,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	data.Name = types.StringPointerValue(org.Name)
+	organizationCYModelToData(can, org, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -112,6 +125,33 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Update API call logic
+	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	mid := middleware.NewMiddleware(api)
+	can := data.Canonical.ValueString()
+
+	// As the canonical is not required to be set we read it from the
+	// state as we set it on creation and we need it to update the
+	// credential to the API
+	if can == "" {
+		var plandata organizationResourceModel
+		// Read Terraform prior state data into the model
+		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		can = plandata.Canonical.ValueString()
+	}
+
+	uo, err := mid.UpdateOrganization(can, data.Name.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable create organization child",
+			err.Error(),
+		)
+		return
+	}
+
+	organizationCYModelToData(can, uo, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -138,4 +178,11 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 		)
 		return
 	}
+}
+
+func organizationCYModelToData(org string, o *models.Organization, data *organizationResourceModel) {
+	data.Canonical = types.StringPointerValue(o.Canonical)
+	data.Name = types.StringPointerValue(o.Name)
+	data.Data = resource_organization.NewDataValueNull()
+	data.OrganizationCanonical = types.StringValue(org)
 }
