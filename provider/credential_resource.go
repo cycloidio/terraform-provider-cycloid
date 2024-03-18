@@ -9,7 +9,6 @@ import (
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -170,7 +169,6 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
-	spew.Dump(data.OrganizationCanonical)
 
 	cred, err := mid.UpdateCredential(orgCan, name, ct, rawCred, path, can, des)
 	if err != nil {
