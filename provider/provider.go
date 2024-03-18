@@ -49,5 +49,6 @@ func (p *cycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 	return []func() resource.Resource{
 		NewOrganizationResource,
 		NewCredentialResource,
+		NewCatalogRepositoryResource,
 	}
 }

@@ -33,3 +33,22 @@ resources:
       ignores:
         - data
         - credential_canonical
+  catalog_repository:
+    create:
+      path: /organizations/{organization_canonical}/service_catalog_sources
+      method: POST
+    read:
+      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
+      method: GET
+    update:
+      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
+      method: PUT
+    delete:
+      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
+      method: DELETE
+    schema:
+      ignores:
+        - data
+        - service_catalog_source_canonical
+        - page_index
+        - page_size
