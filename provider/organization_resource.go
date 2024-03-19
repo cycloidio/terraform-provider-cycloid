@@ -108,7 +108,9 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	organizationCYModelToData(can, org, &data)
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
+	organizationCYModelToData(orgCan, org, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -151,7 +153,9 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	organizationCYModelToData(can, uo, &data)
+	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+
+	organizationCYModelToData(orgCan, uo, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
