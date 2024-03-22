@@ -29,5 +29,3 @@ description: |-
 - `owner` (String) User canonical that owns this service catalog source. If omitted then the person
 creating this service catalog source will be assigned as owner. When a user is the
 owner of a service catalog source they has all the permissions on it.
-
-

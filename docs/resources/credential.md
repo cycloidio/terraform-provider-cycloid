@@ -54,5 +54,3 @@ Optional:
 
 <a id="nestedatt--body--raw"></a>
 ### Nested Schema for `body.raw`
-
-

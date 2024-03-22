@@ -96,5 +96,3 @@ Read-Only:
 
 - `canonical` (String)
 - `name` (String)
-
-
