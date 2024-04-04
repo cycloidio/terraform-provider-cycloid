@@ -167,6 +167,146 @@
 			}
 		},
 		{
+			"name": "config_repository",
+			"schema": {
+				"attributes": [
+					{
+						"name": "branch",
+						"string": {
+							"computed_optional_required": "required"
+						}
+					},
+					{
+						"name": "canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "credential_canonical",
+						"string": {
+							"computed_optional_required": "required",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "default",
+						"bool": {
+							"computed_optional_required": "required"
+						}
+					},
+					{
+						"name": "name",
+						"string": {
+							"computed_optional_required": "required"
+						}
+					},
+					{
+						"name": "url",
+						"string": {
+							"computed_optional_required": "required",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^((/|~)[^/]*)+.(\\\\.git)|(([\\\\w\\\\]+@[\\\\w\\\\.]+))(:(//)?)([\\\\w\\\\.@\\\\:/\\\\-~]+)(/)?\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "organization_canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"description": "A canonical of an organization.",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		{
 			"name": "credential",
 			"schema": {
 				"attributes": [
