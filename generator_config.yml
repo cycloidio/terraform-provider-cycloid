@@ -71,3 +71,21 @@ resources:
         - config_repository_canonical
         - page_index
         - page_size
+  external_backend:
+    create:
+      path: /organizations/{organization_canonical}/external_backends
+      method: POST
+    read:
+      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
+      method: GET
+    update:
+      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
+      method: PUT
+    delete:
+      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
+      method: DELETE
+    schema:
+      ignores:
+        - page_index
+        - page_size
+        - data

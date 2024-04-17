@@ -36868,7 +36868,6 @@ components:
     ExternalBackend:
       title: External backend
       required:
-      - configuration
       - default
       - purpose
       type: object
@@ -36902,8 +36901,12 @@ components:
           minLength: 3
           pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
           type: string
-        configuration:
-          $ref: '#/components/schemas/ExternalBackendConfiguration'
+#        aws_storage:
+#          $ref: '#/components/schemas/AWSStorage'
+#        gcp_storage:
+#          $ref: '#/components/schemas/GCPStorage'
+#        swift_storage:
+#          $ref: '#/components/schemas/SwiftStorage'
         created_at:
           minimum: 0
           type: integer
@@ -36919,17 +36922,20 @@ components:
     NewExternalBackend:
       title: New External backend
       required:
-      - configuration
       - purpose
+      - engine
       type: object
       properties:
         purpose:
           type: string
           enum:
-          - events
-          - logs
           - remote_tfstate
-          - cost_explorer
+        engine:
+          type: string
+          enum:
+            - aws_storage
+            - gcp_storage
+            - swift_storage
         default:
           type: boolean
           description: Will mark this EB as default for the specific purpose
@@ -36939,7 +36945,7 @@ components:
           pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
           type: string
           description: |
-            The type of the credential must be one of: ["aws", "azure_storage", "elasticsearch", "gcp", "swift", "vmware"]
+            The type of the credential must be one of: ["aws", "gcp", "swift"]
         project_canonical:
           maxLength: 100
           minLength: 1
@@ -36950,8 +36956,12 @@ components:
           minLength: 1
           pattern: "^[\\da-zA-Z]+(?:(?:[\\da-zA-Z\\-._]+)?[\\da-zA-Z])?$"
           type: string
-        configuration:
-          $ref: '#/components/schemas/ExternalBackendConfiguration'
+        aws_storage:
+          $ref: '#/components/schemas/AWSStorage'
+        gcp_storage:
+          $ref: '#/components/schemas/GCPStorage'
+        swift_storage:
+          $ref: '#/components/schemas/SwiftStorage'
       description: "An external backend contains the configuration needed in order\
         \ to be plugged into the Cycloid system. A backend is a general purpose concept,\
         \ but Cycloid specifies which ones are supported and the list of those which\
@@ -36959,7 +36969,6 @@ components:
     UpdateExternalBackend:
       title: Update External backend
       required:
-      - configuration
       - purpose
       type: object
       properties:
@@ -36970,10 +36979,7 @@ components:
         purpose:
           type: string
           enum:
-          - events
-          - logs
           - remote_tfstate
-          - cost_explorer
         default:
           type: boolean
           description: Will mark this EB as default for the specific purpose
@@ -36994,403 +37000,87 @@ components:
           minLength: 1
           pattern: "^[\\da-zA-Z]+(?:(?:[\\da-zA-Z\\-._]+)?[\\da-zA-Z])?$"
           type: string
-        configuration:
-          $ref: '#/components/schemas/ExternalBackendConfiguration'
+        aws_storage:
+          $ref: '#/components/schemas/AWSStorage'
+        gcp_storage:
+          $ref: '#/components/schemas/GCPStorage'
+        swift_storage:
+          $ref: '#/components/schemas/SwiftStorage'
       description: "An external backend contains the configuration needed in order\
         \ to be plugged into the Cycloid system. A backend is a general purpose concept,\
         \ but Cycloid specifies which ones are supported and the list of those which\
         \ are supported for every concrete feature."
-    ExternalBackendConfiguration:
-      required:
-      - engine
-      type: object
-      properties:
-        engine:
-          type: string
-      discriminator:
-        propertyName: engine
-    AWSCloudWatchLogs:
-      description: |
-        Representation of AWS cloud watch logs for external backend.
-        Must be matched with a credential of the "aws" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - region
-        type: object
-        properties:
-          region:
-            type: string
-            description: |
-              The AWS region where the resource exists
-    AWSRemoteTFState:
-      description: |
-        Deprecated. Please use AWSStorage.
-        Representation of AWS remote tf state for external backend.
-        Must be matched with a credential of the "aws" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - bucket
-        - region
-        type: object
-        properties:
-          region:
-            type: string
-            description: |
-              The AWS region where the resource exists
-          bucket:
-            type: string
-            description: |
-              The AWS bucket containing objects
-          key:
-            type: string
-            description: |
-              The S3 Key uniquely identifies an object in a bucket, will
-              be required if the EB is not the default one.
-          endpoint:
-            type: string
-            description: |
-              A custom endpoint for the S3 API (default: s3.amazonaws.com)
-          s3_force_path_style:
-            type: boolean
-            description: |
-              Always use path-style S3 URLs (https://<HOST>/<BUCKET> instead of https://<BUCKET>.<HOST>)
-          skip_verify_ssl:
-            type: boolean
-            description: |
-              Set this to `true` to not verify SSL certificates
     AWSStorage:
+      title: AWSStorage
       description: |
         Representation of AWS storage for external backend.
         Must be matched with a credential of the "aws" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - bucket
-        - region
-        type: object
-        properties:
-          region:
-            type: string
-            description: |
-              The AWS region where the resource exists
-          bucket:
-            type: string
-            description: |
-              The AWS bucket containing objects
-          key:
-            type: string
-            description: |
-              The S3 Key uniquely identifies an object in a bucket
-          endpoint:
-            type: string
-            description: |
-              A custom endpoint for the S3 API (default: s3.amazonaws.com)
-          s3_force_path_style:
-            type: boolean
-            description: |
-              Always use path-style S3 URLs (https://<HOST>/<BUCKET> instead of https://<BUCKET>.<HOST>)
-          skip_verify_ssl:
-            type: boolean
-            description: |
-              Set this to `true` to not verify SSL certificates
-    AzureRemoteTFState:
-      description: |
-        Deprecated. Please use AzureStorage.
-        Representation of azure remote tf state for external backend.
-        Must be matched with a credential of the "azure_storage" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - container
-        type: object
-        properties:
-          container:
-            type: string
-            description: |
-              The Azure container where the resource exists
-          blob:
-            type: string
-            description: |
-              The Azure blob contained in the container, will be
-              required if the EB is not default
-          endpoint:
-            type: string
-            description: |
-              A custom endpoint for the Azure API
-              (default: "https://{account_name}.blob.core.windows.net/", where
-              the "account_name" is the one from the credential)
-    AzureStorage:
-      description: |
-        Representation of azure remote tf state for external backend.
-        Must be matched with a credential of the "azure_storage" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - container
-        type: object
-        properties:
-          container:
-            type: string
-            description: |
-              The Azure container where the resource exists
-          blob:
-            type: string
-            description: |
-              The Azure blob contained in the container, will be
-              required if the EB is not default
-          endpoint:
-            type: string
-            description: |
-              A custom endpoint for the Azure API
-              (default: "https://{account_name}.blob.core.windows.net/", where
-              the "account_name" is the one from the credential)
-    GCPRemoteTFState:
-      description: |
-        Deprecated. Please use GCPStorage.
-        Representation of GCP remote tf state for external backend.
-        Must be matched with a credential of the "gcp" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - bucket
-        type: object
-        properties:
-          bucket:
-            type: string
-            description: |
-              The GCP bucket containing objects
-          object:
-            type: string
-            description: |
-              The GCP object uniquely identifying an object in a bucket
+      type: object
+      properties:
+        region:
+          type: string
+          description: |
+            The AWS region where the resource exists
+        bucket:
+          type: string
+          description: |
+            The AWS bucket containing objects
+        key:
+          type: string
+          description: |
+            The S3 Key uniquely identifies an object in a bucket
+        endpoint:
+          type: string
+          description: |
+            A custom endpoint for the S3 API (default: s3.amazonaws.com)
+        s3_force_path_style:
+          type: boolean
+          description: |
+            Always use path-style S3 URLs (https://<HOST>/<BUCKET> instead of https://<BUCKET>.<HOST>)
+        skip_verify_ssl:
+          type: boolean
+          description: |
+            Set this to `true` to not verify SSL certificates
     GCPStorage:
+      title: GCPStorage
       description: |
         Representation of GCP remote tf state for external backend.
         Must be matched with a credential of the "gcp" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - bucket
-        type: object
-        properties:
-          bucket:
-            type: string
-            description: |
-              The GCP bucket containing objects
-          object:
-            type: string
-            description: |
-              The GCP object uniquely identifying an object in a bucket,
-              will be required if the EB is not default
-    SwiftRemoteTFState:
-      description: |
-        Deprecated. Please use SwiftStorage.
-        Representation of Swift remote tf state for external backend.
-        Must be matched with a credential of the "swift" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - container
-        - region
-        type: object
-        properties:
-          container:
-            type: string
-            description: |
-              The Swift container containing objects
-          object:
-            type: string
-            description: |
-              The swift object uniquely identifying an object in a container
-          skip_verify_ssl:
-            type: boolean
-            description: |
-              Set this to `true` to not verify SSL certificates
-          region:
-            type: string
-            description: |
-              The Swift region where the resource exists
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: |
+            The GCP bucket containing objects
+        object:
+          type: string
+          description: |
+            The GCP object uniquely identifying an object in a bucket,
+            will be required if the EB is not default
     SwiftStorage:
+      title: SwiftStorage
       description: |
         Representation of Swift remote tf state for external backend.
         Must be matched with a credential of the "swift" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - container
-        - region
-        type: object
-        properties:
-          container:
-            type: string
-            description: |
-              The Swift container containing objects
-          object:
-            type: string
-            description: |
-              The swift object uniquely identifying an object in a container,
-              will be required if the EB is not default
-          skip_verify_ssl:
-            type: boolean
-            description: |
-              Set this to `true` to not verify SSL certificates
-          region:
-            type: string
-            description: |
-              The Swift region where the resource exists
-    HTTPStorage:
-      description: |
-        Representation of HTTP storage for external backend.
-        Must be matched with a credential of the "basic_auth" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - url
-        type: object
-        properties:
-          url:
-            type: string
-            description: |
-              The URL endpoint to use
-    GitLabHTTPStorage:
-      description: |
-        Representation of GitLab HTTP storage for external backend.
-        Must be matched with a credential of the "basic_auth" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - url
-        type: object
-        properties:
-          url:
-            type: string
-            description: |
-              The URL endpoint to use
-    ElasticsearchLogs:
-      description: |
-        Representation of Elasticsearch logs for external backend.
-        Must be matched with a credential of the "elasticsearch" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - required:
-        - sources
-        - urls
-        - version
-        type: object
-        properties:
-          urls:
-            type: array
-            description: |
-              List of the URLs
-            items:
-              type: string
-          version:
-            type: string
-            description: |
-              Only 7 is supported
-          sources:
-            type: object
-            additionalProperties:
-              type: object
-              additionalProperties:
-                type: object
-                properties:
-                  index:
-                    type: string
-                    description: |
-                      Index to use
-                  urls:
-                    type: array
-                    description: |
-                      List of URLs to override the main URL defined
-                    items:
-                      type: string
-                  prefilters:
-                    type: object
-                    properties: {}
-                    description: |
-                      JSON representing the prefilters to apply to the index to get
-                      the specific values.
-                  mapping:
-                    required:
-                    - host
-                    - message
-                    - timestamp
-                    type: object
-                    properties:
-                      host:
-                        type: string
-                        description: |
-                          The Host of the log
-                      timestamp:
-                        type: string
-                        description: |
-                          The Timestamp of the log
-                      message:
-                        type: string
-                        description: |
-                          The Message the user wants to show
-                    description: |
-                      Object with the mapping to know which attributes are the ones
-                      we have to map to the ones we want
-            description: |
-              It's an object where the key is the 'environment' and the value
-              another object where the key is the 'source-name' and value a Source.
-    GCPCostStorage:
-      description: |
-        Representation of BigQuery external backend.
-        Must be matched with a credential of the "gcp" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - type: object
-        properties:
-          project_id:
-            type: string
-            description: |
-              The project that contains the BigQuery dataset.
-          dataset:
-            type: string
-            description: |
-              The GCP BigQuery dataset containing tables
-          table:
-            type: string
-            description: |
-              The GCP BigQuery table containing data
-    VMwareVsphere:
-      description: |
-        Representation of VMwareVsphere external backend.
-        Must be matched with a credential of the "vmware" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - type: object
-        properties:
-          server:
-            type: string
-            description: |
-              FQDN or IP address of the vCenter server.
-          allow_unverified_ssl:
-            type: boolean
-            description: "Whether verification of SSL certificate should be disabled.\
-              \ \n"
-    AzureCostExport:
-      description: |
-        Representation of AzureCostExport external backend.
-        Must be matched with a credential of the "azure" type.
-      allOf:
-      - $ref: '#/components/schemas/ExternalBackendConfiguration'
-      - type: object
-        properties:
-          name:
-            type: string
-            description: Name of the export
-          scope:
-            type: string
-            description: Scope of the export
-          blob_service_url:
-            type: string
-            description: Endpoint of blob storage service containing the export files.
+      type: object
+      properties:
+        container:
+          type: string
+          description: |
+            The Swift container containing objects
+        object:
+          type: string
+          description: |
+            The swift object uniquely identifying an object in a container,
+            will be required if the EB is not default
+        skip_verify_ssl:
+          type: boolean
+          description: |
+            Set this to `true` to not verify SSL certificates
+        region:
+          type: string
+          description: |
+            The Swift region where the resource exists
     Event:
       title: An event
       required:
@@ -39005,8 +38695,12 @@ components:
           minLength: 3
           pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
           type: string
-        configuration:
-          $ref: '#/components/schemas/ExternalBackendConfiguration'
+        aws_storage:
+          $ref: '#/components/schemas/AWSStorage'
+        gcp_storage:
+          $ref: '#/components/schemas/GCPStorage'
+        swift_storage:
+          $ref: '#/components/schemas/SwiftStorage'
       description: "An external backend contains the configuration needed in order\
         \ to be plugged into the Cycloid system. A backend is a general purpose concept,\
         \ but Cycloid specifies which ones are supported and the list of those which\

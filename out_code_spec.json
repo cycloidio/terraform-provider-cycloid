@@ -534,6 +534,300 @@
 			}
 		},
 		{
+			"name": "external_backend",
+			"schema": {
+				"attributes": [
+					{
+						"name": "aws_storage",
+						"single_nested": {
+							"computed_optional_required": "computed_optional",
+							"attributes": [
+								{
+									"name": "bucket",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The AWS bucket containing objects\n"
+									}
+								},
+								{
+									"name": "endpoint",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "A custom endpoint for the S3 API (default: s3.amazonaws.com)\n"
+									}
+								},
+								{
+									"name": "key",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The S3 Key uniquely identifies an object in a bucket\n"
+									}
+								},
+								{
+									"name": "region",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The AWS region where the resource exists\n"
+									}
+								},
+								{
+									"name": "s3_force_path_style",
+									"bool": {
+										"computed_optional_required": "computed_optional",
+										"description": "Always use path-style S3 URLs (https://\u003cHOST\u003e/\u003cBUCKET\u003e instead of https://\u003cBUCKET\u003e.\u003cHOST\u003e)\n"
+									}
+								},
+								{
+									"name": "skip_verify_ssl",
+									"bool": {
+										"computed_optional_required": "computed_optional",
+										"description": "Set this to `true` to not verify SSL certificates\n"
+									}
+								}
+							],
+							"description": "Representation of AWS storage for external backend.\nMust be matched with a credential of the \"aws\" type.\n"
+						}
+					},
+					{
+						"name": "credential_canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"description": "The type of the credential must be one of: [\"aws\", \"gcp\", \"swift\"]\n",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "default",
+						"bool": {
+							"computed_optional_required": "computed_optional",
+							"description": "Will mark this EB as default for the specific purpose"
+						}
+					},
+					{
+						"name": "engine",
+						"string": {
+							"computed_optional_required": "required",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.OneOf(\n\"aws_storage\",\n\"gcp_storage\",\n\"swift_storage\",\n)"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "environment_canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(1, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[\\\\da-zA-Z]+(?:(?:[\\\\da-zA-Z\\\\-._]+)?[\\\\da-zA-Z])?$\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "gcp_storage",
+						"single_nested": {
+							"computed_optional_required": "computed_optional",
+							"attributes": [
+								{
+									"name": "bucket",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The GCP bucket containing objects\n"
+									}
+								},
+								{
+									"name": "object",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The GCP object uniquely identifying an object in a bucket,\nwill be required if the EB is not default\n"
+									}
+								}
+							],
+							"description": "Representation of GCP remote tf state for external backend.\nMust be matched with a credential of the \"gcp\" type.\n"
+						}
+					},
+					{
+						"name": "project_canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(1, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"(^[a-z0-9]+(([a-z0-9\\\\-_]+)?[a-z0-9]+)?$)\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "purpose",
+						"string": {
+							"computed_optional_required": "required",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.OneOf(\n\"remote_tfstate\",\n)"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "swift_storage",
+						"single_nested": {
+							"computed_optional_required": "computed_optional",
+							"attributes": [
+								{
+									"name": "container",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The Swift container containing objects\n"
+									}
+								},
+								{
+									"name": "object",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The swift object uniquely identifying an object in a container,\nwill be required if the EB is not default\n"
+									}
+								},
+								{
+									"name": "region",
+									"string": {
+										"computed_optional_required": "computed_optional",
+										"description": "The Swift region where the resource exists\n"
+									}
+								},
+								{
+									"name": "skip_verify_ssl",
+									"bool": {
+										"computed_optional_required": "computed_optional",
+										"description": "Set this to `true` to not verify SSL certificates\n"
+									}
+								}
+							],
+							"description": "Representation of Swift remote tf state for external backend.\nMust be matched with a credential of the \"swift\" type.\n"
+						}
+					},
+					{
+						"name": "organization_canonical",
+						"string": {
+							"computed_optional_required": "computed_optional",
+							"description": "A canonical of an organization.",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "external_backend_id",
+						"int64": {
+							"computed_optional_required": "computed_optional",
+							"description": "External Backend ID"
+						}
+					}
+				]
+			}
+		},
+		{
 			"name": "organization",
 			"schema": {
 				"attributes": [
