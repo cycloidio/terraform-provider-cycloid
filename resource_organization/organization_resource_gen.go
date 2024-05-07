@@ -22,8 +22,10 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"canonical": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -34,7 +36,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					"appearance": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"canonical": schema.StringAttribute{
-								Computed: true,
+								Computed:            true,
+								Description:         "The canonical of an entity",
+								MarkdownDescription: "The canonical of an entity",
 							},
 							"color": schema.SingleNestedAttribute{
 								Attributes: map[string]schema.Attribute{
@@ -62,7 +66,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 								Computed: true,
 							},
 							"created_at": schema.Int64Attribute{
-								Computed: true,
+								Computed:            true,
+								Description:         "The time of creation of the entity",
+								MarkdownDescription: "The time of creation of the entity",
 							},
 							"display_name": schema.StringAttribute{
 								Computed: true,
@@ -80,13 +86,17 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 								Computed: true,
 							},
 							"name": schema.StringAttribute{
-								Computed: true,
+								Computed:            true,
+								Description:         "The name of an entity",
+								MarkdownDescription: "The name of an entity",
 							},
 							"tab_title": schema.StringAttribute{
 								Computed: true,
 							},
 							"updated_at": schema.Int64Attribute{
-								Computed: true,
+								Computed:            true,
+								Description:         "The time of the last update of the entity",
+								MarkdownDescription: "The time of the last update of the entity",
 							},
 						},
 						CustomType: AppearanceType{
@@ -109,7 +119,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Computed: true,
 					},
 					"canonical": schema.StringAttribute{
-						Computed: true,
+						Computed:            true,
+						Description:         "The canonical of an entity",
+						MarkdownDescription: "The canonical of an entity",
 					},
 					"ci_port": schema.StringAttribute{
 						Computed: true,
@@ -121,13 +133,17 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Computed: true,
 					},
 					"created_at": schema.Int64Attribute{
-						Computed: true,
+						Computed:            true,
+						Description:         "The time of creation of the entity",
+						MarkdownDescription: "The time of creation of the entity",
 					},
 					"has_children": schema.BoolAttribute{
 						Computed: true,
 					},
 					"id": schema.Int64Attribute{
-						Computed: true,
+						Computed:            true,
+						Description:         "ID represents the id of the entity",
+						MarkdownDescription: "ID represents the id of the entity",
 					},
 					"mfa_enabled": schema.BoolAttribute{
 						Computed: true,
@@ -152,7 +168,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 							"plan": schema.SingleNestedAttribute{
 								Attributes: map[string]schema.Attribute{
 									"canonical": schema.StringAttribute{
-										Computed: true,
+										Computed:            true,
+										Description:         "The canonical of an entity",
+										MarkdownDescription: "The canonical of an entity",
 									},
 									"name": schema.StringAttribute{
 										Computed: true,
@@ -178,7 +196,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						MarkdownDescription: "It reflects the relation between an Organization and a Plan which\ncould be the Free Trial or others, for more info check https://www.cycloid.io/pricing\n",
 					},
 					"updated_at": schema.Int64Attribute{
-						Computed: true,
+						Computed:            true,
+						Description:         "The time of the last update of the entity",
+						MarkdownDescription: "The time of the last update of the entity",
 					},
 				},
 				CustomType: DataType{

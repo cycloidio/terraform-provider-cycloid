@@ -42,7 +42,7 @@ terraform {
 
 ### Optional
 
-- `canonical` (String)
+- `canonical` (String) The canonical of an entity
 - `organization_canonical` (String) A canonical of an organization.
 
 ### Read-Only
@@ -58,36 +58,36 @@ Read-Only:
 - `blocked` (List of String)
 - `can_children_create_appearance` (Boolean)
 - `can_create_appearance` (Boolean)
-- `canonical` (String)
+- `canonical` (String) The canonical of an entity
 - `ci_port` (String)
 - `ci_team_name` (String)
 - `ci_url` (String)
-- `created_at` (Number)
+- `created_at` (Number) The time of creation of the entity
 - `has_children` (Boolean)
-- `id` (Number)
+- `id` (Number) ID represents the id of the entity
 - `mfa_enabled` (Boolean)
 - `name` (String)
 - `quotas` (Boolean)
 - `subscription` (Attributes) It reflects the relation between an Organization and a Plan which
 could be the Free Trial or others, for more info check https://www.cycloid.io/pricing (see [below for nested schema](#nestedatt--data--subscription))
-- `updated_at` (Number)
+- `updated_at` (Number) The time of the last update of the entity
 
 <a id="nestedatt--data--appearance"></a>
 ### Nested Schema for `data.appearance`
 
 Read-Only:
 
-- `canonical` (String)
+- `canonical` (String) The canonical of an entity
 - `color` (Attributes) (see [below for nested schema](#nestedatt--data--appearance--color))
-- `created_at` (Number)
+- `created_at` (Number) The time of creation of the entity
 - `display_name` (String)
 - `favicon` (String)
 - `footer` (String)
 - `is_active` (Boolean)
 - `logo` (String)
-- `name` (String)
+- `name` (String) The name of an entity
 - `tab_title` (String)
-- `updated_at` (Number)
+- `updated_at` (Number) The time of the last update of the entity
 
 <a id="nestedatt--data--appearance--color"></a>
 ### Nested Schema for `data.appearance.color`
@@ -115,5 +115,5 @@ Read-Only:
 
 Read-Only:
 
-- `canonical` (String)
+- `canonical` (String) The canonical of an entity
 - `name` (String)
