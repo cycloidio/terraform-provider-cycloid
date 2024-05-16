@@ -16,28 +16,41 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"branch": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "Branch needs to be valid git repository branch",
+				MarkdownDescription: "Branch needs to be valid git repository branch",
 			},
 			"canonical": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
 				},
 			},
 			"credential_canonical": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
 				},
 			},
 			"default": schema.BoolAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "Whether the given entity is default one",
+				MarkdownDescription: "Whether the given entity is default one",
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "The name of an entity",
+				MarkdownDescription: "The name of an entity",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,
@@ -50,7 +63,9 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"url": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "GitURL represents all git URL formats we accept.\n",
+				MarkdownDescription: "GitURL represents all git URL formats we accept.\n",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^((/|~)[^/]*)+.(\\.git)|(([\\w\\]+@[\\w\\.]+))(:(//)?)([\\w\\.@\\:/\\-~]+)(/)?"), ""),
 				},

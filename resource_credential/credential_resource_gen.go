@@ -100,19 +100,28 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "All the possible fields inside it",
 			},
 			"canonical": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
 				},
 			},
 			"description": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The description of an entity",
+				MarkdownDescription: "The description of an entity",
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "The name of an entity",
+				MarkdownDescription: "The name of an entity",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,
@@ -127,8 +136,12 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 			"owner": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
-				MarkdownDescription: "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
+				Description:         "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
+				MarkdownDescription: "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+				},
 			},
 			"path": schema.StringAttribute{
 				Required: true,

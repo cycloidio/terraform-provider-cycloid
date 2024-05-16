@@ -43,18 +43,20 @@ terraform {
 ### Required
 
 - `body` (Attributes) All the possible fields inside it (see [below for nested schema](#nestedatt--body))
-- `name` (String)
+- `name` (String) The name of an entity
 - `path` (String)
 - `type` (String)
 
 ### Optional
 
-- `canonical` (String)
-- `description` (String)
+- `canonical` (String) The canonical of an entity
+- `description` (String) The description of an entity
 - `organization_canonical` (String) A canonical of an organization.
-- `owner` (String) User canonical that owns this credential. If omitted then the person creating this
-credential will be assigned as owner. When a user is the owner of a credential he has
+- `owner` (String) User canonical that owns this entity. If omitted then the person creating this
+entity will be assigned as owner. When a user is the owner of the entity he has
 all the permissions on it.
+In case of API keys, the owner of API key is assigned as an owner. If 
+API key has no owner, then no owner is set for entity as well.
 
 <a id="nestedatt--body"></a>
 ### Nested Schema for `body`

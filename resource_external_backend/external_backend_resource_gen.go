@@ -73,8 +73,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"credential_canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The type of the credential must be one of: [\"aws\", \"gcp\", \"swift\"]\n",
-				MarkdownDescription: "The type of the credential must be one of: [\"aws\", \"gcp\", \"swift\"]\n",
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -83,8 +83,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"default": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Will mark this EB as default for the specific purpose",
-				MarkdownDescription: "Will mark this EB as default for the specific purpose",
+				Description:         "Whether the given entity is default one",
+				MarkdownDescription: "Whether the given entity is default one",
 			},
 			"engine": schema.StringAttribute{
 				Required: true,
@@ -97,8 +97,10 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"environment_canonical": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[\\da-zA-Z]+(?:(?:[\\da-zA-Z\\-._]+)?[\\da-zA-Z])?$"), ""),
@@ -146,8 +148,10 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"project_canonical": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "The canonical of an entity",
+				MarkdownDescription: "The canonical of an entity",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("(^[a-z0-9]+(([a-z0-9\\-_]+)?[a-z0-9]+)?$)"), ""),

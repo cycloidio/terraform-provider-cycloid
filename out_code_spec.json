@@ -32,13 +32,15 @@
 					{
 						"name": "branch",
 						"string": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "Branch needs to be valid git repository branch"
 						}
 					},
 					{
 						"name": "canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -70,6 +72,7 @@
 						"name": "credential_canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -100,20 +103,59 @@
 					{
 						"name": "name",
 						"string": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "The name of an entity",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthAtLeast(1)"
+									}
+								}
+							]
 						}
 					},
 					{
 						"name": "owner",
 						"string": {
 							"computed_optional_required": "computed_optional",
-							"description": "User canonical that owns this service catalog source. If omitted then the person\ncreating this service catalog source will be assigned as owner. When a user is the\nowner of a service catalog source they has all the permissions on it.\n"
+							"description": "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
 						}
 					},
 					{
 						"name": "url",
 						"string": {
 							"computed_optional_required": "required",
+							"description": "GitURL represents all git URL formats we accept.\n",
 							"validators": [
 								{
 									"custom": {
@@ -173,13 +215,15 @@
 					{
 						"name": "branch",
 						"string": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "Branch needs to be valid git repository branch"
 						}
 					},
 					{
 						"name": "canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -211,6 +255,7 @@
 						"name": "credential_canonical",
 						"string": {
 							"computed_optional_required": "required",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -241,19 +286,34 @@
 					{
 						"name": "default",
 						"bool": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "Whether the given entity is default one"
 						}
 					},
 					{
 						"name": "name",
 						"string": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "The name of an entity",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthAtLeast(1)"
+									}
+								}
+							]
 						}
 					},
 					{
 						"name": "url",
 						"string": {
 							"computed_optional_required": "required",
+							"description": "GitURL represents all git URL formats we accept.\n",
 							"validators": [
 								{
 									"custom": {
@@ -413,6 +473,7 @@
 						"name": "canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -443,20 +504,59 @@
 					{
 						"name": "description",
 						"string": {
-							"computed_optional_required": "computed_optional"
+							"computed_optional_required": "computed_optional",
+							"description": "The description of an entity"
 						}
 					},
 					{
 						"name": "name",
 						"string": {
-							"computed_optional_required": "required"
+							"computed_optional_required": "required",
+							"description": "The name of an entity",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthAtLeast(1)"
+									}
+								}
+							]
 						}
 					},
 					{
 						"name": "owner",
 						"string": {
 							"computed_optional_required": "computed_optional",
-							"description": "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n"
+							"description": "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
+							"validators": [
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.LengthBetween(3, 100)"
+									}
+								},
+								{
+									"custom": {
+										"imports": [
+											{
+												"path": "regexp"
+											},
+											{
+												"path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+											}
+										],
+										"schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+									}
+								}
+							]
 						}
 					},
 					{
@@ -592,7 +692,7 @@
 						"name": "credential_canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
-							"description": "The type of the credential must be one of: [\"aws\", \"gcp\", \"swift\"]\n",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -624,7 +724,7 @@
 						"name": "default",
 						"bool": {
 							"computed_optional_required": "computed_optional",
-							"description": "Will mark this EB as default for the specific purpose"
+							"description": "Whether the given entity is default one"
 						}
 					},
 					{
@@ -649,6 +749,7 @@
 						"name": "environment_canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -703,6 +804,7 @@
 						"name": "project_canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -835,6 +937,7 @@
 						"name": "canonical",
 						"string": {
 							"computed_optional_required": "computed_optional",
+							"description": "The canonical of an entity",
 							"validators": [
 								{
 									"custom": {
@@ -893,7 +996,8 @@
 											{
 												"name": "canonical",
 												"string": {
-													"computed_optional_required": "computed"
+													"computed_optional_required": "computed",
+													"description": "The canonical of an entity"
 												}
 											},
 											{
@@ -928,7 +1032,8 @@
 											{
 												"name": "created_at",
 												"int64": {
-													"computed_optional_required": "computed"
+													"computed_optional_required": "computed",
+													"description": "The time of creation of the entity"
 												}
 											},
 											{
@@ -964,7 +1069,8 @@
 											{
 												"name": "name",
 												"string": {
-													"computed_optional_required": "computed"
+													"computed_optional_required": "computed",
+													"description": "The name of an entity"
 												}
 											},
 											{
@@ -976,7 +1082,8 @@
 											{
 												"name": "updated_at",
 												"int64": {
-													"computed_optional_required": "computed"
+													"computed_optional_required": "computed",
+													"description": "The time of the last update of the entity"
 												}
 											}
 										],
@@ -1007,7 +1114,8 @@
 								{
 									"name": "canonical",
 									"string": {
-										"computed_optional_required": "computed"
+										"computed_optional_required": "computed",
+										"description": "The canonical of an entity"
 									}
 								},
 								{
@@ -1031,7 +1139,8 @@
 								{
 									"name": "created_at",
 									"int64": {
-										"computed_optional_required": "computed"
+										"computed_optional_required": "computed",
+										"description": "The time of creation of the entity"
 									}
 								},
 								{
@@ -1043,7 +1152,8 @@
 								{
 									"name": "id",
 									"int64": {
-										"computed_optional_required": "computed"
+										"computed_optional_required": "computed",
+										"description": "ID represents the id of the entity"
 									}
 								},
 								{
@@ -1095,7 +1205,8 @@
 														{
 															"name": "canonical",
 															"string": {
-																"computed_optional_required": "computed"
+																"computed_optional_required": "computed",
+																"description": "The canonical of an entity"
 															}
 														},
 														{
@@ -1115,7 +1226,8 @@
 								{
 									"name": "updated_at",
 									"int64": {
-										"computed_optional_required": "computed"
+										"computed_optional_required": "computed",
+										"description": "The time of the last update of the entity"
 									}
 								}
 							],

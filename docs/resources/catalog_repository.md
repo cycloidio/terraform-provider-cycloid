@@ -50,15 +50,17 @@ terraform {
 
 ### Required
 
-- `branch` (String)
-- `name` (String)
-- `url` (String)
+- `branch` (String) Branch needs to be valid git repository branch
+- `name` (String) The name of an entity
+- `url` (String) GitURL represents all git URL formats we accept.
 
 ### Optional
 
-- `canonical` (String)
-- `credential_canonical` (String)
+- `canonical` (String) The canonical of an entity
+- `credential_canonical` (String) The canonical of an entity
 - `organization_canonical` (String) A canonical of an organization.
-- `owner` (String) User canonical that owns this service catalog source. If omitted then the person
-creating this service catalog source will be assigned as owner. When a user is the
-owner of a service catalog source they has all the permissions on it.
+- `owner` (String) User canonical that owns this entity. If omitted then the person creating this
+entity will be assigned as owner. When a user is the owner of the entity he has
+all the permissions on it.
+In case of API keys, the owner of API key is assigned as an owner. If 
+API key has no owner, then no owner is set for entity as well.

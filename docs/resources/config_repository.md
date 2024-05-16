@@ -50,13 +50,13 @@ terraform {
 
 ### Required
 
-- `branch` (String)
-- `credential_canonical` (String)
-- `default` (Boolean)
-- `name` (String)
-- `url` (String)
+- `branch` (String) Branch needs to be valid git repository branch
+- `credential_canonical` (String) The canonical of an entity
+- `default` (Boolean) Whether the given entity is default one
+- `name` (String) The name of an entity
+- `url` (String) GitURL represents all git URL formats we accept.
 
 ### Optional
 
-- `canonical` (String)
+- `canonical` (String) The canonical of an entity
 - `organization_canonical` (String) A canonical of an organization.
