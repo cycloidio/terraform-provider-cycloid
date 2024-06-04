@@ -14632,415 +14632,6 @@ paths:
                   code: Unexpected
       security: []
       x-codegen-request-body-name: body
-  /organizations/{organization_canonical}/invitations:
-    get:
-      tags:
-      - Organization Invitations
-      description: Get list of the Organization's Invitations.
-      operationId: getInvitations
-      parameters:
-      - name: page_index
-        in: query
-        description: The page number to request. The first page is 1.
-        schema:
-          type: integer
-          format: uint32
-          default: 1
-      - name: page_size
-        in: query
-        description: The number of items at most which the response can have.
-        schema:
-          type: integer
-          format: uint32
-          default: 1000
-      - name: order_by
-        in: query
-        description: |
-          Allows to order the list of items. Example usage: field_name:asc
-        schema:
-          type: string
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: invitation_created_at
-        in: query
-        description: Search by Invitation's creation date
-        schema:
-          type: integer
-          format: uint64
-      - name: invitation_state
-        in: query
-        description: Search by Invitation's state
-        schema:
-          type: string
-          enum:
-          - accepted
-          - pending
-          - declined
-      responses:
-        "200":
-          description: List of the Organization's Invitations.
-          content:
-            application/json:
-              schema:
-                required:
-                - data
-                - pagination
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Invitation'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-              example:
-                data:
-                - id: 1
-                  created_at: 1503225026
-                  updated_at: 1503335026
-                  state: pending
-                  email: superuser@company.com
-                  resent_at: 1503225040
-                  invitee:
-                    id: 99
-                    created_at: 1503225026
-                    updated_at: 1503225026
-                    username: superuser
-                    given_name: Owen
-                    family_name: Smith
-                    emails:
-                    - superuser@company.com
-                    last_login: 1503225026
-                    locale: en
-                  invited_by:
-                    id: 99
-                    username: superuser
-                    given_name: Owen
-                    family_name: Smith
-                    email: superuser@company.com
-                    created_at: 1503225026
-                    role:
-                      id: 22
-                      name: Organization Admin
-                      description: Can manage organization's projects
-                      policies:
-                      - id: 33
-                        code: organization:project:update
-                        description: can update the organization's projects
-                      - id: 32
-                        code: organization:project:delete
-                        description: can delete the organization's projects
-                  role:
-                    id: 3
-                    name: Developer
-                    description: A developer of the Organization
-                    policies:
-                    - id: 21
-                      code: team:read
-                      entities:
-                      - "1"
-                      - "12"
-                      - "42"
-                      description: Grant the access to read the teams of an organization
-                    - id: 42
-                      code: member:read
-                      entities: []
-                      description: Grant the access to read the members
-                    - id: 60
-                      code: project:read
-                      entities: []
-                      description: Grant the access to projects
-                pagination:
-                  index: 1
-                  size: 10
-                  total: 1
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        "422":
-          description: All the custom errors that are generated from the Cycloid API
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: some error
-                  code: SomeCode
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-  /invitations/{verification_token}:
-    get:
-      tags:
-      - Organization Invitations
-      description: Get the email address used for the pending invitation
-      operationId: getPendingInvitation
-      parameters:
-      - name: verification_token
-        in: path
-        description: "A token for verifying emails, invitations, etc."
-        required: true
-        schema:
-          minLength: 5
-          type: string
-      responses:
-        "200":
-          description: The email address used for the pending invitation
-          content:
-            application/json:
-              schema:
-                required:
-                - data
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/PendingInvite'
-              example:
-                data:
-                  email: user@user.com
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-      security: []
-  /organizations/{organization_canonical}/invitations/{invitation_id}/resend:
-    put:
-      tags:
-      - Organization Invitations
-      description: Resend the email containing the verification token to accept the
-        Invitation.
-      operationId: resendInvitation
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: invitation_id
-        in: path
-        description: Organization Invitation id.
-        required: true
-        schema:
-          type: integer
-          format: uint32
-      responses:
-        "204":
-          description: The Invitation has been resent.
-          content: {}
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-      security: []
-  /organizations/{organization_canonical}/invitations/{invitation_id}:
-    delete:
-      tags:
-      - Organization Invitations
-      description: Delete an Organization's Invitation.
-      operationId: deleteInvitation
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: invitation_id
-        in: path
-        description: Organization Invitation id.
-        required: true
-        schema:
-          type: integer
-          format: uint32
-      responses:
-        "204":
-          description: Invitation has been deleted.
-          content: {}
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
   /organizations/{organization_canonical}/kpis:
     get:
       tags:
@@ -16402,659 +15993,6 @@ paths:
                 errors:
                 - message: some error
                   code: SomeCode
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-  /organizations/{organization_canonical}/members:
-    get:
-      tags:
-      - Organization members
-      description: Get the members of an organization.
-      operationId: getOrgMembers
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: page_index
-        in: query
-        description: The page number to request. The first page is 1.
-        schema:
-          type: integer
-          format: uint32
-          default: 1
-      - name: page_size
-        in: query
-        description: The number of items at most which the response can have.
-        schema:
-          type: integer
-          format: uint32
-          default: 1000
-      - name: user_given_name
-        in: query
-        description: Search by the user's given name
-        schema:
-          type: string
-      - name: user_family_name
-        in: query
-        description: Search by the user's family name
-        schema:
-          type: string
-      - name: role_name
-        in: query
-        description: Search by the role's name
-        schema:
-          type: string
-      - name: user_canonical
-        in: query
-        description: Search by the user canonical
-        schema:
-          type: string
-      - name: user_created_at
-        in: query
-        description: Search by user creation date
-        schema:
-          type: integer
-          format: uint64
-      - name: member_created_at
-        in: query
-        description: Search by member joining date
-        schema:
-          type: integer
-          format: uint64
-      - name: order_by
-        in: query
-        description: |
-          Allows to order the list of items. Example usage: field_name:asc
-        schema:
-          type: string
-      responses:
-        "200":
-          description: List of the members of the organization.
-          content:
-            application/json:
-              schema:
-                required:
-                - data
-                - pagination
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MemberOrg'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-              example:
-                data:
-                - username: user-1
-                  id: 1
-                  given_name: Mariano
-                  family_name: Jimenez
-                  email: mariano.jimenez@fakeemail.com
-                  picture_url: https://avatars2.githubusercontent.com/u/14579210
-                  created_at: 1503225026
-                  last_login_at: 1503225576
-                  role:
-                    id: 17
-                    name: existing
-                    description: Organization existing role
-                    canonical: role-can
-                    rules:
-                    - id: 1
-                      effect: allow
-                      action: organization:delete
-                      resources:
-                      - organization:org-can
-                      - organization:org-can2
-                    - id: 20
-                      effect: allow
-                      action: organization:team:create
-                      resources: []
-                    - id: 21
-                      effect: allow
-                      action: organization:team:read
-                      resources:
-                      - organization:org-can:team:team-can
-                - username: user2
-                  id: 1
-                  given_name: Jordi
-                  family_name: Capdevila
-                  email: jordi.capdevila@fakeemail.com
-                  picture_url: https://avatars2.githubusercontent.com/u/14579210
-                  created_at: 1503281026
-                  last_login_at: 1503225576
-                  role:
-                    id: 17
-                    name: existing
-                    description: Organization existing role
-                    canonical: role-can
-                    rules:
-                    - id: 1
-                      effect: allow
-                      action: organization:delete
-                      resources:
-                      - organization:org-can
-                      - organization:org-can2
-                    - id: 20
-                      effect: allow
-                      action: organization:team:create
-                      resources: []
-                    - id: 21
-                      effect: allow
-                      action: organization:team:read
-                      resources:
-                      - organization:org-can:team:team-can
-                - username: user-3
-                  id: 1
-                  given_name: Ivan
-                  family_name: Drago
-                  email: ivan.drago@fakeemail.com
-                  picture_url: https://avatars2.githubusercontent.com/u/14579210
-                  created_at: 1502225026
-                  last_login_at: 1503225576
-                  role:
-                    id: 17
-                    name: existing
-                    description: Organization existing role
-                    canonical: role-can
-                    rules:
-                    - id: 1
-                      effect: allow
-                      action: organization:delete
-                      resources:
-                      - organization:org-can
-                      - organization:org-can2
-                    - id: 20
-                      effect: allow
-                      action: organization:team:create
-                      resources: []
-                    - id: 21
-                      effect: allow
-                      action: organization:team:read
-                      resources:
-                      - organization:org-can:team:team-can
-                pagination:
-                  index: 1
-                  size: 10
-                  total: 3
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        "422":
-          description: All the custom errors that are generated from the Cycloid API
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: some error
-                  code: SomeCode
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-  /organizations/{organization_canonical}/members-invitations:
-    put:
-      tags:
-      - Organization members
-      description: Invite a user to be a member of the organization.
-      operationId: inviteUserToOrgMember
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      requestBody:
-        description: The user's member invitation.
-        content:
-          application/vnd.cycloid.io.v1+json:
-            schema:
-              $ref: '#/components/schemas/NewMemberInvitation'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/NewMemberInvitation'
-        required: true
-      responses:
-        "204":
-          description: The user has been invited to be a member of the organization.
-            The verification is pending.
-          content: {}
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        "411":
-          description: The request has a body but it doesn't have a Content-Length
-            header.
-          content: {}
-        "422":
-          description: All the custom errors that are generated from the Cycloid API
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: some error
-                  code: SomeCode
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-      x-codegen-request-body-name: body
-  /organizations/{organization_canonical}/members/{username}:
-    get:
-      tags:
-      - Organization members
-      description: Get the information of a member of the organization.
-      operationId: getOrgMember
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: username
-        in: path
-        description: A username
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      responses:
-        "200":
-          description: The information of the member of the organization.
-          content:
-            application/json:
-              schema:
-                required:
-                - data
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/MemberOrg'
-              example:
-                data:
-                  id: 1
-                  username: user2
-                  given_name: Jordi
-                  family_name: Capdevila
-                  email: jordi.capdevila@fakeemail.com
-                  picture_url: https://avatars2.githubusercontent.com/u/14579210
-                  created_at: 1503281026
-                  last_login_at: 1503281333
-                  role:
-                    id: 17
-                    name: existing
-                    description: Organization existing role
-                    canonical: role-can
-                    rules:
-                    - id: 1
-                      effect: allow
-                      action: organization:delete
-                      resources:
-                      - organization:org-can
-                      - organization:org-can2
-                    - id: 20
-                      effect: allow
-                      action: organization:team:create
-                      resources: []
-                    - id: 21
-                      effect: allow
-                      action: organization:team:read
-                      resources:
-                      - organization:org-can:team:team-can
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-    put:
-      tags:
-      - Organization members
-      description: Update member of the organization.
-      operationId: updateOrgMember
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: username
-        in: path
-        description: A username
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      requestBody:
-        description: The member information to be updated.
-        content:
-          application/vnd.cycloid.io.v1+json:
-            schema:
-              $ref: '#/components/schemas/MemberAssignation'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/MemberAssignation'
-        required: true
-      responses:
-        "200":
-          description: The information of the member of the organization.
-          content:
-            application/json:
-              schema:
-                required:
-                - data
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/MemberOrg'
-              example:
-                data:
-                  id: 1
-                  username: user2
-                  given_name: Jordi
-                  family_name: Capdevila
-                  email: jordi.capdevila@fakeemail.com
-                  picture_url: https://avatars2.githubusercontent.com/u/14579210
-                  created_at: 1503281026
-                  role:
-                    id: 2
-                    name: project manager
-                    description: A project manager
-                    policies:
-                    - id: 21
-                      code: team:read
-                      entities: []
-                      description: Grant the access to read the teams of an organization
-                    - id: 22
-                      code: team:edit
-                      entities: []
-                      description: Grant the access to edit teams
-                    - id: 60
-                      code: project:read
-                      entities: []
-                      description: Grant the access to projects
-                    - id: 61
-                      code: project:create
-                      entities: []
-                      description: Grant the access to create a project in the organization
-                    - id: 62
-                      code: project:edit
-                      entities: []
-                      description: Grant the access to edit projects
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
-        "422":
-          description: All the custom errors that are generated from the Cycloid API
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: some error
-                  code: SomeCode
-        default:
-          description: "The response sent when an unexpected error happened, as known\
-            \ as an internal server error."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Server Internal error
-                  code: Unexpected
-      x-codegen-request-body-name: body
-    delete:
-      tags:
-      - Organization members
-      description: Remove a member of the organization.
-      operationId: removeOrgMember
-      parameters:
-      - name: organization_canonical
-        in: path
-        description: A canonical of an organization.
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: username
-        in: path
-        description: A username
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
-      responses:
-        "204":
-          description: Member has been removed.
-          content: {}
-        "403":
-          description: "The authenticated user cannot perform the operation because,\
-            \ it doesn't have permissions for such operation."
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Not enough permissions to perform the operation
-                  code: Unauthorized
-        "404":
-          description: The response sent when any of the entities present in the path
-            is not found.
-          headers:
-            Content-Length:
-              description: The length of the response body in octets (8-bit bytes).
-              schema:
-                type: integer
-                format: uint64
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-              example:
-                errors:
-                - message: Entity not found
-                  code: NotFoundEntity
         default:
           description: "The response sent when an unexpected error happened, as known\
             \ as an internal server error."
@@ -26912,7 +25850,7 @@ paths:
                 - message: Server Internal error
                   code: Unexpected
       x-codegen-request-body-name: body
-  /organizations/{organization_canonical}/teams/{team_canonical}/members/{username}:
+  /organizations/{organization_canonical}/teams/{team_canonical}/members/{member_id}:
     get:
       tags:
       - Organization team members
@@ -26930,13 +25868,11 @@ paths:
         description: A canonical of a team.
         required: true
         schema:
-          $ref: '#/components/schemas/Canonical'
-      - name: username
-        in: path
-        description: A username
-        required: true
-        schema:
-          $ref: '#/components/schemas/Canonical'
+          maxLength: 100
+          minLength: 3
+          pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+          type: string
+      - $ref: '#/components/parameters/member_id'
       responses:
         "200":
           description: The information of the member of the team.
@@ -31667,8 +30603,918 @@ paths:
                   code: Unexpected
       security: []
       x-codegen-request-body-name: body
+  /organizations/{organization_canonical}/members:
+    get:
+      tags:
+        - Organization members
+      description: Get the members of an organization.
+      operationId: getOrgMembers
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+        - name: page_index
+          in: query
+          description: The page number to request. The first page is 1.
+          schema:
+            type: integer
+            format: uint32
+            default: 1
+        - name: page_size
+          in: query
+          description: The number of items at most which the response can have.
+          schema:
+            type: integer
+            format: uint32
+            default: 1000
+        - name: invitation_state
+          in: query
+          description: Search by Invitation's state
+          schema:
+            type: string
+            enum:
+              - accepted
+              - pending
+              - declined
+        - name: user_given_name
+          in: query
+          description: Search by the user's given name
+          schema:
+            type: string
+        - name: user_family_name
+          in: query
+          description: Search by the user's family name
+          schema:
+            type: string
+        - name: role_name
+          in: query
+          description: Search by the role's name
+          schema:
+            type: string
+        - name: user_canonical
+          in: query
+          description: Search by the user canonical
+          schema:
+            type: string
+        - name: user_created_at
+          in: query
+          description: Search by user creation date
+          schema:
+            type: integer
+            format: uint64
+        - name: member_created_at
+          in: query
+          description: Search by member joining date
+          schema:
+            type: integer
+            format: uint64
+        - name: order_by
+          in: query
+          description: |
+            Allows to order the list of items. Example usage: field_name:asc
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of the members of the organization.
+          content:
+            '*/*':
+              schema:
+                required:
+                  - data
+                  - pagination
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemberOrg'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+            application/json:
+              example:
+                data:
+                  - username: user-1
+                    id: 1
+                    given_name: Mariano
+                    family_name: Jimenez
+                    invitation_email: jordi.capdevila@fakeemail.com
+                    email: mariano.jimenez@fakeemail.com
+                    picture_url: https://avatars2.githubusercontent.com/u/14579210
+                    created_at: 1503225026
+                    invitation_state: accepted
+                    last_login_at: 1503225576
+                    role:
+                      id: 17
+                      name: existing
+                      description: Organization existing role
+                      canonical: role-can
+                      rules:
+                        - id: 1
+                          effect: allow
+                          action: organization:delete
+                          resources:
+                            - organization:org-can
+                            - organization:org-can2
+                        - id: 20
+                          effect: allow
+                          action: organization:team:create
+                          resources: []
+                        - id: 21
+                          effect: allow
+                          action: organization:team:read
+                          resources:
+                            - organization:org-can:team:team-can
+                  - username: user2
+                    id: 1
+                    given_name: Jordi
+                    family_name: Capdevila
+                    invitation_email: jordi.capdevila@fakeemail.com
+                    email: jordi.capdevila@fakeemail.com
+                    picture_url: https://avatars2.githubusercontent.com/u/14579210
+                    created_at: 1503281026
+                    last_login_at: 1503225576
+                    invitation_state: accepted
+                    role:
+                      id: 17
+                      name: existing
+                      description: Organization existing role
+                      canonical: role-can
+                      rules:
+                        - id: 1
+                          effect: allow
+                          action: organization:delete
+                          resources:
+                            - organization:org-can
+                            - organization:org-can2
+                        - id: 20
+                          effect: allow
+                          action: organization:team:create
+                          resources: []
+                        - id: 21
+                          effect: allow
+                          action: organization:team:read
+                          resources:
+                            - organization:org-can:team:team-can
+                  - username: user-3
+                    id: 1
+                    given_name: Ivan
+                    family_name: Drago
+                    invitation_email: jordi.capdevila@fakeemail.com
+                    email: ivan.drago@fakeemail.com
+                    picture_url: https://avatars2.githubusercontent.com/u/14579210
+                    created_at: 1502225026
+                    last_login_at: 1503225576
+                    invitation_state: accepted
+                    role:
+                      id: 17
+                      name: existing
+                      description: Organization existing role
+                      canonical: role-can
+                      rules:
+                        - id: 1
+                          effect: allow
+                          action: organization:delete
+                          resources:
+                            - organization:org-can
+                            - organization:org-can2
+                        - id: 20
+                          effect: allow
+                          action: organization:team:create
+                          resources: []
+                        - id: 21
+                          effect: allow
+                          action: organization:team:read
+                          resources:
+                            - organization:org-can:team:team-can
+                pagination:
+                  index: 1
+                  size: 10
+                  total: 3
+        "403":
+          description: "The authenticated user cannot perform the operation because,\
+            \ it doesn't have permissions for such operation."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Not enough permissions to perform the operation
+                    code: Unauthorized
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        "422":
+          description: All the custom errors that are generated from the Cycloid API
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: some error
+                    code: SomeCode
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+    post:
+      tags:
+        - Organization members
+      description: Invite a user to be a member of the organization.
+      operationId: inviteUserToOrgMember
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+      requestBody:
+        description: The user's member invitation.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/NewMemberInvitation'
+        required: true
+      responses:
+        "200":
+          description: The information of the member of the organization.
+          content:
+            '*/*':
+              schema:
+                required:
+                  - data
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MemberOrg'
+            application/json:
+              example:
+                data:
+                  id: 1
+                  username: user2
+                  given_name: Jordi
+                  family_name: Capdevila
+                  invitation_email: jordi.capdevila@fakeemail.com
+                  email: jordi.capdevila@fakeemail.com
+                  picture_url: https://avatars2.githubusercontent.com/u/14579210
+                  created_at: 1503281026
+                  invitation_state: accepted
+                  role:
+                    id: 2
+                    name: project manager
+                    description: A project manager
+                    policies:
+                      - id: 21
+                        code: team:read
+                        entities: []
+                        description: Grant the access to read the teams of an organization
+                      - id: 22
+                        code: team:edit
+                        entities: []
+                        description: Grant the access to edit teams
+                      - id: 60
+                        code: project:read
+                        entities: []
+                        description: Grant the access to projects
+                      - id: 61
+                        code: project:create
+                        entities: []
+                        description: Grant the access to create a project in the organization
+                      - id: 62
+                        code: project:edit
+                        entities: []
+                        description: Grant the access to edit projects
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        "411":
+          description: The request has a body but it doesn't have a Content-Length
+            header.
+          content: {}
+        "422":
+          description: All the custom errors that are generated from the Cycloid API
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: some error
+                    code: SomeCode
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+      x-codegen-request-body-name: body
+  /organizations/{organization_canonical}/members/{member_id}:
+    get:
+      tags:
+        - Organization members
+      description: Get the information of a member of the organization.
+      operationId: getOrgMember
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+        - name: member_id
+          in: path
+          description: A member id
+          required: true
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        "200":
+          description: The information of the member of the organization.
+          content:
+            '*/*':
+              schema:
+                required:
+                  - data
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MemberOrg'
+            application/json:
+              example:
+                data:
+                  id: 1
+                  username: user2
+                  given_name: Jordi
+                  family_name: Capdevila
+                  invitation_email: jordi.capdevila@fakeemail.com
+                  email: jordi.capdevila@fakeemail.com
+                  picture_url: https://avatars2.githubusercontent.com/u/14579210
+                  created_at: 1503281026
+                  invitation_state: accepted
+                  role:
+                    id: 2
+                    name: project manager
+                    description: A project manager
+                    policies:
+                      - id: 21
+                        code: team:read
+                        entities: []
+                        description: Grant the access to read the teams of an organization
+                      - id: 22
+                        code: team:edit
+                        entities: []
+                        description: Grant the access to edit teams
+                      - id: 60
+                        code: project:read
+                        entities: []
+                        description: Grant the access to projects
+                      - id: 61
+                        code: project:create
+                        entities: []
+                        description: Grant the access to create a project in the organization
+                      - id: 62
+                        code: project:edit
+                        entities: []
+                        description: Grant the access to edit projects
+        "403":
+          description: "The authenticated user cannot perform the operation because,\
+            \ it doesn't have permissions for such operation."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Not enough permissions to perform the operation
+                    code: Unauthorized
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+    put:
+      tags:
+        - Organization members
+      description: Update member of the organization.
+      operationId: updateOrgMember
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+        - name: member_id
+          in: path
+          description: A member id
+          required: true
+          schema:
+            type: integer
+            format: uint32
+      requestBody:
+        description: The member information to be updated.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/MemberAssignation'
+        required: true
+      responses:
+        "200":
+          description: The information of the member of the organization.
+          content:
+            '*/*':
+              schema:
+                required:
+                  - data
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MemberOrg'
+            application/json:
+              example:
+                data:
+                  id: 1
+                  username: user2
+                  given_name: Jordi
+                  family_name: Capdevila
+                  invitation_email: jordi.capdevila@fakeemail.com
+                  email: jordi.capdevila@fakeemail.com
+                  picture_url: https://avatars2.githubusercontent.com/u/14579210
+                  created_at: 1503281026
+                  invitation_state: accepted
+                  role:
+                    id: 2
+                    name: project manager
+                    description: A project manager
+                    policies:
+                      - id: 21
+                        code: team:read
+                        entities: []
+                        description: Grant the access to read the teams of an organization
+                      - id: 22
+                        code: team:edit
+                        entities: []
+                        description: Grant the access to edit teams
+                      - id: 60
+                        code: project:read
+                        entities: []
+                        description: Grant the access to projects
+                      - id: 61
+                        code: project:create
+                        entities: []
+                        description: Grant the access to create a project in the organization
+                      - id: 62
+                        code: project:edit
+                        entities: []
+                        description: Grant the access to edit projects
+        "403":
+          description: "The authenticated user cannot perform the operation because,\
+            \ it doesn't have permissions for such operation."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Not enough permissions to perform the operation
+                    code: Unauthorized
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        "422":
+          description: All the custom errors that are generated from the Cycloid API
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: some error
+                    code: SomeCode
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+      x-codegen-request-body-name: body
+    delete:
+      tags:
+        - Organization members
+      description: Remove a member of the organization.
+      operationId: removeOrgMember
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+        - name: member_id
+          in: path
+          description: A member id
+          required: true
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        "204":
+          description: Member has been removed.
+          content: {}
+        "403":
+          description: "The authenticated user cannot perform the operation because,\
+            \ it doesn't have permissions for such operation."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Not enough permissions to perform the operation
+                    code: Unauthorized
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+  /organizations/{organization_canonical}/members/{member_id}/resend:
+    put:
+      tags:
+        - Organization members
+      description: Resend the email containing the verification token to accept the
+        member Invitation.
+      operationId: resendMemberInvitation
+      parameters:
+        - name: organization_canonical
+          in: path
+          description: A canonical of an organization.
+          required: true
+          schema:
+            maxLength: 100
+            minLength: 3
+            pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+            type: string
+        - name: member_id
+          in: path
+          description: A member id
+          required: true
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        "204":
+          description: The member Invitation has been resent.
+          content: {}
+        "403":
+          description: "The authenticated user cannot perform the operation because,\
+            \ it doesn't have permissions for such operation."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Not enough permissions to perform the operation
+                    code: Unauthorized
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+      security: []
+  /members/verify/{verification_token}:
+    get:
+      tags:
+        - Organization members
+      description: Get the email address used for the pending member invitation
+      operationId: getPendingMemberInvitation
+      parameters:
+        - name: verification_token
+          in: path
+          description: "A token for verifying emails, invitations, etc."
+          required: true
+          schema:
+            minLength: 5
+            type: string
+      responses:
+        "200":
+          description: The email address used for the pending member invitation
+          content:
+            '*/*':
+              schema:
+                required:
+                  - data
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PendingMemberInvitation'
+            application/json:
+              example:
+                data:
+                  email: user@user.com
+        "404":
+          description: The response sent when any of the entities present in the path
+            is not found.
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Entity not found
+                    code: NotFoundEntity
+        default:
+          description: "The response sent when an unexpected error happened, as known\
+            \ as an internal server error."
+          headers:
+            Content-Length:
+              description: The length of the response body in octets (8-bit bytes).
+              schema:
+                type: integer
+                format: uint64
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+            application/json:
+              example:
+                errors:
+                  - message: Server Internal error
+                    code: Unexpected
+      security: []
 components:
   schemas:
+    PendingMemberInvitation:
+      title: PendingMemberInvitation
+      description: Contains the email used for the member invitation
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
     TerraformProviderCycloid:
       title: TerraformProviderCycloid
       required:
@@ -39266,7 +39112,18 @@ components:
       description: The canonical of the service you want to get the status from
       required: true
       schema:
-        $ref: '#/components/schemas/Canonical'
+        maxLength: 100
+        minLength: 3
+        pattern: "^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"
+        type: string
+    member_id:
+      name: member_id
+      description: A member id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: uint32
   securitySchemes:
     api_key:
       type: apiKey
