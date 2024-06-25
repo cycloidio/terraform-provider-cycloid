@@ -197,6 +197,7 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 	data.Canonical = types.StringPointerValue(cr.Canonical)
 	data.Owner = types.StringPointerValue(cr.Owner.Username)
 	data.OrganizationCanonical = types.StringValue(org)
+	data.CredentialCanonical = types.StringValue(cr.CredentialCanonical)
 
 	return diags
 }
