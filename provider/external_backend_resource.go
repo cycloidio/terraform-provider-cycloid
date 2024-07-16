@@ -271,12 +271,25 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	ebID := data.ExternalBackendId.ValueInt64()
+
+	// If there's no ebID, try to get it from the prior state
+	if ebID == 0 {
+		var plandata externalBackendResourceModel
+		// Read Terraform prior state data into the model
+		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		ebID = plandata.ExternalBackendId.ValueInt64()
+	}
+
 	var (
 		eb  *models.ExternalBackend
 		err error
 	)
 
-	eb, err = mid.GetExternalBackend(orgCan, uint32(data.ExternalBackendId.ValueInt64()))
+	eb, err = mid.GetExternalBackend(orgCan, uint32(ebID))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read external backend",

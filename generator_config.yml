@@ -89,3 +89,19 @@ resources:
         - page_index
         - page_size
         - data
+  organization_member:
+    create:
+      path: /organizations/{organization_canonical}/members
+      method: POST
+    read:
+      path: /organizations/{organization_canonical}/members/{member_id}
+      method: GET
+    update:
+      path: /organizations/{organization_canonical}/members/{member_id}
+      method: PUT
+    delete:
+      path: /organizations/{organization_canonical}/members/{member_id}
+      method: DELETE
+    schema:
+      ignores:
+        - data

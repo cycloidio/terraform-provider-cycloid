@@ -52,5 +52,6 @@ func (p *cycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewCatalogRepositoryResource,
 		NewConfigRepositoryResource,
 		NewExternalBackendResource,
+		NewOrganizationMemberResource,
 	}
 }
