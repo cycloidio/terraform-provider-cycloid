@@ -191,11 +191,14 @@ func (r *catalogRepositoryResource) Delete(ctx context.Context, req resource.Del
 func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource, data *catalogRepositoryResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	if cr.Owner != nil {
+		data.Owner = types.StringPointerValue(cr.Owner.Username)
+	}
+
 	data.Name = types.StringPointerValue(cr.Name)
 	data.Url = types.StringPointerValue(cr.URL)
 	data.Branch = types.StringValue(cr.Branch)
 	data.Canonical = types.StringPointerValue(cr.Canonical)
-	data.Owner = types.StringPointerValue(cr.Owner.Username)
 	data.OrganizationCanonical = types.StringValue(org)
 	data.CredentialCanonical = types.StringValue(cr.CredentialCanonical)
 

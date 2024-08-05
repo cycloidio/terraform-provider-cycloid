@@ -210,15 +210,18 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		)
 		return
 	}
-
 }
 
 // credentialCYModelToData converts the 'cred' into the 'credentialResourceModel'
 func credentialCYModelToData(ctx context.Context, org string, cred *models.Credential, data *credentialResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	if cred.Owner != nil {
+		data.Owner = types.StringPointerValue(cred.Owner.Username)
+	}
+
 	data.Name = types.StringPointerValue(cred.Name)
 	data.Description = types.StringValue(cred.Description)
-	data.Owner = types.StringPointerValue(cred.Owner.Username)
 	data.Canonical = types.StringPointerValue(cred.Canonical)
 	data.OrganizationCanonical = types.StringValue(org)
 	data.Body.AccessKey = types.StringValue(cred.Raw.AccessKey)
