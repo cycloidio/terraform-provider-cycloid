@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
@@ -61,14 +63,16 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	name := data.Name.ValueString()
 	ct := data.Type.ValueString()
-	// TODO: https://github.com/cycloidio/terraform-provider-cycloid/issues/3
-	if ct == "custom" {
+
+	err := validateCredential(data)
+	if err != nil {
 		resp.Diagnostics.AddError(
-			"'custom' type is not yet supported on credentials, for more information check https://github.com/cycloidio/terraform-provider-cycloid/issues/3",
-			fmt.Errorf("attribute 'type=\"custom\"' is not supported").Error(),
+			"Unable to create credential",
+			err.Error(),
 		)
 		return
 	}
+
 	rawCred, diags := dataRawToCredentialRawCYModel(ctx, data)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -84,7 +88,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	cred, err := mid.CreateCredential(orgCan, name, ct, rawCred, path, can, des)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable create credential",
+			"Unable to create credential",
 			err.Error(),
 		)
 		return
@@ -117,7 +121,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	cred, err := mid.GetCredential(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable read credential",
+			"Unable to read credential",
 			err.Error(),
 		)
 		return
@@ -138,6 +142,14 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	err := validateCredential(data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to update credential",
+			err.Error(),
+		)
+		return
+	}
 	// Update API call logic
 	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
 	mid := middleware.NewMiddleware(api)
@@ -172,7 +184,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	cred, err := mid.UpdateCredential(orgCan, name, ct, rawCred, path, can, des)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable create credential",
+			"Unable to update credential",
 			err.Error(),
 		)
 		return
@@ -205,7 +217,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	err := mid.DeleteCredential(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable delete credential",
+			"Unable to delete credential",
 			err.Error(),
 		)
 		return
@@ -266,6 +278,17 @@ func credentialCYModelToData(ctx context.Context, org string, cred *models.Crede
 	data.Body.Username = types.StringValue(cred.Raw.Username)
 
 	return diags
+}
+
+func validateCredential(data credentialResourceModel) error {
+	if strings.HasPrefix(data.Body.SshKey.ValueString(), "\n") || strings.HasSuffix(data.Body.SshKey.ValueString(), "\n") {
+		return fmt.Errorf("Expected 'body.ssh_key' to not have \\n at the beginning or end of it, use 'chomp()' Terraform function to fix this")
+	}
+	// TODO: https://github.com/cycloidio/terraform-provider-cycloid/issues/3
+	if data.Type.ValueString() == "custom" {
+		return fmt.Errorf("attribute 'type=\"custom\"' is not yet supported on credentials, for more information check https://github.com/cycloidio/terraform-provider-cycloid/issues/3")
+	}
+	return nil
 }
 
 func dataRawToCredentialRawCYModel(ctx context.Context, data credentialResourceModel) (*models.CredentialRaw, diag.Diagnostics) {
