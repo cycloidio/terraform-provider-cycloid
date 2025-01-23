@@ -42,7 +42,9 @@ func (p *cycloidProvider) Metadata(ctx context.Context, req provider.MetadataReq
 }
 
 func (p *cycloidProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewStacksDataSource,
+	}
 }
 
 func (p *cycloidProvider) Resources(ctx context.Context) []func() resource.Resource {
