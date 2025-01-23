@@ -2,3 +2,9 @@
 main.tf
 variables.tf
 *.env
+.devenv/
+.direnv/
+.ci
+playground.just
+terraform-provider-cycloid
+source-openapi.yaml
