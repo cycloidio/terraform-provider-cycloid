@@ -72,11 +72,13 @@ run_test:
 
 You can override a step by putting a \${step_name}.sh script in the folder of your test, in that case, the script will be sourced in place of the default behavior.
 
-You can also override the `run_test` order by overriding the command by making a `run_test.sh` script in your test folder.
+You can also override the `run_test` order eiter by:
+- adding a file named `step` in your folder that contains your step order, one per line
+- overriding the command by making a `run_test.sh` script in your test folder.
 
-The scripts must be executable to be used as override. It will have access to the same context as the _override_step function in this script.
+It will have access to the same context as the _override_step function in this script.
 
-If a vars.tfvars is set on the current repo, it will be added as a -var-file arg to the default steps.
+If a vars.tfvars is set on the test folder, it will be added as a -var-file arg to the default steps.
 
 By default, you test will have a cycloid child org create with from the folder name without the leading `test_` and `_` will be replaced to `-`.
   > Exemple: from a `test_resource_stack_visibiltiy` folder name, you will have an org named `resource-stack-visibility` org.

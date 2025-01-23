@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Wrapper to run a command a /bin/sh -c <cmd> using RunCmd
+// RunSh is a wrapper to run a shell commandBlock using /bin/sh -c commandBlock
 func RunSh(commandBlock string) (string, error) {
 	binSh, err := exec.LookPath("sh")
 	if err != nil {
@@ -27,8 +27,7 @@ func RunSh(commandBlock string) (string, error) {
 	return string(output), err
 }
 
-// Run a command and return stdout stderr and err
-// is env is nil, defaults top os.Environ()
+// RunCmdOutErr exec a cmd with args and return stdout stderr and err
 func RunCmdOutErr(cmd string, args ...string) (string, string, error) {
 	proc := exec.Command(cmd, args...)
 	proc.Env = os.Environ()
@@ -40,7 +39,7 @@ func RunCmdOutErr(cmd string, args ...string) (string, string, error) {
 	return pOut.String(), pErr.String(), err
 }
 
-// Lookup $ENV_VAR, is not set, return defaultValue
+// EnvDefault lookup envVar, if not set, return defaultValue
 func EnvDefault(envVar, defaultValue string) string {
 	value, ok := os.LookupEnv(envVar)
 	if !ok {
@@ -50,7 +49,7 @@ func EnvDefault(envVar, defaultValue string) string {
 	return value
 }
 
-// Converts os.Environ() env var list to map[string]string
+// EnvListToMap converts os.Environ() env var list to map[string]string
 func EnvListToMap(env []string) map[string]string {
 	var result = make(map[string]string)
 	for _, envVar := range env {
@@ -63,7 +62,7 @@ func EnvListToMap(env []string) map[string]string {
 	return result
 }
 
-// Convert env variables stored as map[string]string to []string with 'key=value' format.
+// EnvMapToList convert env variables stored as map[string]string to []string with 'key=value' format.
 func EnvMapToList(env map[string]string) []string {
 	result := []string{}
 	for k, v := range env {
@@ -73,7 +72,7 @@ func EnvMapToList(env map[string]string) []string {
 	return result
 }
 
-// Check if a git repo exists at <path>
+// RepoExists if a git repo exists at <path>
 func RepoExists(path string) bool {
 	repoDir, err := os.Stat(path)
 	if err != nil {
@@ -91,9 +90,7 @@ func RepoExists(path string) bool {
 	return true
 }
 
-// Fetch credential and return its value
-// Uses cy cli to use the user's credentials
-// It will use our production cycloid instance
+// GetCyCredential uses cy cli to get a credential using canonical and org
 func GetCyCredential(org, canonical string) (*models.Credential, error) {
 	cmdOut, cmdErr, err := RunCmdOutErr(
 		"cy", "--api-url", "https://http-api.cycloid.io", "--org", org, "credential", "get", "--output", "json",
@@ -113,7 +110,8 @@ func GetCyCredential(org, canonical string) (*models.Credential, error) {
 	return cred, nil
 }
 
-// load the .env at project root - will also try to load a .dev.env for local overrides
+// LoadProjectDotEnv will load a .env at project root
+// will also try to load a .dev.env for local overrides
 // errors only if it can't load the project .env
 func LoadProjectDotEnv() error {
 	err := godotenv.Load(".env")
@@ -135,7 +133,7 @@ func LoadProjectDotEnv() error {
 	return nil
 }
 
-// Curl status from backend and wait that database, pipelines and vault status are ok
+// WaitForBackend to be up using docker compose healthcheck
 func WaitForBackend(timeoutInSec int) error {
 	// Wait for backend up
 	for increment := range timeoutInSec {
@@ -160,6 +158,7 @@ func WaitForBackend(timeoutInSec int) error {
 	return errors.New("timeout while waiting for backend up\n")
 }
 
+// GetRepoRoot will try to find the repo's root
 func GetRepoRoot() (string, error) {
 	dirName, err := os.Getwd()
 	if err != nil {

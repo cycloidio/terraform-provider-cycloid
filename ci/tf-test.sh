@@ -19,7 +19,7 @@ DESCRIPTION:
 This script implement the way we run e2e tests for the terraform provider.
 Must be executed from repo'\''s root
 
-`run_test` will execute each test case with those steps in that order:
+`run_test` will execute each test case with those steps in that order by default:
 1 - setup
 2 - init
 3 - pre_plan_apply
@@ -34,18 +34,22 @@ Must be executed from repo'\''s root
 
 You can override a step by putting a \${step_name}.sh script in the folder of your test, in that case, the script will be sourced in place of the default behavior.
 
-You can also override the `run_test` order by overriding the command by making a `run_test.sh` script in your test folder.
+You can also override the `run_test` order by 2 means:
+- Putting a file named `step` with step names, one per line.
+- Overriding the `run_test` step by making a `run_test.sh` script in your test folder.
 
-The scripts must be executable to be used as override. It will have access to the same context as the _override_step function in this script.
+The scripts will have access to the same context (env vars, path, functions, etc...) as the _override_step function in this script.
 
 If a vars.tfvars is set on the current repo, it will be added as a -var-file arg to the default steps.
 
 By default, you test will have a cycloid child org create with from the folder name without the leading `test_` and `_` will be replaced to `-`.
   > Exemple: from a `test_resource_stack_visibiltiy` folder name, you will have an org named `resource-stack-visibility` org.
 
-/!\\ The org is created at the `setup` stage, so if you override this step, be careful.
+/!\\ The org is created at the `setup` stage, so if you override this step, you will have to do it youself.
 
 The API_KEY and org will be passed to terraform via the `TF_VAR_cycloid_api_key` and `TF_VAR_cycloid_org` variable.
+
+Look up the tests already there, it will give you example on how it works.
 '
 
 # those are default values used in steps

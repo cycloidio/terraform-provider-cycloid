@@ -36,7 +36,7 @@ func Cleanup(code int) {
 	os.Exit(code)
 }
 
-// Setup the tests and execute them
+// TestMain will setup the tests and execute them
 func TestMain(m *testing.M) {
 	repoRoot, err := utils.GetRepoRoot()
 	if err != nil {
@@ -100,7 +100,7 @@ func TestMain(m *testing.M) {
 	Cleanup(m.Run())
 }
 
-// Return the licence key
+// fetchLicenceKey will get the backend licence key using `cy`
 func fetchLicenceKey() (string, error) {
 	fmt.Println("Fetching API licence key for tests using the CLI.")
 	// Get the licence and propagate it
