@@ -1,107 +1,121 @@
+---
 provider:
-  name: cycloid
-  schema_ref: '#/components/schemas/TerraformProviderCycloid'
+  name: "cycloid"
+  schema_ref: "#/components/schemas/TerraformProviderCycloid"
 
 resources:
   organization:
     create:
-      path: /organizations
-      method: POST
+      path: "/organizations"
+      method: "POST"
     read:
-      path: /organizations/{organization_canonical}
-      method: GET
+      path: "/organizations/{organization_canonical}"
+      method: "GET"
     update:
-      path: /organizations/{organization_canonical}
-      method: PUT
+      path: "/organizations/{organization_canonical}"
+      method: "PUT"
     delete:
-      path: /organizations/{organization_canonical}
-      method: DELETE
+      path: "/organizations/{organization_canonical}"
+      method: "DELETE"
   credential:
     create:
-      path: /organizations/{organization_canonical}/credentials
-      method: POST
+      path: "/organizations/{organization_canonical}/credentials"
+      method: "POST"
     read:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
-      method: GET
+      path: "/organizations/{organization_canonical}/credentials/{credential_canonical}"
+      method: "GET"
     update:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
-      method: PUT
+      path: "/organizations/{organization_canonical}/credentials/{credential_canonical}"
+      method: "PUT"
     delete:
-      path: /organizations/{organization_canonical}/credentials/{credential_canonical}
-      method: DELETE
+      path: "/organizations/{organization_canonical}/credentials/{credential_canonical}"
+      method: "DELETE"
     schema:
       ignores:
-        - data
-        - credential_canonical
-  catalog_repository:
-    create:
-      path: /organizations/{organization_canonical}/service_catalog_sources
-      method: POST
-    read:
-      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
-      method: GET
-    update:
-      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
-      method: PUT
-    delete:
-      path: /organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}
-      method: DELETE
-    schema:
-      ignores:
-        - data
-        - service_catalog_source_canonical
-        - page_index
-        - page_size
+      - "data"
+      - "credential_canonical"
   config_repository:
     create:
-      path: /organizations/{organization_canonical}/config_repositories
-      method: POST
+      path: "/organizations/{organization_canonical}/config_repositories"
+      method: "POST"
     read:
-      path: /organizations/{organization_canonical}/config_repositories/{config_repository_canonical}
-      method: GET
+      path: "/organizations/{organization_canonical}/config_repositories/{config_repository_canonical}"
+      method: "GET"
     update:
-      path: /organizations/{organization_canonical}/config_repositories/{config_repository_canonical}
-      method: PUT
+      path: "/organizations/{organization_canonical}/config_repositories/{config_repository_canonical}"
+      method: "PUT"
     delete:
-      path: /organizations/{organization_canonical}/config_repositories/{config_repository_canonical}
-      method: DELETE
+      path: "/organizations/{organization_canonical}/config_repositories/{config_repository_canonical}"
+      method: "DELETE"
     schema:
       ignores:
-        - data
-        - config_repository_canonical
-        - page_index
-        - page_size
+      - "data"
+      - "config_repository_canonical"
+      - "page_index"
+      - "page_size"
   external_backend:
     create:
-      path: /organizations/{organization_canonical}/external_backends
-      method: POST
+      path: "/organizations/{organization_canonical}/external_backends"
+      method: "POST"
     read:
-      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
-      method: GET
+      path: "/organizations/{organization_canonical}/external_backends/{external_backend_id}"
+      method: "GET"
     update:
-      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
-      method: PUT
+      path: "/organizations/{organization_canonical}/external_backends/{external_backend_id}"
+      method: "PUT"
     delete:
-      path: /organizations/{organization_canonical}/external_backends/{external_backend_id}
-      method: DELETE
+      path: "/organizations/{organization_canonical}/external_backends/{external_backend_id}"
+      method: "DELETE"
     schema:
       ignores:
-        - page_index
-        - page_size
-        - data
+      - "page_index"
+      - "page_size"
+      - "data"
   organization_member:
     create:
-      path: /organizations/{organization_canonical}/members
-      method: POST
+      path: "/organizations/{organization_canonical}/members"
+      method: "POST"
     read:
-      path: /organizations/{organization_canonical}/members/{member_id}
-      method: GET
+      path: "/organizations/{organization_canonical}/members/{member_id}"
+      method: "GET"
     update:
-      path: /organizations/{organization_canonical}/members/{member_id}
-      method: PUT
+      path: "/organizations/{organization_canonical}/members/{member_id}"
+      method: "PUT"
     delete:
-      path: /organizations/{organization_canonical}/members/{member_id}
-      method: DELETE
+      path: "/organizations/{organization_canonical}/members/{member_id}"
+      method: "DELETE"
     schema:
       ignores:
-        - data
+      - "data"
+  stack:
+    create:
+      path: "/organizations/{organization_canonical}/service_catalogs/{service_catalog_ref}"
+      method: GET
+    read:
+      path: "/organizations/{organization_canonical}/service_catalogs/{service_catalog_ref}"
+      method: "GET"
+    update:
+      path: "/organizations/{organization_canonical}/service_catalogs/{service_catalog_ref}"
+      method: "PUT"
+    delete:
+      path: "/organizations/{organization_canonical}/service_catalogs/{service_catalog_ref}"
+      method: "DELETE"
+    schema:
+      ignores:
+      - pagination
+      - page_index
+      - page_size
+      - data.dependencies
+      - data.team.id
+      - data.team.owner
+      - data.team.created_at
+      - data.team.updated_at
+      - data.team.name
+      - data.id
+      - data.cloud_providers
+      - data.technologies
+      - data.readme
+      - data.keywords
+      - data.image
+      - data.updated_at
+      - data.created_at

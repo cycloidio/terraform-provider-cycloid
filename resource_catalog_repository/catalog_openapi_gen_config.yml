@@ -1,0 +1,48 @@
+---
+# This resource has been edited by had
+# This is the base config before edit for info
+provider:
+  name: "cycloid"
+  schema_ref: "#/components/schemas/TerraformProviderCycloid"
+
+# Resource has been hand edited, do not generate it anymore
+resources:
+  catalog_repository:
+    create:
+      path: "/organizations/{organization_canonical}/service_catalog_sources"
+      method: "POST"
+    read:
+      path: "/organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}"
+      method: "GET"
+    update:
+      path: "/organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}"
+      method: "PUT"
+    delete:
+      path: "/organizations/{organization_canonical}/service_catalog_sources/{service_catalog_source_canonical}"
+      method: "DELETE"
+    schema:
+      ignores:
+      # I removed as much as possible to reduce the code
+      - "data.created_at"
+      - "data.updated_at"
+      - "data.refreshed_at"
+      - "data.owner"
+      - "data.service_catalogs.id"
+      - "data.service_catalogs.image"
+      - "data.service_catalogs.import_status"
+      - "data.service_catalogs.service_catalog_source_canonical"
+      - "data.service_catalogs.created_at"
+      - "data.service_catalogs.updated_at"
+      - "data.service_catalogs.team.name"
+      - "data.service_catalogs.team.owner"
+      - "data.service_catalogs.team.created_at"
+      - "data.service_catalogs.team.updated_at"
+      - "data.service_catalogs.team.id"
+      - "data.service_catalogs.cloud_providers.created_at"
+      - "data.service_catalogs.cloud_providers.updated_at"
+      - "data.service_catalogs.cloud_providers.id"
+      - "data.id"
+      - "data.changes"
+      - "service_catalog_source_canonical"
+      - "page_index"
+      - "page_size"
