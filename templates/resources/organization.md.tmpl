@@ -1,0 +1,22 @@
+# {{ .Name }} ({{ .Type }})
+
+[Cycloid organizations](https://docs.cycloid.io/reference/organizations/) are highest entity level below the user in cycloid.
+
+Everything that you will create will be done within an organization: credentials, teams, projects, etc.
+A user can exist without one, but s/he will not be able to perform any actions if s/he is not part of at least one organization.
+
+**
+Warning: When creating a child organization, you will have to attach a subscription to it.
+Unfortunately, that process can't be made using the API.
+See [this documentation on how to manage it](https://docs.cycloid.io/reference/organizations/concepts/licencing#managed-service-provider-msp-context)
+**
+
+## Example Usage
+
+{{ if .HasExample }}
+## example usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown }}

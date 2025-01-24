@@ -1,0 +1,19 @@
+# {{ .Name }} ({{ .Type }})
+
+[Cycloid catalog repositories](https://docs.cycloid.io/reference/config-and-catalog-repository/) contains Cycloid stacks.
+
+You can manage them using terraform.
+
+A catalog repository requires git credentials (ssh_key or http token) to be able to fetch the catalog.
+
+You can manage the default visiblity and team maintainer of the stacks in a repository by using the `on_create_visibility` and `on_create_team` attributes.
+
+Be careful, don't try to delete a catalog repository that contains stacks used inside a Cycloid projet.
+
+## Example Usage
+
+{{ if .HasExample }}
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown }}

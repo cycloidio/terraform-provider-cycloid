@@ -1,0 +1,28 @@
+# {{ .Name }} ({{ .Type }})
+
+This resource is used to [invite members in your organization.](https://docs.cycloid.io/reference/organizations/concepts/permissions#roles).
+
+You can attach a role by the `role_canonical` attribute.
+
+Default roles canonical are:
+
+```
+default-project-creator
+default-project-manager
+organization-admin
+default-finops-viewer
+default-no-permissions
+default-finops-admin
+organization-member
+default-project-viewer
+```
+
+You can get a role canonical by going to the `Security -> Roles` page, the canonical will be the last part of the uri of the current page.
+
+{{ if .HasExample }}
+## example usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown }}
