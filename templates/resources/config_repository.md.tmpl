@@ -1,0 +1,13 @@
+# {{ .Name }} ({{ .Type }})
+
+[Cycloid config repositories](https://docs.cycloid.io/reference/config-and-catalog-repository/) will store the configurations updated in Cycloid.
+
+A catalog repository requires git credentials (ssh_key or http token) to be able to fetch the config repo.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown }}

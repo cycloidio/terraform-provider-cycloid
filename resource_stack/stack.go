@@ -16,6 +16,14 @@ import (
 
 func StackResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
+		Description: "The stack resource exists only to manage `visibility` and `team` parameters on a stack",
+		MarkdownDescription: `
+			The stack resource exists only to manage 'visibility' and 'team' parameters on a stack.
+
+			On creation/update this will change those settings on the remote stack.
+
+			On delete it will erase this resource on the state an keep the stack current state.
+		`,
 		Attributes: map[string]schema.Attribute{
 			"organization_canonical": schema.StringAttribute{
 				Required:            true,
