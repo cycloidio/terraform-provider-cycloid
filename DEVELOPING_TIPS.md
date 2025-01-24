@@ -1,7 +1,6 @@
 # Tips
 
 ## Dev tooling
-
 ### Requirements
 
 To make the dev environment work, you need those binaries installed on your machine.
@@ -124,6 +123,11 @@ tfplugingen-framework generate resources --input ./out_code_spec.json --output .
 ```
 
 To regenerate the documentation just use:
+
+> [!CAUTION]
+> Some attributes have been documented manually
+> those addition should be pushed in the schema
+> Check the diff if you re-generate the docs
 
 ```
 tfplugindocs generate ./...
