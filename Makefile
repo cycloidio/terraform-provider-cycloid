@@ -9,7 +9,7 @@ help: ## Show this help
 
 build: args=""
 build: ## build the provider
-	@go build -gcflags "all=-n -l" -trimpath
+	@go build -gcflags 'all=-l' -trimpath $(args)
 
 tf-generate: ## Will regenerate the new provider spec and models
 	@tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
@@ -47,5 +47,5 @@ destroy: install-provider ## Will run a destroy
 	@terraform destroy -auto-approve
 
 docs: ## Generates the provider docs
-	@tfplugindocs generate ./..
+	@tfplugindocs generate --examples-dir examples/ --provider-dir . --provider-name cycloid ./..
 
