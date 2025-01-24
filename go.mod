@@ -6,16 +6,19 @@ toolchain go1.23.0
 
 require (
 	github.com/cycloidio/cycloid-cli v1.0.98-0.20240715144812-df582231c38d
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/hashicorp/terraform-plugin-framework v1.11.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
 	github.com/hashicorp/terraform-plugin-go v0.23.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/joho/godotenv v1.5.1
+	github.com/pkg/errors v0.9.1
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
 	github.com/adrg/xdg v0.5.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
@@ -51,7 +54,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
