@@ -3,83 +3,7 @@
 [Cycloid credential](https://docs.cycloid.io/reference/credentials/) manager securly stores,
 accesses, and distributes secrets like API keys, cloud provider credentials, TLS certificates, SSH keys and more.
 
-There is a current limitation on Credential creation, you can't create a `custom` credential type.
-
-You can select the type of credential using the `type` field.
-
-The content of the credential should in a `body` object property with attributes that match the credential type.
-
-```tf
-# ssh
-body = {
-  # On ssh key, it is advised to comp() the key to avoid inconsistency in tf state
-  ssh_key = chomp(var.your_ssh_key)
-}
-
-# aws
-body = {
-  access_key = "aws_access_key"
-  secret_key = "aws_secret_key"
-}
-
-# gcp
-body = {
-  json_key = ""
-}
-
-# azure
-body = {
-  client_id = ""
-  client_secret = ""
-  subscription_id = ""
-  tenant_id = ""
-}
-
-# azure_storage
-body = {
-  account_name = ""
-  access_key = ""
-}
-
-# basic_auth
-body = {
-  username = ""
-  password = ""
-}
-
-# swift
-body = {
-  username = ""
-  password = ""
-  tenant_id = ""
-  domain_id = ""
-  auth_url = ""
-}
-
-# vmware
-body = {
-  username = ""
-  password = ""
-}
-
-# elasticsearch
-# depending on the fields you provide not all are required
-# see the three examples below
-body = {
-  ca_cert = ""
-}
-
-body {
-  username = ""
-  password = ""
-}
-
-body {
-  username = ""
-  password = ""
-  ca_cert  = ""
-}
-```
+There is a current limitation on Credential creation, you can't create a `raw` credential type.
 
 
 ## Example Usage
@@ -128,7 +52,7 @@ terraform {
 - `owner` (String) User canonical that owns this entity. If omitted then the person creating this
 entity will be assigned as owner. When a user is the owner of the entity he has
 all the permissions on it.
-In case of API keys, the owner of API key is assigned as an owner. If
+In case of API keys, the owner of API key is assigned as an owner. If 
 API key has no owner, then no owner is set for entity as well.
 
 <a id="nestedatt--body"></a>

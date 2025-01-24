@@ -1,4 +1,4 @@
-# cycloid_organization (Resource)
+# {{ .Name }} ({{ .Type }})
 
 [Cycloid organizations](https://docs.cycloid.io/reference/organizations/) are highest entity level below the user in cycloid.
 
@@ -13,24 +13,10 @@ See [this documentation on how to manage it](https://docs.cycloid.io/reference/o
 
 ## Example Usage
 
-```terraform
-resource "cycloid_organization" "tf_organization" {
-  name = "tforganization"
-  organization_canonical = var.cycloid_organization
-}
+{{ if .HasExample }}
+## example usage
 
-provider "cycloid" {
-  url                    = var.cycloid_api_url
-  jwt                    = var.cycloid_api_key
-  organization_canonical = var.cycloid_organization
-}
+{{ tffile .ExampleFile }}
+{{ end }}
 
-terraform {
-  required_providers {
-    cycloid = {
-      source = "cycloidio/cycloid"
-    }
-  }
-}
-```
-
+{{ .SchemaMarkdown }}

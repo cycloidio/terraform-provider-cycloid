@@ -6,7 +6,9 @@ You can manage them using terraform.
 
 A catalog repository requires git credentials (ssh_key or http token) to be able to fetch the catalog.
 
-You can manage the default visiblity and team maintainer of the stacks in a repository by using the `on_create_visibility` and `on_create_team` attributes. Those settings are only applied on the catalog creation. To manage the visibility of a stack already imported, use the `resource_stack`.
+You can manage the default visiblity and team maintainer of the stacks in a repository by using the `on_create_visibility` and `on_create_team` attributes.
+
+Be careful, don't try to delete a catalog repository that contains stacks used inside a Cycloid projet.
 
 ## Example Usage
 
@@ -50,9 +52,9 @@ terraform {
 
 ### Required
 
-- `branch` (String)
-- `name` (String)
-- `url` (String)
+- `branch` (String) Branch needs to be valid git repository branch
+- `name` (String) The name of an entity
+- `url` (String) GitURL represents all git URL formats we accept.
 
 ### Optional
 

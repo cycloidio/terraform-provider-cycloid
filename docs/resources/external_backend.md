@@ -2,19 +2,6 @@
 
 [Cycloid external backend documentation](https://docs.cycloid.io/cookbook/getting-started/platform-teams/organizations/terraform-backend#set-up-a-terraform-backend).
 
-You can select the type of credential using the `type` field.
-
-The content of the credential should in a `body` block with attributes that match the credential type.
-
-```tf
-# ssh
-body {
-  # On ssh key, it is advised to comp() the key to avoid inconsistency in tf state
-  ssh_key = chomp(var.your_ssh_key)
-}
-
-
-```
 
 ## Example Usage
 
