@@ -267,63 +267,15 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 	var diags diag.Diagnostics
 
 	stackType := resource_catalog_repository.StacksValue{}.AttributeTypes(ctx)
-	teamType := map[string]attr.Type{"canonical": basetypes.StringType{}}
 
 	stackElements := make([]attr.Value, len(stacks))
 	for index, s := range stacks {
-		cloudProviderValues, errDiags := stackCloudProvidersToListValue(ctx, s.CloudProviders)
-		if errDiags.HasError() {
-			return basetypes.ListValue{}, errDiags
-		}
-
-		technologiesValues, errDiags := crStackTechnologiesToListValue(ctx, s.Technologies)
-		if errDiags.HasError() {
-			return basetypes.ListValue{}, errDiags
-		}
-
-		keywordsValues, errDiags := types.ListValueFrom(ctx, types.StringType, s.Keywords)
-		if errDiags.HasError() {
-			return basetypes.ListValue{}, errDiags
-		}
-
-		dependenciesValues, errDiags := crStackDependenciesToListValue(ctx, s.Dependencies)
-		if errDiags.HasError() {
-			return basetypes.ListValue{}, errDiags
-		}
-
-		teamCan := ""
-		if s.Team != nil {
-			teamCan = *s.Team.Canonical
-		}
-
-		teamValue, errDiags := types.ObjectValue(
-			teamType,
-			map[string]attr.Value{
-				"canonical": types.StringValue(teamCan),
-			},
-		)
-
+		var errDiags diag.Diagnostics
 		stackElements[index], errDiags = resource_catalog_repository.NewStacksValue(
 			stackType,
 			map[string]attr.Value{
-				"author":                 types.StringValue(*s.Author),
-				"blueprint":              types.BoolValue(s.Blueprint),
-				"canonical":              types.StringValue(*s.Canonical),
-				"cloud_providers":        cloudProviderValues,
-				"dependencies":           dependenciesValues,
-				"description":            types.StringValue(*s.Description),
-				"directory":              types.StringValue(*s.Directory),
-				"form_enabled":           types.BoolValue(*s.FormEnabled),
-				"keywords":               keywordsValues,
-				"name":                   types.StringValue(*s.Name),
-				"organization_canonical": types.StringValue(*s.OrganizationCanonical),
-				"quota_enabled":          types.BoolValue(*s.QuotaEnabled),
-				"readme":                 types.StringValue(s.Readme),
-				"ref":                    types.StringValue(*s.Ref),
-				"team":                   teamValue,
-				"trusted":                types.BoolValue(*s.Trusted),
-				"technologies":           technologiesValues,
-				"visibility":             types.StringValue(*s.Visibility),
+				"canonical": types.StringValue(*s.Canonical),
+				"ref":       types.StringValue(*s.Ref),
 			},
 		)
 		diags.Append(errDiags...)
@@ -335,85 +287,4 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 	return types.ListValueFrom(ctx, resource_catalog_repository.StacksType{basetypes.ObjectType{
 		AttrTypes: stackType,
 	}}, stackElements)
-}
-
-func crStackTechnologiesToListValue(ctx context.Context, techs []*models.ServiceCatalogTechnology) (basetypes.ListValue, diag.Diagnostics) {
-	techType := resource_catalog_repository.TechnologiesValue{}.AttributeTypes(ctx)
-	stackTechnologies := make([]attr.Value, len(techs))
-	for index, tech := range techs {
-		tech, diag := types.ObjectValue(
-			techType,
-			map[string]attr.Value{
-				"technology": types.StringValue(tech.Technology),
-				"version":    types.StringValue(tech.Version),
-			},
-		)
-		if diag.HasError() {
-			return basetypes.ListValue{}, diag
-		}
-
-		stackTechnologies[index] = tech
-	}
-
-	return types.ListValueFrom(ctx, resource_catalog_repository.TechnologiesType{basetypes.ObjectType{
-		AttrTypes: techType,
-	}}, stackTechnologies)
-}
-
-func crStackDependenciesToListValue(ctx context.Context, dependencies []*models.ServiceCatalogDependency) (basetypes.ListValue, diag.Diagnostics) {
-	dependencyType := resource_catalog_repository.DependenciesValue{}.AttributeTypes(ctx)
-	stackDependencies := make([]attr.Value, len(dependencies))
-	for index, dependency := range dependencies {
-		tech, diag := types.ObjectValue(
-			dependencyType,
-			map[string]attr.Value{
-				"ref":      types.StringValue(dependency.Ref),
-				"required": types.BoolValue(dependency.Required),
-			},
-		)
-		if diag.HasError() {
-			return basetypes.ListValue{}, diag
-		}
-
-		stackDependencies[index] = tech
-	}
-
-	return types.ListValueFrom(ctx, resource_catalog_repository.DependenciesType{basetypes.ObjectType{
-		AttrTypes: dependencyType,
-	}}, stackDependencies)
-}
-
-func stackCloudProvidersToListValue(ctx context.Context, cloudProviders []*models.CloudProvider) (basetypes.ListValue, diag.Diagnostics) {
-	cloudProviderType := resource_catalog_repository.CloudProvidersValue{}.AttributeTypes(ctx)
-	stackCloudProviders := make([]attr.Value, len(cloudProviders))
-	for index, cloudProvider := range cloudProviders {
-		regions, diag := types.ListValueFrom(ctx, types.StringType, cloudProvider.Regions)
-		if diag.HasError() {
-			return basetypes.ListValue{}, diag
-		}
-
-		tech, diag := types.ObjectValue(
-			cloudProviderType,
-			map[string]attr.Value{
-				"abbreviation": types.StringValue(cloudProvider.Abbreviation),
-				"canonical":    types.StringValue(*cloudProvider.Canonical),
-				"name":         types.StringValue(*cloudProvider.Name),
-				"regions":      regions,
-			},
-		)
-		if diag.HasError() {
-			return basetypes.ListValue{}, diag
-		}
-
-		stackCloudProviders[index] = tech
-	}
-
-	return types.ListValueFrom(
-		ctx,
-		resource_catalog_repository.CloudProvidersType{
-			basetypes.ObjectType{
-				AttrTypes: cloudProviderType,
-			},
-		},
-		stackCloudProviders)
 }
