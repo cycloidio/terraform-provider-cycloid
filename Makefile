@@ -12,12 +12,12 @@ build: ## build the provider
 	@go build -gcflags 'all=-l' -trimpath $(args)
 
 tf-generate: ## Will regenerate the new provider spec and models
-	@tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
+	tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
 	# Catalogs repoository generation is specific
-	@./datasource_stacks/gen.sh
-	@./resource_catalog_repository/gen.sh
-	@tfplugingen-framework generate resources --input ./out_code_spec.json --output .
-	@tfplugingen-framework generate data-sources --input ./out_code_spec.json --output .
+	./datasource_stacks/gen.sh
+	./resource_catalog_repository/gen.sh
+	tfplugingen-framework generate resources --input ./out_code_spec.json --output .
+	tfplugingen-framework generate data-sources --input ./out_code_spec.json --output .
 
 new-resource: ## Generates boilplate code for new resource R
 	@tfplugingen-framework scaffold resource --name $(R) --output-dir ./provider
