@@ -1,12 +1,10 @@
 #! /usr/bin/env sh
 
 # use from repo root !
-test -f "./ci/lib.sh" || {
+test -f ".git" || {
   echo >&2 "error: must be executed from repo root"
   exit 1
 }
-
-. ci/lib.sh
 
 gen_config_path="datasource_stacks/openapi_gen_config.yml"
 spec_path="datasource_stacks/spec.json"
