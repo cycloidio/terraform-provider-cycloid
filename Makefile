@@ -11,7 +11,10 @@ build: args=""
 build: ## build the provider
 	@go build -gcflags 'all=-l' -trimpath $(args)
 
-tf-generate: ## Will regenerate the new provider spec and models
+convert-swagger:
+	go run ./swagger_converter exec
+
+tf-generate: ## Will regenerate the new provider spec and models, need a convert-swagger before.
 	tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
 	# Catalogs repoository generation is specific
 	./datasource_stacks/gen.sh
