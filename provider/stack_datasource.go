@@ -133,6 +133,9 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 				"canonical": types.StringValue(teamCan),
 			},
 		)
+		if errDiags != nil {
+			return basetypes.ListValue{}, errDiags
+		}
 
 		stackElements[index], errDiags = datasource_stacks.NewStacksValue(
 			stackType,
