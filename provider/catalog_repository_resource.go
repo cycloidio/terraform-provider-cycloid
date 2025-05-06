@@ -229,7 +229,7 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 	data.OrganizationCanonical = types.StringValue(org)
 	data.CredentialCanonical = types.StringValue(cr.CredentialCanonical)
 	if cr.Owner != nil {
-		data.Owner = types.StringValue(*cr.Owner.FamilyName)
+		data.Owner = types.StringValue(*cr.Owner.Username)
 	}
 
 	stacksValue, diagErr := crStacksToListValue(ctx, cr.ServiceCatalogs)

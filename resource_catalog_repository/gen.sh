@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 # use from repo root !
-test -f ".git" || {
+test -d ".git" || {
   echo >&2 "error: must be executed from repo root"
   exit 1
 }

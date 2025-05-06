@@ -28,6 +28,7 @@ func TestCyModelToData(t *testing.T) {
 				Canonical:           p("stack-canonical"),
 				CredentialCanonical: "cred-canonical",
 				ServiceCatalogs: []*models.ServiceCatalog{{
+					Ref:       p("ref"),
 					Canonical: p("stack-canonical"),
 				}},
 				Owner: &models.User{
@@ -47,7 +48,9 @@ func TestCyModelToData(t *testing.T) {
 				OrganizationCanonical: types.StringValue(""),
 				Owner:                 types.StringValue(""),
 				Url:                   types.StringValue(""),
-				Stacks:                types.ListNull(types.ObjectType{}),
+				Data: resource_catalog_repository.DataValue{
+					Stacks: types.ListNull(types.ObjectType{}),
+				},
 			},
 		},
 	}
@@ -60,14 +63,14 @@ func TestCyModelToData(t *testing.T) {
 
 		assert.Equal(t, testCase.Model.Branch, testCase.Data.Branch.ValueString(), "branch must be equal")
 
-		if testCase.Data.Stacks.IsNull() || testCase.Data.Stacks.IsUnknown() {
-			t.Log("data is nill or unknown")
+		if testCase.Data.Data.Stacks.IsNull() || testCase.Data.Data.Stacks.IsUnknown() {
+			t.Log("stack data is nill or unknown")
 			litter.Dump(testCase.Data)
 			t.FailNow()
 		}
 
-		var stackElements []resource_catalog_repository.Stack
-		diags = testCase.Data.Stacks.ElementsAs(
+		var stackElements []resource_catalog_repository.StacksValue
+		diags = testCase.Data.Data.Stacks.ElementsAs(
 			context.Background(),
 			&stackElements,
 			false,
