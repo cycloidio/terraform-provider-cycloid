@@ -59,10 +59,10 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	m := middleware.NewMiddleware(api)
 
 	name := data.Name.ValueString()
-	ct := data.Type.ValueString()
+	credentialType := data.Type.ValueString()
 
 	err := validateCredential(data)
 	if err != nil {
@@ -80,12 +80,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	path := data.Path.ValueString()
-	can := data.Canonical.ValueString()
-	des := data.Description.ValueString()
+	canonical := data.Canonical.ValueString()
+	description := data.Description.ValueString()
+	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
-
-	cred, err := mid.CreateCredential(orgCan, name, ct, rawCred, path, can, des)
+	cred, err := m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create credential",
@@ -94,7 +93,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, orgCan, cred, &data)
+	credentialCYModelToData(ctx, organization, cred, &data)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -102,7 +101,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data credentialResourceModel
-
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -111,14 +109,16 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api := common.NewAPI(
+		common.WithURL(r.provider.Url.ValueString()),
+		common.WithToken(r.provider.Jwt.ValueString()),
+	)
 	mid := middleware.NewMiddleware(api)
 
-	can := data.Canonical.ValueString()
+	canonical := data.Canonical.ValueString()
+	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
-
-	cred, err := mid.GetCredential(orgCan, can)
+	credential, err := mid.GetCredential(organization, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to read credential",
@@ -127,7 +127,12 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	credentialCYModelToData(ctx, orgCan, cred, &data)
+	data.Name = types.StringPointerValue(credential.Name)
+	data.Path = types.StringPointerValue(credential.Path)
+	data.Type = types.StringPointerValue(credential.Type)
+	data.Description = types.StringValue(credential.Description)
+
+	credentialCYModelToData(ctx, organization, credential, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -150,12 +155,16 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		)
 		return
 	}
+
 	// Update API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	api := common.NewAPI(
+		common.WithURL(r.provider.Url.ValueString()),
+		common.WithToken(r.provider.Jwt.ValueString()),
+	)
+	m := middleware.NewMiddleware(api)
 
 	name := data.Name.ValueString()
-	ct := data.Type.ValueString()
+	credentialType := data.Type.ValueString()
 	rawCred, diags := dataRawToCredentialRawCYModel(ctx, data)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -163,25 +172,25 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	path := data.Path.ValueString()
-	can := data.Canonical.ValueString()
-	des := data.Description.ValueString()
+	canonical := data.Canonical.ValueString()
+	description := data.Description.ValueString()
 
 	// As the canonical is not required to be set we read it from the
 	// state as we set it on creation and we need it to update the
 	// credential to the API
-	if can == "" {
+	if canonical == "" {
 		var plandata credentialResourceModel
 		// Read Terraform prior state data into the model
 		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		can = plandata.Canonical.ValueString()
+		canonical = plandata.Canonical.ValueString()
 	}
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	cred, err := mid.UpdateCredential(orgCan, name, ct, rawCred, path, can, des)
+	cred, err := m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to update credential",
@@ -190,7 +199,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, orgCan, cred, &data)
+	credentialCYModelToData(ctx, organization, cred, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -206,15 +215,17 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	can := data.Canonical.ValueString()
-
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	canonical := data.Canonical.ValueString()
+	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	api := common.NewAPI(
+		common.WithURL(r.provider.Url.ValueString()),
+		common.WithToken(r.provider.Jwt.ValueString()),
+	)
+	m := middleware.NewMiddleware(api)
 
-	err := mid.DeleteCredential(orgCan, can)
+	err := m.DeleteCredential(organization, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete credential",
