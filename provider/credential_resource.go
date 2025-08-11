@@ -225,57 +225,45 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 // credentialCYModelToData converts the 'cred' into the 'credentialResourceModel'
-func credentialCYModelToData(ctx context.Context, org string, cred *models.Credential, data *credentialResourceModel) diag.Diagnostics {
+func credentialCYModelToData(ctx context.Context, org string, credential *models.Credential, data *credentialResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	if cred.Owner != nil {
-		data.Owner = types.StringPointerValue(cred.Owner.Username)
+	if credential.Owner != nil {
+		data.Owner = types.StringPointerValue(credential.Owner.Username)
+	} else {
+		data.Owner = types.StringValue("")
 	}
 
-	data.Name = types.StringPointerValue(cred.Name)
-	data.Description = types.StringValue(cred.Description)
-	data.Canonical = types.StringPointerValue(cred.Canonical)
+	data.Name = types.StringPointerValue(credential.Name)
+	data.Description = types.StringValue(credential.Description)
+	data.Canonical = types.StringPointerValue(credential.Canonical)
+	data.Type = types.StringPointerValue(credential.Type)
 	data.OrganizationCanonical = types.StringValue(org)
-	data.Body.AccessKey = types.StringValue(cred.Raw.AccessKey)
-	data.Body.SecretKey = types.StringValue(cred.Raw.SecretKey)
-	data.Body.AccountName = types.StringValue(cred.Raw.AccountName)
-	data.Body.AuthUrl = types.StringValue(cred.Raw.AuthURL)
-	data.Body.CaCert = types.StringValue(cred.Raw.CaCert)
-	data.Body.ClientId = types.StringValue(cred.Raw.ClientID)
-	data.Body.ClientSecret = types.StringValue(cred.Raw.ClientSecret)
-	data.Body.DomainId = types.StringValue(cred.Raw.DomainID)
-	data.Body.JsonKey = types.StringValue(cred.Raw.JSONKey)
-	data.Body.Password = types.StringValue(cred.Raw.Password)
-	var ov types.Object
-	// TODO: https://github.com/cycloidio/terraform-provider-cycloid/issues/3
-	//if cred.Raw.Raw != nil {
-	//at := make(map[string]attr.Type)
-	//av := make(map[string]attr.Value)
-	//for k, v := range cred.Raw.Raw.(map[string]interface{}) {
-	//switch v.(type) {
-	//case string:
-	//at[k] = types.StringType
-	//av[k] = types.StringValue(v.(string))
-	//case int64:
-	//at[k] = types.Int64Type
-	//av[k] = types.Int64Value(v.(int64))
-	//case bool:
-	//at[k] = types.BoolType
-	//av[k] = types.BoolValue(v.(bool))
-	//case float64:
-	//at[k] = types.Float64Type
-	//av[k] = types.Float64Value(v.(float64))
-	//}
-	//}
-	//ov, diags = types.ObjectValue(at, av)
-	//} else {
-	//ov, diags = resource_credential.NewRawValueNull().ToObjectValue(ctx)
-	//}
-	data.Body.Raw = ov
-	data.Body.SshKey = types.StringValue(cred.Raw.SSHKey)
-	data.Body.SubscriptionId = types.StringValue(cred.Raw.SubscriptionID)
-	data.Body.TenantId = types.StringValue(cred.Raw.TenantID)
-	data.Body.Username = types.StringValue(cred.Raw.Username)
+	data.Body.AccessKey = types.StringValue(credential.Raw.AccessKey)
+	data.Body.SecretKey = types.StringValue(credential.Raw.SecretKey)
+	data.Body.AccountName = types.StringValue(credential.Raw.AccountName)
+	data.Body.AuthUrl = types.StringValue(credential.Raw.AuthURL)
+	data.Body.CaCert = types.StringValue(credential.Raw.CaCert)
+	data.Body.ClientId = types.StringValue(credential.Raw.ClientID)
+	data.Body.ClientSecret = types.StringValue(credential.Raw.ClientSecret)
+	data.Body.DomainId = types.StringValue(credential.Raw.DomainID)
+	data.Body.JsonKey = types.StringValue(credential.Raw.JSONKey)
+	data.Body.Password = types.StringValue(credential.Raw.Password)
+	data.Body.Environment = types.StringValue(credential.Raw.Environment)
+	data.Body.SshKey = types.StringValue(credential.Raw.SSHKey)
+	data.Body.SubscriptionId = types.StringValue(credential.Raw.SubscriptionID)
+	data.Body.TenantId = types.StringValue(credential.Raw.TenantID)
+	data.Body.Username = types.StringValue(credential.Raw.Username)
+	if data.Type.ValueString() == "custom" {
+		var rawDiags diag.Diagnostics
+		data.Body.Raw, rawDiags = types.MapValueFrom(ctx, data.Body.Raw.ElementType(ctx), credential.Raw.Raw)
+		if rawDiags.HasError() {
+			diags.Append(rawDiags...)
+			return diags
+		}
+	} else {
+		data.Body.Raw = types.MapNull(data.Body.Raw.ElementType(ctx))
+	}
 
 	return diags
 }
@@ -284,17 +272,11 @@ func validateCredential(data credentialResourceModel) error {
 	if strings.HasPrefix(data.Body.SshKey.ValueString(), "\n") || strings.HasSuffix(data.Body.SshKey.ValueString(), "\n") {
 		return fmt.Errorf("Expected 'body.ssh_key' to not have \\n at the beginning or end of it, use 'chomp()' Terraform function to fix this")
 	}
-	// TODO: https://github.com/cycloidio/terraform-provider-cycloid/issues/3
-	if data.Type.ValueString() == "custom" {
-		return fmt.Errorf("attribute 'type=\"custom\"' is not yet supported on credentials, for more information check https://github.com/cycloidio/terraform-provider-cycloid/issues/3")
-	}
+
 	return nil
 }
 
 func dataRawToCredentialRawCYModel(ctx context.Context, data credentialResourceModel) (*models.CredentialRaw, diag.Diagnostics) {
-	var (
-		raw map[string]interface{}
-	)
 	rawCred := &models.CredentialRaw{
 		AccessKey:      data.Body.AccessKey.ValueString(),
 		SecretKey:      data.Body.SecretKey.ValueString(),
@@ -306,11 +288,30 @@ func dataRawToCredentialRawCYModel(ctx context.Context, data credentialResourceM
 		DomainID:       data.Body.DomainId.ValueString(),
 		JSONKey:        data.Body.JsonKey.ValueString(),
 		Password:       data.Body.Password.ValueString(),
-		Raw:            raw,
 		SSHKey:         data.Body.SshKey.ValueString(),
 		SubscriptionID: data.Body.SubscriptionId.ValueString(),
 		TenantID:       data.Body.TenantId.ValueString(),
 		Username:       data.Body.Username.ValueString(),
+	}
+
+	if data.Type.ValueString() != "custom" || data.Body.Raw.IsNull() || data.Body.Raw.IsUnknown() {
+		rawCred.Raw = nil
+		return rawCred, nil
+	}
+
+	if data.Type.ValueString() == "custom" {
+		elements := make(map[string]types.String, len(data.Body.Raw.Elements()))
+		diags := data.Body.Raw.ElementsAs(ctx, &elements, false)
+		if diags.HasError() {
+			return rawCred, diags
+		}
+
+		customMapString := make(map[string]string, len(elements))
+		for k, v := range elements {
+			customMapString[k] = v.ValueString()
+		}
+
+		rawCred.Raw = customMapString
 	}
 
 	return rawCred, nil
