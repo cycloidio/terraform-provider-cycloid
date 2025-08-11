@@ -19,6 +19,11 @@ No environment is provided, so you will have to install them yourself.
 
 ## Code generation
 
+> [!CAUTION]
+> Do not recreate the `out_gen_spec.json` using the swagger spec !
+> Some attributes had to be changed directly in the `out_gen_spec.json` and to be fair,
+> New generated resource should use this spec instead of the OpenAPI generation.
+
 Docs: https://developer.hashicorp.com/terraform/plugin/code-generation/openapi-generator#generator-config
 
 We have 2 required files:
@@ -29,6 +34,10 @@ The `tfplugingen-openapi` has several issues, namely it doesn't support (issues 
 - Recursive attributes (we have one issue with the admin model that is a memberOf)
 - `$ref` or attributed merging
 
+Do not use it until further notice.
+
+<details>
+<summary>Some legacy stuff, we should not use it anymore.</summary>
 So a script has been made in go, contained in [the swagger_converter directory](./swagger_converter).
 Its main purpose is to fix the openapi spec to remove or merge problematic attributes.
 
@@ -42,17 +51,13 @@ from that we can generate the `out_code_spec.json` using `tfplugingen-openapi` (
 
 All the current exception handling is made in the Convert function in the `converter.go` file:
 
-<details>
-
-<summary>code</summary>
-
+Related code:
 https://github.com/cycloidio/terraform-provider-cycloid/blob/284bea0538cd047e940b9b49dbd922cef86afc56/swagger_converter/converter.go#L59-L169
-
 </details>
 
-You can append you changes here.
+Append directly your changes in the `out_code_spec.json` using the [spec from terraform](https://developer.hashicorp.com/terraform/plugin/code-generation/specification)
 
-Once the `out_code_spec.json` is generated, the `tfplugingen-framework` cli will generate the code.
+Once the `out_code_spec.json` is changed, the `tfplugingen-framework` cli will generate the code.
 
 > [!CAUTION]
 > The code generation is not very friendly, and the `tfplugingen-openapi` has a lot of bug
@@ -75,28 +80,6 @@ Once the `out_code_spec.json` is generated, the `tfplugingen-framework` cli will
 > Maintaining the openAPI of this repo up to date could be really painful, be careful when trying to update.
 
 ---
-<details>
-<summary>Known bugs</summary>
-
-**Credentials**
-
-Renamed `raw` to `body` on the main NewCredentials. I've commented the `body` from the `Credential` because it's causing issues as it's generating multiple types and it does not compile. We should investigate this.
-
-From the [docs](https://github.com/hashicorp/terraform-plugin-codegen-openapi/blob/main/DESIGN.md#resources) it should not be doing this
-
-> Arrays and Objects will have their child attributes merged, so example_object.string_field and example_object.bool_field will be merged into the same SingleNestedAttribute schema.
-
-
-**Organizations**
-
-On Organization the `admins` are `MemberOrg` which itself has a `invited_by` which is also `MemberOrg` so it's a buckle and it needs to be broken.
-
--> This is fixed by the [conversion script](./swagger_converter/converter.go) that will remove the recursive attribute.
-
---
-
-</details>
-
 
 From that using the `out_code_spec.json` we can us it to generate:
 
