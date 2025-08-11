@@ -51,6 +51,18 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 						Optional: true,
 						Computed: true,
 					},
+					"environment": schema.StringAttribute{
+						Optional: true,
+						Computed: true,
+						Validators: []validator.String{
+							stringvalidator.OneOf(
+								"public",
+								"usgovernment",
+								"china",
+								"german",
+							),
+						},
+					},
 					"json_key": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
@@ -59,15 +71,12 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 						Optional: true,
 						Computed: true,
 					},
-					"raw": schema.SingleNestedAttribute{
-						Attributes: map[string]schema.Attribute{},
-						CustomType: RawType{
-							ObjectType: types.ObjectType{
-								AttrTypes: RawValue{}.AttributeTypes(ctx),
-							},
-						},
-						Optional: true,
-						Computed: true,
+					"raw": schema.MapAttribute{
+						ElementType:         types.StringType,
+						Optional:            true,
+						Computed:            true,
+						Description:         "custom credential fields",
+						MarkdownDescription: "custom credential fields",
 					},
 					"secret_key": schema.StringAttribute{
 						Optional: true,
@@ -95,33 +104,26 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 						AttrTypes: BodyValue{}.AttributeTypes(ctx),
 					},
 				},
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				Sensitive:           true,
 				Description:         "All the possible fields inside it",
 				MarkdownDescription: "All the possible fields inside it",
 			},
 			"canonical": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
 				},
 			},
 			"description": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				Description:         "The description of an entity",
-				MarkdownDescription: "The description of an entity",
+				Optional: true,
+				Computed: true,
 			},
 			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "The name of an entity",
-				MarkdownDescription: "The name of an entity",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Required: true,
 			},
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,
@@ -136,12 +138,8 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 			"owner": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
-				MarkdownDescription: "User canonical that owns this entity. If omitted then the person creating this\nentity will be assigned as owner. When a user is the owner of the entity he has\nall the permissions on it.\nIn case of API keys, the owner of API key is assigned as an owner. If \nAPI key has no owner, then no owner is set for entity as well.\n",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
-				},
+				Description:         "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
+				MarkdownDescription: "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
 			},
 			"path": schema.StringAttribute{
 				Required: true,
@@ -332,6 +330,24 @@ func (t BodyType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue)
 			fmt.Sprintf(`domain_id expected to be basetypes.StringValue, was: %T`, domainIdAttribute))
 	}
 
+	environmentAttribute, ok := attributes["environment"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`environment is missing from object`)
+
+		return nil, diags
+	}
+
+	environmentVal, ok := environmentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`environment expected to be basetypes.StringValue, was: %T`, environmentAttribute))
+	}
+
 	jsonKeyAttribute, ok := attributes["json_key"]
 
 	if !ok {
@@ -378,12 +394,12 @@ func (t BodyType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue)
 		return nil, diags
 	}
 
-	rawVal, ok := rawAttribute.(basetypes.ObjectValue)
+	rawVal, ok := rawAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`raw expected to be basetypes.ObjectValue, was: %T`, rawAttribute))
+			fmt.Sprintf(`raw expected to be basetypes.MapValue, was: %T`, rawAttribute))
 	}
 
 	secretKeyAttribute, ok := attributes["secret_key"]
@@ -488,6 +504,7 @@ func (t BodyType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue)
 		ClientId:       clientIdVal,
 		ClientSecret:   clientSecretVal,
 		DomainId:       domainIdVal,
+		Environment:    environmentVal,
 		JsonKey:        jsonKeyVal,
 		Password:       passwordVal,
 		Raw:            rawVal,
@@ -689,6 +706,24 @@ func NewBodyValue(attributeTypes map[string]attr.Type, attributes map[string]att
 			fmt.Sprintf(`domain_id expected to be basetypes.StringValue, was: %T`, domainIdAttribute))
 	}
 
+	environmentAttribute, ok := attributes["environment"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`environment is missing from object`)
+
+		return NewBodyValueUnknown(), diags
+	}
+
+	environmentVal, ok := environmentAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`environment expected to be basetypes.StringValue, was: %T`, environmentAttribute))
+	}
+
 	jsonKeyAttribute, ok := attributes["json_key"]
 
 	if !ok {
@@ -735,12 +770,12 @@ func NewBodyValue(attributeTypes map[string]attr.Type, attributes map[string]att
 		return NewBodyValueUnknown(), diags
 	}
 
-	rawVal, ok := rawAttribute.(basetypes.ObjectValue)
+	rawVal, ok := rawAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`raw expected to be basetypes.ObjectValue, was: %T`, rawAttribute))
+			fmt.Sprintf(`raw expected to be basetypes.MapValue, was: %T`, rawAttribute))
 	}
 
 	secretKeyAttribute, ok := attributes["secret_key"]
@@ -845,6 +880,7 @@ func NewBodyValue(attributeTypes map[string]attr.Type, attributes map[string]att
 		ClientId:       clientIdVal,
 		ClientSecret:   clientSecretVal,
 		DomainId:       domainIdVal,
+		Environment:    environmentVal,
 		JsonKey:        jsonKeyVal,
 		Password:       passwordVal,
 		Raw:            rawVal,
@@ -932,9 +968,10 @@ type BodyValue struct {
 	ClientId       basetypes.StringValue `tfsdk:"client_id"`
 	ClientSecret   basetypes.StringValue `tfsdk:"client_secret"`
 	DomainId       basetypes.StringValue `tfsdk:"domain_id"`
+	Environment    basetypes.StringValue `tfsdk:"environment"`
 	JsonKey        basetypes.StringValue `tfsdk:"json_key"`
 	Password       basetypes.StringValue `tfsdk:"password"`
-	Raw            basetypes.ObjectValue `tfsdk:"raw"`
+	Raw            basetypes.MapValue    `tfsdk:"raw"`
 	SecretKey      basetypes.StringValue `tfsdk:"secret_key"`
 	SshKey         basetypes.StringValue `tfsdk:"ssh_key"`
 	SubscriptionId basetypes.StringValue `tfsdk:"subscription_id"`
@@ -944,7 +981,7 @@ type BodyValue struct {
 }
 
 func (v BodyValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 15)
+	attrTypes := make(map[string]tftypes.Type, 16)
 
 	var val tftypes.Value
 	var err error
@@ -956,10 +993,11 @@ func (v BodyValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) 
 	attrTypes["client_id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["client_secret"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["domain_id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["environment"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["json_key"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["password"] = basetypes.StringType{}.TerraformType(ctx)
-	attrTypes["raw"] = basetypes.ObjectType{
-		AttrTypes: RawValue{}.AttributeTypes(ctx),
+	attrTypes["raw"] = basetypes.MapType{
+		ElemType: types.StringType,
 	}.TerraformType(ctx)
 	attrTypes["secret_key"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["ssh_key"] = basetypes.StringType{}.TerraformType(ctx)
@@ -971,7 +1009,7 @@ func (v BodyValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) 
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 15)
+		vals := make(map[string]tftypes.Value, 16)
 
 		val, err = v.AccessKey.ToTerraformValue(ctx)
 
@@ -1028,6 +1066,14 @@ func (v BodyValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) 
 		}
 
 		vals["domain_id"] = val
+
+		val, err = v.Environment.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["environment"] = val
 
 		val, err = v.JsonKey.ToTerraformValue(ctx)
 
@@ -1122,29 +1168,20 @@ func (v BodyValue) String() string {
 func (v BodyValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var raw basetypes.ObjectValue
-
-	if v.Raw.IsNull() {
-		raw = types.ObjectNull(
-			RawValue{}.AttributeTypes(ctx),
-		)
+	var rawVal basetypes.MapValue
+	switch {
+	case v.Raw.IsUnknown():
+		rawVal = types.MapUnknown(types.StringType)
+	case v.Raw.IsNull():
+		rawVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		rawVal, d = types.MapValue(types.StringType, v.Raw.Elements())
+		diags.Append(d...)
 	}
 
-	if v.Raw.IsUnknown() {
-		raw = types.ObjectUnknown(
-			RawValue{}.AttributeTypes(ctx),
-		)
-	}
-
-	if !v.Raw.IsNull() && !v.Raw.IsUnknown() {
-		raw = types.ObjectValueMust(
-			RawValue{}.AttributeTypes(ctx),
-			v.Raw.Attributes(),
-		)
-	}
-
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
 			"access_key":    basetypes.StringType{},
 			"account_name":  basetypes.StringType{},
 			"auth_url":      basetypes.StringType{},
@@ -1152,17 +1189,51 @@ func (v BodyValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, di
 			"client_id":     basetypes.StringType{},
 			"client_secret": basetypes.StringType{},
 			"domain_id":     basetypes.StringType{},
+			"environment":   basetypes.StringType{},
 			"json_key":      basetypes.StringType{},
 			"password":      basetypes.StringType{},
-			"raw": basetypes.ObjectType{
-				AttrTypes: RawValue{}.AttributeTypes(ctx),
+			"raw": basetypes.MapType{
+				ElemType: types.StringType,
 			},
 			"secret_key":      basetypes.StringType{},
 			"ssh_key":         basetypes.StringType{},
 			"subscription_id": basetypes.StringType{},
 			"tenant_id":       basetypes.StringType{},
 			"username":        basetypes.StringType{},
+		}), diags
+	}
+
+	attributeTypes := map[string]attr.Type{
+		"access_key":    basetypes.StringType{},
+		"account_name":  basetypes.StringType{},
+		"auth_url":      basetypes.StringType{},
+		"ca_cert":       basetypes.StringType{},
+		"client_id":     basetypes.StringType{},
+		"client_secret": basetypes.StringType{},
+		"domain_id":     basetypes.StringType{},
+		"environment":   basetypes.StringType{},
+		"json_key":      basetypes.StringType{},
+		"password":      basetypes.StringType{},
+		"raw": basetypes.MapType{
+			ElemType: types.StringType,
 		},
+		"secret_key":      basetypes.StringType{},
+		"ssh_key":         basetypes.StringType{},
+		"subscription_id": basetypes.StringType{},
+		"tenant_id":       basetypes.StringType{},
+		"username":        basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
 		map[string]attr.Value{
 			"access_key":      v.AccessKey,
 			"account_name":    v.AccountName,
@@ -1171,9 +1242,10 @@ func (v BodyValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, di
 			"client_id":       v.ClientId,
 			"client_secret":   v.ClientSecret,
 			"domain_id":       v.DomainId,
+			"environment":     v.Environment,
 			"json_key":        v.JsonKey,
 			"password":        v.Password,
-			"raw":             raw,
+			"raw":             rawVal,
 			"secret_key":      v.SecretKey,
 			"ssh_key":         v.SshKey,
 			"subscription_id": v.SubscriptionId,
@@ -1224,6 +1296,10 @@ func (v BodyValue) Equal(o attr.Value) bool {
 	}
 
 	if !v.DomainId.Equal(other.DomainId) {
+		return false
+	}
+
+	if !v.Environment.Equal(other.Environment) {
 		return false
 	}
 
@@ -1279,10 +1355,11 @@ func (v BodyValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		"client_id":     basetypes.StringType{},
 		"client_secret": basetypes.StringType{},
 		"domain_id":     basetypes.StringType{},
+		"environment":   basetypes.StringType{},
 		"json_key":      basetypes.StringType{},
 		"password":      basetypes.StringType{},
-		"raw": basetypes.ObjectType{
-			AttrTypes: RawValue{}.AttributeTypes(ctx),
+		"raw": basetypes.MapType{
+			ElemType: types.StringType,
 		},
 		"secret_key":      basetypes.StringType{},
 		"ssh_key":         basetypes.StringType{},
@@ -1290,254 +1367,4 @@ func (v BodyValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 		"tenant_id":       basetypes.StringType{},
 		"username":        basetypes.StringType{},
 	}
-}
-
-var _ basetypes.ObjectTypable = RawType{}
-
-type RawType struct {
-	basetypes.ObjectType
-}
-
-func (t RawType) Equal(o attr.Type) bool {
-	other, ok := o.(RawType)
-
-	if !ok {
-		return false
-	}
-
-	return t.ObjectType.Equal(other.ObjectType)
-}
-
-func (t RawType) String() string {
-	return "RawType"
-}
-
-func (t RawType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	return RawValue{
-		state: attr.ValueStateKnown,
-	}, diags
-}
-
-func NewRawValueNull() RawValue {
-	return RawValue{
-		state: attr.ValueStateNull,
-	}
-}
-
-func NewRawValueUnknown() RawValue {
-	return RawValue{
-		state: attr.ValueStateUnknown,
-	}
-}
-
-func NewRawValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (RawValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
-	ctx := context.Background()
-
-	for name, attributeType := range attributeTypes {
-		attribute, ok := attributes[name]
-
-		if !ok {
-			diags.AddError(
-				"Missing RawValue Attribute Value",
-				"While creating a RawValue value, a missing attribute value was detected. "+
-					"A RawValue must contain values for all attributes, even if null or unknown. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("RawValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
-			)
-
-			continue
-		}
-
-		if !attributeType.Equal(attribute.Type(ctx)) {
-			diags.AddError(
-				"Invalid RawValue Attribute Type",
-				"While creating a RawValue value, an invalid attribute value was detected. "+
-					"A RawValue must use a matching attribute type for the value. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("RawValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("RawValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
-			)
-		}
-	}
-
-	for name := range attributes {
-		_, ok := attributeTypes[name]
-
-		if !ok {
-			diags.AddError(
-				"Extra RawValue Attribute Value",
-				"While creating a RawValue value, an extra attribute value was detected. "+
-					"A RawValue must not contain values beyond the expected attribute types. "+
-					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra RawValue Attribute Name: %s", name),
-			)
-		}
-	}
-
-	if diags.HasError() {
-		return NewRawValueUnknown(), diags
-	}
-
-	if diags.HasError() {
-		return NewRawValueUnknown(), diags
-	}
-
-	return RawValue{
-		state: attr.ValueStateKnown,
-	}, diags
-}
-
-func NewRawValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) RawValue {
-	object, diags := NewRawValue(attributeTypes, attributes)
-
-	if diags.HasError() {
-		// This could potentially be added to the diag package.
-		diagsStrings := make([]string, 0, len(diags))
-
-		for _, diagnostic := range diags {
-			diagsStrings = append(diagsStrings, fmt.Sprintf(
-				"%s | %s | %s",
-				diagnostic.Severity(),
-				diagnostic.Summary(),
-				diagnostic.Detail()))
-		}
-
-		panic("NewRawValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
-	}
-
-	return object
-}
-
-func (t RawType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
-	if in.Type() == nil {
-		return NewRawValueNull(), nil
-	}
-
-	if !in.Type().Equal(t.TerraformType(ctx)) {
-		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
-	}
-
-	if !in.IsKnown() {
-		return NewRawValueUnknown(), nil
-	}
-
-	if in.IsNull() {
-		return NewRawValueNull(), nil
-	}
-
-	attributes := map[string]attr.Value{}
-
-	val := map[string]tftypes.Value{}
-
-	err := in.As(&val)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range val {
-		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
-
-		if err != nil {
-			return nil, err
-		}
-
-		attributes[k] = a
-	}
-
-	return NewRawValueMust(RawValue{}.AttributeTypes(ctx), attributes), nil
-}
-
-func (t RawType) ValueType(ctx context.Context) attr.Value {
-	return RawValue{}
-}
-
-var _ basetypes.ObjectValuable = RawValue{}
-
-type RawValue struct {
-	state attr.ValueState
-}
-
-func (v RawValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 0)
-
-	objectType := tftypes.Object{AttributeTypes: attrTypes}
-
-	switch v.state {
-	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 0)
-
-		if err := tftypes.ValidateValue(objectType, vals); err != nil {
-			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
-		}
-
-		return tftypes.NewValue(objectType, vals), nil
-	case attr.ValueStateNull:
-		return tftypes.NewValue(objectType, nil), nil
-	case attr.ValueStateUnknown:
-		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
-	default:
-		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
-	}
-}
-
-func (v RawValue) IsNull() bool {
-	return v.state == attr.ValueStateNull
-}
-
-func (v RawValue) IsUnknown() bool {
-	return v.state == attr.ValueStateUnknown
-}
-
-func (v RawValue) String() string {
-	return "RawValue"
-}
-
-func (v RawValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	objVal, diags := types.ObjectValue(
-		map[string]attr.Type{},
-		map[string]attr.Value{})
-
-	return objVal, diags
-}
-
-func (v RawValue) Equal(o attr.Value) bool {
-	other, ok := o.(RawValue)
-
-	if !ok {
-		return false
-	}
-
-	if v.state != other.state {
-		return false
-	}
-
-	if v.state != attr.ValueStateKnown {
-		return true
-	}
-
-	return true
-}
-
-func (v RawValue) Type(ctx context.Context) attr.Type {
-	return RawType{
-		basetypes.ObjectType{
-			AttrTypes: v.AttributeTypes(ctx),
-		},
-	}
-}
-
-func (v RawValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
-	return map[string]attr.Type{}
 }
