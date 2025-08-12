@@ -15,8 +15,13 @@ convert-swagger:
 	go run ./swagger_converter exec
 
 tf-generate: ## Will regenerate the new provider spec and models, need a convert-swagger before.
-	tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
-	# Catalogs repoository generation is specific
+	# # DO NOT UNCOMMENT THIS
+	# # Generation from the OpenAPI will erase modifications made here: https://github.com/cycloidio/terraform-provider-cycloid/pull/32
+	# # for custom credentials support, edit the out_code_spec.json directly now.
+	# # or if you want to add a new resource from the OpenAPI spec, make a separate section
+	# # like what has been made for `resource_catalog_repository`
+	# tfplugingen-openapi generate --config generator_config.yml --output out_code_spec.json openapi.yaml
+	#
 	./datasource_stacks/gen.sh
 	./resource_catalog_repository/gen.sh
 	tfplugingen-framework generate resources --input ./out_code_spec.json --output .
@@ -33,8 +38,8 @@ install: ## Install the tools
 		github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 		'
 		for dep in $deps; do
-			echo "installing $dep";
-			go install "$dep";
+			echo "installing $$dep";
+			go install "$$dep";
 		done
 
 install-provider: ## Install the provider
