@@ -1,0 +1,22 @@
+---
+# This resource has been edited by had
+# This is the base config before edit for info
+provider:
+  name: "cycloid"
+  schema_ref: "#/components/schemas/TerraformProviderCycloid"
+
+data_sources:
+  credentials:
+    read:
+      path: "/organizations/{organization_canonical}/credentials/{credential_canonical}"
+      method: "GET"
+    schema:
+      ignores:
+      - "data.id"
+      - "data.created_at"
+      - "data.updated_at"
+      - "data.in_use"
+      - "data.owner"
+      - "page_index"
+      - "page_size"
+      - "pagination"
