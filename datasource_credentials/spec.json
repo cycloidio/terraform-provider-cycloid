@@ -1,0 +1,200 @@
+{
+  "datasources": [
+    {
+      "name": "credentials",
+      "schema": {
+        "attributes": [
+          {
+            "name": "organization",
+            "string": {
+              "computed_optional_required": "computed_optional",
+              "description": "The canonical of an organization, will default to the provider organization settings.",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthBetween(3, 100)"
+                  }
+                },
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "regexp"
+                      },
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "credential_types",
+            "list": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              },
+              "description": "Filter credential by types, allowed types are [ssh aws custom azure azure_storage gcp basic_auth elasticsearch swift]",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                      }
+                    ],
+                    "schema_definition": "listvalidator.UniqueValues()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "credentials",
+            "list_nested": {
+              "computed_optional_required": "computed",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "canonical",
+                    "string": {
+                      "computed_optional_required": "computed_optional",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.LengthBetween(3, 100)"
+                          }
+                        },
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "regexp"
+                              },
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "description",
+                    "string": {
+                      "computed_optional_required": "computed_optional"
+                    }
+                  },
+                  {
+                    "name": "name",
+                    "string": {
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "owner",
+                    "string": {
+                      "computed_optional_required": "computed_optional",
+                      "description": "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n"
+                    }
+                  },
+                  {
+                    "name": "path",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "regexp"
+                              },
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"[a-zA-z0-9_\\\\-./]\"), \"\")"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "keys",
+                    "list": {
+                      "computed_optional_required": "computed",
+                      "element_type": {
+                        "string": {}
+                      },
+                      "description": "List of all the keys available for the Credential"
+                    }
+                  },
+                  {
+                    "name": "type",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.OneOf(\n\"ssh\",\n\"aws\",\n\"custom\",\n\"azure\",\n\"azure_storage\",\n\"gcp\",\n\"basic_auth\",\n\"elasticsearch\",\n\"swift\",\n\"vmware\",\n)"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "provider": {
+    "name": "cycloid",
+    "schema": {
+      "attributes": [
+        {
+          "name": "jwt",
+          "string": {
+            "optional_required": "required"
+          }
+        },
+        {
+          "name": "organization_canonical",
+          "string": {
+            "optional_required": "required"
+          }
+        },
+        {
+          "name": "url",
+          "string": {
+            "optional_required": "required"
+          }
+        }
+      ]
+    }
+  },
+  "version": "0.1"
+}

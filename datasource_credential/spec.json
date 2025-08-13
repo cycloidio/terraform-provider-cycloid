@@ -1,0 +1,253 @@
+{
+  "datasources": [
+    {
+      "name": "credential",
+      "schema": {
+        "attributes": [
+          {
+            "name": "organization",
+            "string": {
+              "computed_optional_required": "computed_optional",
+              "description": "The canonical of the organization where is store the credential, default to the provider's organization",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthBetween(3, 100)"
+                  }
+                },
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "regexp"
+                      },
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "canonical",
+            "string": {
+              "computed_optional_required": "computed_optional",
+              "description": "The canonical of the credential to fetch, use either this or path.",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthBetween(3, 100)"
+                  }
+                },
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "regexp"
+                      },
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(\"^[a-z0-9]+[a-z0-9\\\\-_]+[a-z0-9]+$\"), \"\")"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "description",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "keys",
+            "list": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              },
+              "description": "List of all the keys available for the Credential"
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "path",
+            "string": {
+              "computed_optional_required": "computed_optional"
+            }
+          },
+          {
+            "name": "type",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "owner",
+            "string": {
+              "computed_optional_required": "computed",
+              "description": "The canonical of the user that owns this credential."
+            }
+          },
+          {
+            "name": "body",
+            "single_nested": {
+              "computed_optional_required": "computed",
+              "description": "Represents the Credential",
+              "sensitive": true,
+              "attributes": [
+                {
+                  "name": "access_key",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "account_name",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "auth_url",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "ca_cert",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "client_id",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "client_secret",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "domain_id",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "environment",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "json_key",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "password",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "raw",
+                  "map": {
+                    "computed_optional_required": "computed_optional",
+                    "element_type": {
+                      "string": {}
+                    },
+                    "description": "custom credential fields"
+                  }
+                },
+                {
+                  "name": "secret_key",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "ssh_key",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "subscription_id",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "tenant_id",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "username",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "provider": {
+    "name": "cycloid",
+    "schema": {
+      "attributes": [
+        {
+          "name": "jwt",
+          "string": {
+            "optional_required": "required"
+          }
+        },
+        {
+          "name": "organization_canonical",
+          "string": {
+            "optional_required": "required"
+          }
+        },
+        {
+          "name": "url",
+          "string": {
+            "optional_required": "required"
+          }
+        }
+      ]
+    }
+  },
+  "version": "0.1"
+}
+
