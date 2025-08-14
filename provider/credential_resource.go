@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
@@ -113,24 +114,33 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		common.WithURL(r.provider.Url.ValueString()),
 		common.WithToken(r.provider.Jwt.ValueString()),
 	)
-	mid := middleware.NewMiddleware(api)
+	m := middleware.NewMiddleware(api)
 
 	canonical := data.Canonical.ValueString()
 	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	credential, err := mid.GetCredential(organization, canonical)
+	// Check if the credential exists first
+	credentials, err := m.ListCredentials(organization, data.Type.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to read credential",
-			err.Error(),
-		)
+		resp.Diagnostics.AddError("failed to read credentials, cannot list credentials from API", err.Error())
 		return
 	}
 
-	data.Name = types.StringPointerValue(credential.Name)
-	data.Path = types.StringPointerValue(credential.Path)
-	data.Type = types.StringPointerValue(credential.Type)
-	data.Description = types.StringValue(credential.Description)
+	// We initialize the value with the canonical, it needs to be written
+	// In state even if the cred doesn't exists.
+	var credential = &models.Credential{
+		Canonical: &canonical,
+	}
+
+	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool {
+		return *c.Canonical == canonical
+	}) != -1 {
+		credential, err = m.GetCredential(organization, canonical)
+		if err != nil {
+			resp.Diagnostics.AddError("failed to fetch credential", err.Error())
+			return
+		}
+	}
 
 	credentialCYModelToData(ctx, organization, credential, &data)
 
@@ -190,16 +200,26 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	cred, err := m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	// we need to check first if the cred exists, it could be deleted outside terraform
+	// in that case, we'll just re-create it
+	credentials, err := m.ListCredentials(organization, credentialType)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to update credential",
-			err.Error(),
-		)
+		resp.Diagnostics.AddError("unable to check existing credentials from API", err.Error())
 		return
 	}
 
-	credentialCYModelToData(ctx, organization, cred, &data)
+	var credential *models.Credential
+	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool { return *c.Canonical == canonical }) == -1 {
+		credential, err = m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	} else {
+		credential, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to update credential", err.Error())
+		return
+	}
+
+	credentialCYModelToData(ctx, organization, credential, &data)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -247,33 +267,37 @@ func credentialCYModelToData(ctx context.Context, org string, credential *models
 
 	data.Name = types.StringPointerValue(credential.Name)
 	data.Description = types.StringValue(credential.Description)
+	data.Path = types.StringPointerValue(credential.Path)
 	data.Canonical = types.StringPointerValue(credential.Canonical)
 	data.Type = types.StringPointerValue(credential.Type)
 	data.OrganizationCanonical = types.StringValue(org)
-	data.Body.AccessKey = types.StringValue(credential.Raw.AccessKey)
-	data.Body.SecretKey = types.StringValue(credential.Raw.SecretKey)
-	data.Body.AccountName = types.StringValue(credential.Raw.AccountName)
-	data.Body.AuthUrl = types.StringValue(credential.Raw.AuthURL)
-	data.Body.CaCert = types.StringValue(credential.Raw.CaCert)
-	data.Body.ClientId = types.StringValue(credential.Raw.ClientID)
-	data.Body.ClientSecret = types.StringValue(credential.Raw.ClientSecret)
-	data.Body.DomainId = types.StringValue(credential.Raw.DomainID)
-	data.Body.JsonKey = types.StringValue(credential.Raw.JSONKey)
-	data.Body.Password = types.StringValue(credential.Raw.Password)
-	data.Body.Environment = types.StringValue(credential.Raw.Environment)
-	data.Body.SshKey = types.StringValue(credential.Raw.SSHKey)
-	data.Body.SubscriptionId = types.StringValue(credential.Raw.SubscriptionID)
-	data.Body.TenantId = types.StringValue(credential.Raw.TenantID)
-	data.Body.Username = types.StringValue(credential.Raw.Username)
-	if data.Type.ValueString() == "custom" {
-		var rawDiags diag.Diagnostics
-		data.Body.Raw, rawDiags = types.MapValueFrom(ctx, data.Body.Raw.ElementType(ctx), credential.Raw.Raw)
-		if rawDiags.HasError() {
-			diags.Append(rawDiags...)
-			return diags
+
+	if credential.Raw != nil {
+		data.Body.AccessKey = types.StringValue(credential.Raw.AccessKey)
+		data.Body.SecretKey = types.StringValue(credential.Raw.SecretKey)
+		data.Body.AccountName = types.StringValue(credential.Raw.AccountName)
+		data.Body.AuthUrl = types.StringValue(credential.Raw.AuthURL)
+		data.Body.CaCert = types.StringValue(credential.Raw.CaCert)
+		data.Body.ClientId = types.StringValue(credential.Raw.ClientID)
+		data.Body.ClientSecret = types.StringValue(credential.Raw.ClientSecret)
+		data.Body.DomainId = types.StringValue(credential.Raw.DomainID)
+		data.Body.JsonKey = types.StringValue(credential.Raw.JSONKey)
+		data.Body.Password = types.StringValue(credential.Raw.Password)
+		data.Body.Environment = types.StringValue(credential.Raw.Environment)
+		data.Body.SshKey = types.StringValue(credential.Raw.SSHKey)
+		data.Body.SubscriptionId = types.StringValue(credential.Raw.SubscriptionID)
+		data.Body.TenantId = types.StringValue(credential.Raw.TenantID)
+		data.Body.Username = types.StringValue(credential.Raw.Username)
+		if data.Type.ValueString() == "custom" {
+			var rawDiags diag.Diagnostics
+			data.Body.Raw, rawDiags = types.MapValueFrom(ctx, data.Body.Raw.ElementType(ctx), credential.Raw.Raw)
+			if rawDiags.HasError() {
+				diags.Append(rawDiags...)
+				return diags
+			}
+		} else {
+			data.Body.Raw = types.MapNull(data.Body.Raw.ElementType(ctx))
 		}
-	} else {
-		data.Body.Raw = types.MapNull(data.Body.Raw.ElementType(ctx))
 	}
 
 	return diags
