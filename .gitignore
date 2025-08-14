@@ -8,3 +8,5 @@ variables.tf
 playground.just
 terraform-provider-cycloid
 source-openapi.yaml
+.terraform/
+.terraform.lock.hcl
