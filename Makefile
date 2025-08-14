@@ -4,6 +4,10 @@ SHELL = /usr/bin/env
 .DEFAULT: help
 .PHONY: help build install tf-generate new-resource install install-provider plan apply destroy docs
 
+export TF_VAR_cycloid_org := $(CY_ORG)
+export TF_VAR_cycloid_api_url := $(CY_API_URL)
+export TF_VAR_cycloid_api_key := $(CY_API_KEY)
+
 help: ## Show this help
 	@grep -F -h "##" $(MAKEFILE_LIST) | grep -F -v fgrep | sed -e 's/:.*##/:##/' | column -t -s '##'
 
