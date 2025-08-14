@@ -345,46 +345,61 @@
             "single_nested": {
               "computed_optional_required": "computed_optional",
               "sensitive": true,
+              "description": "The credential values, use the fields related to the credential `type`.",
               "attributes": [
                 {
                   "name": "access_key",
                   "string": {
+                    "description": "An AWS access key or Azure Storage Access key, required for type `aws` or `azure_storage`.",
+                    "computed_optional_required": "computed_optional"
+                  }
+                },
+                {
+                  "name": "secret_key",
+                  "string": {
+                    "description": "An AWS secret key, required for type AWS.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "account_name",
                   "string": {
+                    "description": "Account name required for `azure_storage`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "auth_url",
                   "string": {
+                    "description": "Required for type `swift`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "ca_cert",
                   "string": {
+                    "description": "For type `elasticsearch`, you must fill either:\n  - `ca_cert`\n  - `username` + `password`\n  - `username` + `password` + `cacert`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "client_id",
                   "string": {
+                    "description": "Required for type `azure`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "client_secret",
                   "string": {
+                    "description": "Required for type `azure`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "domain_id",
                   "string": {
+                    "description": "Required for type `swift`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
@@ -409,12 +424,14 @@
                 {
                   "name": "json_key",
                   "string": {
+                    "description": "Required for type `gcp`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "password",
                   "string": {
+                    "description": "Required for type `basic_auth`, `swift`, `vmware` or `elasticsearch`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
@@ -425,46 +442,44 @@
                     "element_type": {
                       "string": {}
                     },
-                    "description": "custom credential fields"
-                  }
-                },
-                {
-                  "name": "secret_key",
-                  "string": {
-                    "computed_optional_required": "computed_optional"
+                    "description": "Credential fields required for type `custom`."
                   }
                 },
                 {
                   "name": "ssh_key",
                   "string": {
+                    "description": "Required for type `ssh`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "subscription_id",
                   "string": {
+                    "description": "Required for type `azure`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "tenant_id",
                   "string": {
+                    "description": "Required for type `swift`.",
                     "computed_optional_required": "computed_optional"
                   }
                 },
                 {
                   "name": "username",
                   "string": {
+                    "description": "Required for type `basic_auth`, `swift`, `vmware` or `elasticsearch`.",
                     "computed_optional_required": "computed_optional"
                   }
                 }
-              ],
-              "description": "All the possible fields inside it"
+              ]
             }
           },
           {
             "name": "canonical",
             "string": {
+              "description": "The canonical of the credential.",
               "computed_optional_required": "computed_optional",
               "validators": [
                 {
@@ -496,12 +511,14 @@
           {
             "name": "description",
             "string": {
+              "description": "The description of the credential.",
               "computed_optional_required": "computed_optional"
             }
           },
           {
             "name": "name",
             "string": {
+              "description": "The name displayed in the UI of the credential.",
               "computed_optional_required": "required"
             }
           },
@@ -516,6 +533,7 @@
             "name": "path",
             "string": {
               "computed_optional_required": "required",
+              "description": "The credential path written in vault and use for `pipelines`.",
               "validators": [
                 {
                   "custom": {
@@ -536,6 +554,7 @@
           {
             "name": "type",
             "string": {
+              "description": "The type of the credential, see [the docs](https://docs.cycloid.io/reference/credentials/concepts).",
               "computed_optional_required": "required",
               "validators": [
                 {
