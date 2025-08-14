@@ -39,46 +39,44 @@ terraform {
 
 ### Required
 
-- `body` (Attributes) All the possible fields inside it (see [below for nested schema](#nestedatt--body))
-- `name` (String) The name of an entity
-- `path` (String)
-- `type` (String)
+- `name` (String) The name displayed in the UI of the credential.
+- `path` (String) The credential path written in vault and use for `pipelines`.
+- `type` (String) The type of the credential, see [the docs](https://docs.cycloid.io/reference/credentials/concepts).
 
 ### Optional
 
-- `canonical` (String) The canonical of an entity
-- `description` (String) The description of an entity
+- `body` (Attributes, Sensitive) The credential values, use the fields related to the credential `type`. (see [below for nested schema](#nestedatt--body))
+- `canonical` (String) The canonical of the credential.
+- `description` (String) The description of the credential.
 - `organization_canonical` (String) A canonical of an organization.
-- `owner` (String) User canonical that owns this entity. If omitted then the person creating this
-entity will be assigned as owner. When a user is the owner of the entity he has
+- `owner` (String) User canonical that owns this credential. If omitted then the person creating this
+credential will be assigned as owner. When a user is the owner of a credential he has
 all the permissions on it.
-In case of API keys, the owner of API key is assigned as an owner. If 
-API key has no owner, then no owner is set for entity as well.
 
 <a id="nestedatt--body"></a>
 ### Nested Schema for `body`
 
 Optional:
 
-- `access_key` (String)
-- `account_name` (String)
-- `auth_url` (String)
-- `ca_cert` (String)
-- `client_id` (String)
-- `client_secret` (String)
-- `domain_id` (String)
-- `json_key` (String)
-- `password` (String)
-- `raw` (Attributes) (see [below for nested schema](#nestedatt--body--raw))
-- `secret_key` (String)
-- `ssh_key` (String)
-- `subscription_id` (String)
-- `tenant_id` (String)
-- `username` (String)
-
-<a id="nestedatt--body--raw"></a>
-### Nested Schema for `body.raw`
-
+- `access_key` (String) An AWS access key or Azure Storage Access key, required for type `aws` or `azure_storage`.
+- `account_name` (String) Account name required for `azure_storage`.
+- `auth_url` (String) Required for type `swift`.
+- `ca_cert` (String) For type `elasticsearch`, you must fill either:
+  - `ca_cert`
+  - `username` + `password`
+  - `username` + `password` + `cacert`.
+- `client_id` (String) Required for type `azure`.
+- `client_secret` (String) Required for type `azure`.
+- `domain_id` (String) Required for type `swift`.
+- `environment` (String)
+- `json_key` (String) Required for type `gcp`.
+- `password` (String) Required for type `basic_auth`, `swift`, `vmware` or `elasticsearch`.
+- `raw` (Map of String) Credential fields required for type `custom`.
+- `secret_key` (String) An AWS secret key, required for type AWS.
+- `ssh_key` (String) Required for type `ssh`.
+- `subscription_id` (String) Required for type `azure`.
+- `tenant_id` (String) Required for type `swift`.
+- `username` (String) Required for type `basic_auth`, `swift`, `vmware` or `elasticsearch`.
 
 
 
