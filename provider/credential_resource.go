@@ -270,6 +270,7 @@ func credentialCYModelToData(ctx context.Context, org string, credential *models
 	data.Path = types.StringPointerValue(credential.Path)
 	data.Canonical = types.StringPointerValue(credential.Canonical)
 	data.Type = types.StringPointerValue(credential.Type)
+	data.Path = types.StringPointerValue(credential.Path)
 	data.OrganizationCanonical = types.StringValue(org)
 
 	if credential.Raw != nil {
