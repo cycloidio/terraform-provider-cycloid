@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
@@ -35,7 +36,18 @@ func (s credentialDataSource) Metadata(ctx context.Context, req datasource.Metad
 }
 
 func (s *credentialDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = datasource_credential.CredentialDataSourceSchema(ctx)
+	schema := datasource_credential.CredentialDataSourceSchema(ctx)
+	// adding schema description here is simpler than writing multi-line
+	// description in a json file.
+	description := fmt.Sprintln(
+		"This datasource allows you to fetch a credential and its value.",
+		"\nYou can define a specific organiztion with the `organization` attribute or it will default the the",
+		"provider's organization settings.\n",
+		"\nThe populated fields will depend on the credential types.",
+	)
+	schema.Description = description
+	schema.MarkdownDescription = description
+	resp.Schema = schema
 }
 
 func (s *credentialDataSource) ConfigValidators(ctx context.Context) []datasource.ConfigValidator {

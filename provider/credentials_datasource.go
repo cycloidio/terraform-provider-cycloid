@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -35,7 +36,20 @@ func (s credentialsDataSource) Metadata(ctx context.Context, req datasource.Meta
 }
 
 func (s *credentialsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = datasource_credentials.CredentialsDataSourceSchema(ctx)
+	schema := datasource_credentials.CredentialsDataSourceSchema(ctx)
+	// adding schema description here is simpler than writing multi-line
+	// description in a json file.
+	description := fmt.Sprintln(
+		"This datasource allows you to list the credentials of the designated cycloid organization.",
+		"\nYou can define a specific organiztion with the `organization` attribute or it will default the the",
+		"provider's organization settings.\n",
+		"\nCredentials types can be filtered using the `credentials_types` attribute, you can fill more than one.",
+		"\nThis datasource will only return the credentials metadata, if you need the credentials values, you will need to use",
+		"the `datasource_credential` to retrieve them.",
+	)
+	schema.Description = description
+	schema.MarkdownDescription = description
+	resp.Schema = schema
 }
 
 func (s *credentialsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {

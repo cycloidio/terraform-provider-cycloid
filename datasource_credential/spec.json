@@ -71,6 +71,7 @@
           {
             "name": "description",
             "string": {
+              "description": "The description of the credential displayed in the UI.",
               "computed_optional_required": "computed"
             }
           },
@@ -87,18 +88,21 @@
           {
             "name": "name",
             "string": {
+              "description": "The name of the credential displayed in the UI.",
               "computed_optional_required": "computed"
             }
           },
           {
             "name": "path",
             "string": {
+              "description": "Vault path of the credential, mainly used in concourse.",
               "computed_optional_required": "computed_optional"
             }
           },
           {
             "name": "type",
             "string": {
+              "description": "Type of the credential.",
               "computed_optional_required": "computed"
             }
           },
@@ -113,7 +117,7 @@
             "name": "body",
             "single_nested": {
               "computed_optional_required": "computed",
-              "description": "Represents the Credential",
+              "description": "Contains the actual credential values, fields are populated depending on types, see [the documentation](https://docs.cycloid.io/reference/credentials/concepts).",
               "sensitive": true,
               "attributes": [
                 {
@@ -250,4 +254,3 @@
   },
   "version": "0.1"
 }
-
