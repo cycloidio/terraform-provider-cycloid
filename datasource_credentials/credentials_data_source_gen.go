@@ -35,16 +35,18 @@ func CredentialsDataSourceSchema(ctx context.Context) schema.Schema {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"canonical": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
+							Computed:            true,
+							Description:         "The canonical of the credential.",
+							MarkdownDescription: "The canonical of the credential.",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(3, 100),
 								stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
 							},
 						},
 						"description": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
+							Computed:            true,
+							Description:         "The description of the credential displayed in the UI.",
+							MarkdownDescription: "The description of the credential displayed in the UI.",
 						},
 						"keys": schema.ListAttribute{
 							ElementType:         types.StringType,
@@ -53,22 +55,27 @@ func CredentialsDataSourceSchema(ctx context.Context) schema.Schema {
 							MarkdownDescription: "List of all the keys available for the Credential",
 						},
 						"name": schema.StringAttribute{
-							Required: true,
+							Computed:            true,
+							Description:         "The name of the credential displayed in the UI.",
+							MarkdownDescription: "The name of the credential displayed in the UI.",
 						},
 						"owner": schema.StringAttribute{
-							Optional:            true,
 							Computed:            true,
 							Description:         "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
 							MarkdownDescription: "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n",
 						},
 						"path": schema.StringAttribute{
-							Required: true,
+							Computed:            true,
+							Description:         "Vault path of the credential, mainly used in concourse.",
+							MarkdownDescription: "Vault path of the credential, mainly used in concourse.",
 							Validators: []validator.String{
 								stringvalidator.RegexMatches(regexp.MustCompile("[a-zA-z0-9_\\-./]"), ""),
 							},
 						},
 						"type": schema.StringAttribute{
-							Required: true,
+							Computed:            true,
+							Description:         "Type of the credential.",
+							MarkdownDescription: "Type of the credential.",
 							Validators: []validator.String{
 								stringvalidator.OneOf(
 									"ssh",

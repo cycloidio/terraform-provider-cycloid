@@ -67,7 +67,8 @@
                   {
                     "name": "canonical",
                     "string": {
-                      "computed_optional_required": "computed_optional",
+                      "computed_optional_required": "computed",
+                      "description": "The canonical of the credential.",
                       "validators": [
                         {
                           "custom": {
@@ -98,26 +99,29 @@
                   {
                     "name": "description",
                     "string": {
-                      "computed_optional_required": "computed_optional"
+                      "description": "The description of the credential displayed in the UI.",
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
                     "name": "name",
                     "string": {
-                      "computed_optional_required": "required"
+                      "description": "The name of the credential displayed in the UI.",
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
                     "name": "owner",
                     "string": {
-                      "computed_optional_required": "computed_optional",
+                      "computed_optional_required": "computed",
                       "description": "User canonical that owns this credential. If omitted then the person creating this\ncredential will be assigned as owner. When a user is the owner of a credential he has\nall the permissions on it.\n"
                     }
                   },
                   {
                     "name": "path",
                     "string": {
-                      "computed_optional_required": "required",
+                      "description": "Vault path of the credential, mainly used in concourse.",
+                      "computed_optional_required": "computed",
                       "validators": [
                         {
                           "custom": {
@@ -148,7 +152,8 @@
                   {
                     "name": "type",
                     "string": {
-                      "computed_optional_required": "required",
+                      "description": "Type of the credential.",
+                      "computed_optional_required": "computed",
                       "validators": [
                         {
                           "custom": {

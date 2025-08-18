@@ -83,8 +83,8 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 				Computed:            true,
 				Sensitive:           true,
-				Description:         "Represents the Credential",
-				MarkdownDescription: "Represents the Credential",
+				Description:         "Contains the actual credential values, fields are populated depending on types, see [the documentation](https://docs.cycloid.io/reference/credentials/concepts).",
+				MarkdownDescription: "Contains the actual credential values, fields are populated depending on types, see [the documentation](https://docs.cycloid.io/reference/credentials/concepts).",
 			},
 			"canonical": schema.StringAttribute{
 				Optional:            true,
@@ -97,7 +97,9 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"description": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				Description:         "The description of the credential displayed in the UI.",
+				MarkdownDescription: "The description of the credential displayed in the UI.",
 			},
 			"keys": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -106,7 +108,9 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "List of all the keys available for the Credential",
 			},
 			"name": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				Description:         "The name of the credential displayed in the UI.",
+				MarkdownDescription: "The name of the credential displayed in the UI.",
 			},
 			"organization": schema.StringAttribute{
 				Optional:            true,
@@ -124,11 +128,15 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The canonical of the user that owns this credential.",
 			},
 			"path": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				Description:         "Vault path of the credential, mainly used in concourse.",
+				MarkdownDescription: "Vault path of the credential, mainly used in concourse.",
 			},
 			"type": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				Description:         "Type of the credential.",
+				MarkdownDescription: "Type of the credential.",
 			},
 		},
 	}

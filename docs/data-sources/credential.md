@@ -3,12 +3,17 @@
 page_title: "cycloid_credential Data Source - cycloid"
 subcategory: ""
 description: |-
-  
+  This datasource allows you to fetch a credential and its value.
+  You can define a specific organiztion with the organization attribute or it will default the the provider's organization settings.
+  The populated fields will depend on the credential types.
 ---
 
 # cycloid_credential (Data Source)
 
-
+This datasource allows you to fetch a credential and its value. 
+You can define a specific organiztion with the `organization` attribute or it will default the the provider's organization settings.
+ 
+The populated fields will depend on the credential types.
 
 
 
@@ -19,16 +24,16 @@ description: |-
 
 - `canonical` (String) The canonical of the credential to fetch, use either this or path.
 - `organization` (String) The canonical of the organization where is store the credential, default to the provider's organization
-- `path` (String)
+- `path` (String) Vault path of the credential, mainly used in concourse.
 
 ### Read-Only
 
-- `body` (Attributes, Sensitive) Represents the Credential (see [below for nested schema](#nestedatt--body))
-- `description` (String)
+- `body` (Attributes, Sensitive) Contains the actual credential values, fields are populated depending on types, see [the documentation](https://docs.cycloid.io/reference/credentials/concepts). (see [below for nested schema](#nestedatt--body))
+- `description` (String) The description of the credential displayed in the UI.
 - `keys` (List of String) List of all the keys available for the Credential
-- `name` (String)
+- `name` (String) The name of the credential displayed in the UI.
 - `owner` (String) The canonical of the user that owns this credential.
-- `type` (String)
+- `type` (String) Type of the credential.
 
 <a id="nestedatt--body"></a>
 ### Nested Schema for `body`

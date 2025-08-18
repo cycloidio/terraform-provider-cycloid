@@ -3,12 +3,19 @@
 page_title: "cycloid_credentials Data Source - cycloid"
 subcategory: ""
 description: |-
-  
+  This datasource allows you to list the credentials of the designated cycloid organization.
+  You can define a specific organiztion with the organization attribute or it will default the the provider's organization settings.
+  Credentials types can be filtered using the credentials_types attribute, you can fill more than one.
+  This datasource will only return the credentials metadata, if you need the credentials values, you will need to use the datasource_credential to retrieve them.
 ---
 
 # cycloid_credentials (Data Source)
 
-
+This datasource allows you to list the credentials of the designated cycloid organization. 
+You can define a specific organiztion with the `organization` attribute or it will default the the provider's organization settings.
+ 
+Credentials types can be filtered using the `credentials_types` attribute, you can fill more than one. 
+This datasource will only return the credentials metadata, if you need the credentials values, you will need to use the `datasource_credential` to retrieve them.
 
 
 
@@ -27,20 +34,14 @@ description: |-
 <a id="nestedatt--credentials"></a>
 ### Nested Schema for `credentials`
 
-Required:
+Read-Only:
 
-- `name` (String)
-- `path` (String)
-- `type` (String)
-
-Optional:
-
-- `canonical` (String)
-- `description` (String)
+- `canonical` (String) The canonical of the credential.
+- `description` (String) The description of the credential displayed in the UI.
+- `keys` (List of String) List of all the keys available for the Credential
+- `name` (String) The name of the credential displayed in the UI.
 - `owner` (String) User canonical that owns this credential. If omitted then the person creating this
 credential will be assigned as owner. When a user is the owner of a credential he has
 all the permissions on it.
-
-Read-Only:
-
-- `keys` (List of String) List of all the keys available for the Credential
+- `path` (String) Vault path of the credential, mainly used in concourse.
+- `type` (String) Type of the credential.
