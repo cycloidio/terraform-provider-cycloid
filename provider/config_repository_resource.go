@@ -63,12 +63,13 @@ func (r *configRepositoryResource) Create(ctx context.Context, req resource.Crea
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
+	can := data.Canonical.ValueString()
 	url := data.Url.ValueString()
 	branch := data.Branch.ValueString()
 	credCan := data.CredentialCanonical.ValueString()
 	def := data.Default.ValueBool()
 
-	cr, err := mid.CreateConfigRepository(orgCan, name, url, branch, credCan, def)
+	cr, err := mid.CreateConfigRepository(orgCan, name, can, url, branch, credCan, def)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create config repository",

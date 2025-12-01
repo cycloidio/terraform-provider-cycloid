@@ -142,7 +142,7 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 				"canonical":              types.StringValue(*s.Canonical),
 				"cloud_providers":        cloudProviderValues,
 				"dependencies":           dependenciesValues,
-				"description":            types.StringValue(*s.Description),
+				"description":            types.StringValue(s.Description),
 				"directory":              types.StringValue(*s.Directory),
 				"form_enabled":           types.BoolValue(*s.FormEnabled),
 				"keywords":               keywordsValues,

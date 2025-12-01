@@ -59,7 +59,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	mid := middleware.NewMiddleware(api)
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	co, err := mid.CreateOrganizationChild(data.Name.ValueString(), orgCan)
+	co, err := mid.CreateOrganizationChild(orgCan, data.Canonical.ValueString(), data.Name.ValueStringPointer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create organization child",
