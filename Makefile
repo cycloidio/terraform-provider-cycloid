@@ -1,6 +1,3 @@
-SHELL = /usr/bin/env
-.SHELLFLAGS = sh -c
-
 .DEFAULT: help
 .PHONY: help build install tf-generate new-resource install install-provider plan apply destroy docs
 
