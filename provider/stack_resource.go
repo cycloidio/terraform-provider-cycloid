@@ -179,7 +179,7 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	}
 
 	// call api
-	url := fmt.Sprintf("%s/organizations/%s/service_catalogs/%s", s.provider.Url.ValueString(), org, *stack.Ref)
+	url := fmt.Sprintf("%s/organizations/%s/service_catalogs/%s", normalizeURL(s.provider.Url.ValueString()), org, *stack.Ref)
 	payload, err := json.Marshal(stackCyModel{
 		Visibility: visibility,
 		Team:       team,
