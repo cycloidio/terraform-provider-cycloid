@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
@@ -69,7 +68,11 @@ func (r *externalBackendResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	project := data.ProjectCanonical.ValueString()
@@ -224,7 +227,11 @@ func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	id := data.ExternalBackendId.ValueInt64()
@@ -261,7 +268,11 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 
 	// Update API call logic
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -284,12 +295,7 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 		ebID = plandata.ExternalBackendId.ValueInt64()
 	}
 
-	var (
-		eb  *models.ExternalBackend
-		err error
-	)
-
-	eb, err = mid.GetExternalBackend(orgCan, uint32(ebID))
+	eb, err := mid.GetExternalBackend(orgCan, uint32(ebID))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read external backend",
@@ -327,13 +333,17 @@ func (r *externalBackendResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	id := data.ExternalBackendId.ValueInt64()
-	err := mid.DeleteExternalBackend(orgCan, uint32(id))
+	err = mid.DeleteExternalBackend(orgCan, uint32(id))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete external backend",

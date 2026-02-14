@@ -31,6 +31,11 @@ func (p *cycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	
+	// Debug: Print insecure flag value
+	println("[PROVIDER CONFIGURE] Insecure.IsNull():", data.Insecure.IsNull())
+	println("[PROVIDER CONFIGURE] Insecure.ValueBool():", data.Insecure.ValueBool())
+	
 	//api := common.NewAPI(common.WithURL(data.Url))
 	resp.ResourceData = data
 	resp.DataSourceData = data

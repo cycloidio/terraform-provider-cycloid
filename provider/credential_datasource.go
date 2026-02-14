@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
@@ -94,10 +93,11 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	// Fetch logic
-	api := common.NewAPI(
-		common.WithURL(s.provider.Url.ValueString()),
-		common.WithToken(s.provider.Jwt.ValueString()),
-	)
+	api, err := getDefaultApi(s.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	m := middleware.NewMiddleware(api)
 
 	canonical := data.Canonical.ValueString()

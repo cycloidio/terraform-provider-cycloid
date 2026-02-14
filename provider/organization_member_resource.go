@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_member"
@@ -57,7 +56,11 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	email := data.Email.ValueString()
@@ -106,7 +109,11 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	memberID := data.MemberId
@@ -137,7 +144,11 @@ func (r *organizationMemberResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -180,13 +191,17 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	memberID := data.MemberId.ValueInt64()
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	err := mid.DeleteMember(orgCan, uint32(memberID))
+	err = mid.DeleteMember(orgCan, uint32(memberID))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete member",

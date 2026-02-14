@@ -2,6 +2,7 @@ package provider
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
@@ -31,5 +32,21 @@ func getDefaultApi(provider provider_cycloid.CycloidModel) (*common.APIClient, e
 	if provider.Jwt.IsNull() || provider.Jwt.IsUnknown() {
 		return nil, errors.New("Cycloid API key not set in provider")
 	}
-	return common.NewAPI(common.WithURL(provider.Url.ValueString()), common.WithToken(provider.Jwt.ValueString())), nil
+	
+	insecure := false
+	fmt.Printf("[DEBUG] provider.Insecure.IsNull(): %v\n", provider.Insecure.IsNull())
+	fmt.Printf("[DEBUG] provider.Insecure.ValueBool(): %v\n", provider.Insecure.ValueBool())
+	if !provider.Insecure.IsNull() && provider.Insecure.ValueBool() {
+		insecure = true
+		fmt.Println("[DEBUG] Insecure TLS mode ENABLED")
+	} else {
+		fmt.Println("[DEBUG] Insecure TLS mode DISABLED")
+	}
+	fmt.Printf("[DEBUG] Final insecure value passed to common.WithInsecure(): %v\n", insecure)
+	
+	return common.NewAPI(
+		common.WithURL(provider.Url.ValueString()),
+		common.WithToken(provider.Jwt.ValueString()),
+		common.WithInsecure(insecure),
+	), nil
 }

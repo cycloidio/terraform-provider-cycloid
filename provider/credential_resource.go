@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
@@ -59,13 +58,17 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	m := middleware.NewMiddleware(api)
 
 	name := data.Name.ValueString()
 	credentialType := data.Type.ValueString()
 
-	err := validateCredential(data)
+	err = validateCredential(data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create credential",
@@ -110,10 +113,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Read API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	m := middleware.NewMiddleware(api)
 
 	canonical := data.Canonical.ValueString()
@@ -167,10 +171,11 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Update API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	m := middleware.NewMiddleware(api)
 
 	name := data.Name.ValueString()
@@ -239,13 +244,14 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	// Delete API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	m := middleware.NewMiddleware(api)
 
-	err := m.DeleteCredential(organization, canonical)
+	err = m.DeleteCredential(organization, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete credential",

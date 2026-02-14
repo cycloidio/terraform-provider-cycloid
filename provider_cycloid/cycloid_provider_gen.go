@@ -21,6 +21,10 @@ func CycloidProviderSchema(ctx context.Context) schema.Schema {
 			"url": schema.StringAttribute{
 				Required: true,
 			},
+			"insecure": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Skip TLS certificate verification (use with self-signed certificates)",
+			},
 		},
 	}
 }
@@ -29,4 +33,5 @@ type CycloidModel struct {
 	Jwt                   types.String `tfsdk:"jwt"`
 	OrganizationCanonical types.String `tfsdk:"organization_canonical"`
 	Url                   types.String `tfsdk:"url"`
+	Insecure              types.Bool   `tfsdk:"insecure"`
 }

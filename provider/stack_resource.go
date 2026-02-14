@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -198,7 +199,13 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	req.Header.Set("Content-Type", "application/vnd.cycloid.io.v1+json")
 	req.Header.Set("Authorization", "Bearer "+s.provider.Jwt.ValueString())
 
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: !s.provider.Insecure.IsNull() && s.provider.Insecure.ValueBool(),
+			},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		diags.AddError("failed to update the stack settings with canonical "+org, err.Error())

@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
@@ -82,7 +81,11 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -119,7 +122,11 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	can := data.Canonical.ValueString()
@@ -152,7 +159,11 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Update API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -198,13 +209,17 @@ func (r *catalogRepositoryResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
+	api, err := getDefaultApi(r.provider)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create API client", err.Error())
+		return
+	}
 	mid := middleware.NewMiddleware(api)
 
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
-	err := mid.DeleteCatalogRepository(orgCan, can)
+	err = mid.DeleteCatalogRepository(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete catalog repository",
