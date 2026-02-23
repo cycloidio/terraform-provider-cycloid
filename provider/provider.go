@@ -46,6 +46,7 @@ func (p *cycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewStacksDataSource,
 		NewCredentialsDataSource,
 		NewCredentialDataSource,
+		NewTerraformOutputsDataSource,
 	}
 }
 
