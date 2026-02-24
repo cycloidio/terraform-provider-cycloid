@@ -5,12 +5,18 @@ export TF_VAR_cycloid_org := $(CY_ORG)
 export TF_VAR_cycloid_api_url := $(CY_API_URL)
 export TF_VAR_cycloid_api_key := $(CY_API_KEY)
 
+-include ./Playground.mk
+
 help: ## Show this help
 	@grep -F -h "##" $(MAKEFILE_LIST) | grep -F -v fgrep | sed -e 's/:.*##/:##/' | column -t -s '##'
 
 build: args=""
 build: ## build the provider
 	@go build -gcflags 'all=-l' -trimpath $(args)
+
+.PHONY: test
+test:
+	go test ./... -v
 
 convert-swagger:
 	go run ./swagger_converter exec

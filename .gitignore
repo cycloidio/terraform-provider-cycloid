@@ -10,3 +10,4 @@ terraform-provider-cycloid
 source-openapi.yaml
 .terraform/
 .terraform.lock.hcl
+Playground.mk
