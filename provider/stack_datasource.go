@@ -79,10 +79,10 @@ func (s *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	stacksValues, errDiags := dataStacksToListValue(ctx, stacks)
 	resp.Diagnostics.Append(errDiags...)
-
-	listValue, errDiags := types.ListValueFrom(ctx, datasource_stacks.StacksType{basetypes.ObjectType{
+	attrType := basetypes.ObjectType{
 		AttrTypes: datasource_stacks.StacksValue{}.AttributeTypes(ctx),
-	}}, stacksValues)
+	}
+	listValue, errDiags := types.ListValueFrom(ctx, attrType, stacksValues)
 	if errDiags.HasError() {
 		resp.Diagnostics.Append(errDiags...)
 		return
@@ -162,9 +162,9 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 		}
 	}
 
-	return types.ListValueFrom(ctx, datasource_stacks.StacksType{basetypes.ObjectType{
+	return types.ListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: stackType,
-	}}, stackElements)
+	}, stackElements)
 }
 
 func dataStackTechnologiesToListValue(ctx context.Context, techs []*models.ServiceCatalogTechnology) (basetypes.ListValue, diag.Diagnostics) {
@@ -185,9 +185,9 @@ func dataStackTechnologiesToListValue(ctx context.Context, techs []*models.Servi
 		stackTechnologies[index] = tech
 	}
 
-	return types.ListValueFrom(ctx, datasource_stacks.TechnologiesType{basetypes.ObjectType{
+	return types.ListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: techType,
-	}}, stackTechnologies)
+	}, stackTechnologies)
 }
 
 func dataStackDependenciesToListValue(ctx context.Context, dependencies []*models.ServiceCatalogDependency) (basetypes.ListValue, diag.Diagnostics) {
@@ -208,9 +208,9 @@ func dataStackDependenciesToListValue(ctx context.Context, dependencies []*model
 		stackDependencies[index] = tech
 	}
 
-	return types.ListValueFrom(ctx, datasource_stacks.DependenciesType{basetypes.ObjectType{
+	return types.ListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: dependencyType,
-	}}, stackDependencies)
+	}, stackDependencies)
 }
 
 func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*models.CloudProvider) (basetypes.ListValue, diag.Diagnostics) {
@@ -240,10 +240,8 @@ func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*m
 
 	return types.ListValueFrom(
 		ctx,
-		datasource_stacks.CloudProvidersType{
-			basetypes.ObjectType{
-				AttrTypes: cloudProviderType,
-			},
+		basetypes.ObjectType{
+			AttrTypes: cloudProviderType,
 		},
 		stackCloudProviders)
 }

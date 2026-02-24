@@ -229,14 +229,13 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 	data.OrganizationCanonical = types.StringValue(org)
 	data.CredentialCanonical = types.StringValue(cr.CredentialCanonical)
 	if cr.Owner != nil {
-		data.Owner = types.StringValue(*cr.Owner.FullName)
+		data.Owner = types.StringValue(*cr.Owner.Username)
 	}
 
 	stacksValue, diagErr := crStacksToListValue(ctx, cr.ServiceCatalogs)
 	diags.Append(diagErr...)
 
 	dataValue, diagErr := resource_catalog_repository.NewDataValue(
-		// CrDataValue{}.AttrTypes(ctx),
 		map[string]attr.Type{
 			"branch":               basetypes.StringType{},
 			"canonical":            basetypes.StringType{},
@@ -274,8 +273,8 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 		stackElements[index], errDiags = resource_catalog_repository.NewStacksValue(
 			stackType,
 			map[string]attr.Value{
-				"canonical": types.StringValue(*s.Canonical),
-				"ref":       types.StringValue(*s.Ref),
+				"canonical": types.StringPointerValue(s.Canonical),
+				"ref":       types.StringPointerValue(s.Ref),
 			},
 		)
 		diags.Append(errDiags...)
@@ -284,7 +283,11 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 		}
 	}
 
-	return types.ListValueFrom(ctx, resource_catalog_repository.StacksType{basetypes.ObjectType{
-		AttrTypes: stackType,
-	}}, stackElements)
+	return types.ListValueFrom(ctx, resource_catalog_repository.StacksType{
+		ObjectType: types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"canonical": types.StringType,
+				"ref":       types.StringType,
+			}},
+	}, stackElements)
 }
