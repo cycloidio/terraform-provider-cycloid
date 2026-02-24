@@ -1,13 +1,10 @@
 package provider
 
 import (
-	"context"
 	"testing"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/sanity-io/litter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +44,6 @@ func TestCyModelToData(t *testing.T) {
 				OrganizationCanonical: types.StringValue(""),
 				Owner:                 types.StringValue(""),
 				Url:                   types.StringValue(""),
-				Stacks:                types.ListNull(types.ObjectType{}),
 			},
 		},
 	}
@@ -59,35 +55,11 @@ func TestCyModelToData(t *testing.T) {
 		}
 
 		assert.Equal(t, testCase.Model.Branch, testCase.Data.Branch.ValueString(), "branch must be equal")
-
-		if testCase.Data.Stacks.IsNull() || testCase.Data.Stacks.IsUnknown() {
-			t.Log("data is nill or unknown")
-			litter.Dump(testCase.Data)
-			t.FailNow()
-		}
-
-		var stackElements []resource_catalog_repository.Stack
-		diags = testCase.Data.Stacks.ElementsAs(
-			context.Background(),
-			&stackElements,
-			false,
-		)
-		if diags.HasError() {
-			t.Fatal(diags)
-		}
-
-		assert.Equal(t, len(testCase.Model.ServiceCatalogs), len(stackElements), "the number of elements in %v must be equal to the number of input stacks", stackElements)
-
 		assert.Equal(t, testCase.Model.Branch, testCase.Data.Branch.ValueString(), "branch must be equal")
 		assert.Equal(t, *testCase.Model.Canonical, testCase.Data.Canonical.ValueString(), "canonical must be equal")
 		assert.Equal(t, testCase.Model.CredentialCanonical, testCase.Data.CredentialCanonical.ValueString(), "credentialcanonical must be equal")
 		assert.Equal(t, *testCase.Model.Name, testCase.Data.Name.ValueString(), "name must be equal")
 		assert.Equal(t, *testCase.Model.Owner.Username, testCase.Data.Owner.ValueString(), "owner must be equal")
 		assert.Equal(t, *testCase.Model.URL, testCase.Data.Url.ValueString(), "url must be equal")
-
-		for index, stack := range testCase.Model.ServiceCatalogs {
-			tfStack := stackElements[index]
-			assert.Equal(t, *stack.Canonical, tfStack.Canonical.ValueString(), "branch must be equal")
-		}
 	}
 }
