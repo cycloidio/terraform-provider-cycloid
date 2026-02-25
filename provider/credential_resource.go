@@ -7,9 +7,6 @@ import (
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,7 +21,7 @@ func NewCredentialResource() resource.Resource {
 }
 
 type credentialResource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type credentialResourceModel resource_credential.CredentialModel
@@ -42,7 +39,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to prepare client")
 		return
@@ -59,8 +56,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	m := middleware.NewMiddleware(api)
+	m := r.provider.Middleware
 
 	name := data.Name.ValueString()
 	credentialType := data.Type.ValueString()
@@ -110,11 +106,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	// Read API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
-	m := middleware.NewMiddleware(api)
+	m := r.provider.Middleware
 
 	canonical := data.Canonical.ValueString()
 	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -167,11 +159,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Update API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
-	m := middleware.NewMiddleware(api)
+	m := r.provider.Middleware
 
 	name := data.Name.ValueString()
 	credentialType := data.Type.ValueString()
@@ -239,11 +227,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	// Delete API call logic
-	api := common.NewAPI(
-		common.WithURL(r.provider.Url.ValueString()),
-		common.WithToken(r.provider.Jwt.ValueString()),
-	)
-	m := middleware.NewMiddleware(api)
+	m := r.provider.Middleware
 
 	err := m.DeleteCredential(organization, canonical)
 	if err != nil {

@@ -4,9 +4,6 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -20,7 +17,7 @@ func NewOrganizationResource() resource.Resource {
 }
 
 type organizationResource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type organizationResourceModel resource_organization.OrganizationModel
@@ -38,7 +35,7 @@ func (r *organizationResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to prepare client")
 		return
@@ -55,8 +52,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	co, err := mid.CreateOrganizationChild(orgCan, data.Canonical.ValueString(), data.Name.ValueStringPointer())
@@ -85,8 +81,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	can := data.Canonical.ValueString()
 	if can == "" {
@@ -127,8 +122,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Update API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 	can := data.Canonical.ValueString()
 
 	// As the canonical is not required to be set we read it from the
@@ -172,8 +166,7 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 	err := mid.DeleteOrganization(data.Canonical.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(

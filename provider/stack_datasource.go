@@ -4,10 +4,7 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_stacks"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -19,7 +16,7 @@ import (
 var _ datasource.DataSource = &stackDataSource{}
 
 type stackDataSource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type stackDatasourceModel = datasource_stacks.StacksModel
@@ -41,7 +38,7 @@ func (s *stackDataSource) Configure(ctx context.Context, req datasource.Configur
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to init client")
 	}
@@ -58,17 +55,7 @@ func (s *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	if s.provider.Jwt.IsUnknown() || s.provider.Jwt.IsNull() {
-		resp.Diagnostics.AddError("API token for cycloid is missing", "")
-		return
-	}
-
-	// Fetch stacks from API
-	api := common.NewAPI(
-		common.WithURL(s.provider.Url.ValueString()),
-		common.WithToken(s.provider.Jwt.ValueString()),
-	)
-	mid := middleware.NewMiddleware(api)
+	mid := s.provider.Middleware
 
 	org := data.OrganizationCanonical.ValueString()
 	stacks, err := mid.ListStacks(org)

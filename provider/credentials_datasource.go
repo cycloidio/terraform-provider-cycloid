@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -24,7 +24,7 @@ var _ datasource.DataSource = &credentialsDataSource{}
 type credentialsDatasourceModel = datasource_credentials.CredentialsModel
 
 type credentialsDataSource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 func NewCredentialsDataSource() datasource.DataSource {
@@ -57,7 +57,7 @@ func (s *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to init client")
 	}
@@ -74,21 +74,11 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	if s.provider.Jwt.IsUnknown() || s.provider.Jwt.IsNull() {
-		resp.Diagnostics.AddError("API token for cycloid is mising", "")
-		return
-	}
-
-	var organization string
-	if data.Organization.IsNull() || data.Organization.IsUnknown() {
-		organization = s.provider.OrganizationCanonical.ValueString()
-	} else {
-		organization = data.Organization.ValueString()
-	}
+	organization := getOrganizationCanonical(s.provider, data.Organization)
 
 	// Fetch logic
 	// We will not use the middleware as the current mid version does not support credential_types parameters
-	apiUrl := s.provider.Url.ValueString() + "/organizations/" + organization + "/credentials"
+	apiUrl := s.provider.APIUrl + "/organizations/" + organization + "/credentials"
 
 	var credentialTypes []string = nil
 	if !data.CredentialTypes.IsNull() && !data.CredentialTypes.IsUnknown() {
@@ -118,9 +108,17 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 	request.Header.Add("Content-Type", "Application/json")
-	request.Header.Add("Authorization", "Bearer "+s.provider.Jwt.ValueString())
+	request.Header.Add("Authorization", "Bearer "+s.provider.APIKey)
 
 	client := http.DefaultClient
+	if s.provider.Insecure {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
 	response, err := client.Do(request)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list credentials", err.Error())

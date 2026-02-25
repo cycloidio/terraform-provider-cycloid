@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,10 +11,8 @@ import (
 
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_terraform_output"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -23,7 +22,7 @@ var _ datasource.DataSource = &terraformOutputDataSource{}
 type terraformOutputDatasourceModel = datasource_terraform_output.TerraformOutputModel
 
 type terraformOutputDataSource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 func NewTerraformOutputDataSource() datasource.DataSource {
@@ -44,7 +43,7 @@ func (t *terraformOutputDataSource) Configure(ctx context.Context, req datasourc
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to init client")
 	}
@@ -60,25 +59,10 @@ func (t *terraformOutputDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	if t.provider.Jwt.IsUnknown() || t.provider.Jwt.IsNull() {
-		resp.Diagnostics.AddError("API token for cycloid is mising", "")
-		return
-	}
-
-	var organization string
-	if data.Organization.IsNull() || data.Organization.IsUnknown() {
-		organization = t.provider.OrganizationCanonical.ValueString()
-	} else {
-		organization = data.Organization.ValueString()
-	}
-
-	if organization == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("organization"), "org should not be empty", "fill it by the provider or the datasource settings")
-		return
-	}
+	organization := getOrganizationCanonical(t.provider, data.Organization)
 
 	// We will not use the middleware because we need LHS filter that are undocumented
-	apiUrl := fmt.Sprintf("%s/organizations/%s/inventory/outputs", t.provider.Url.ValueString(), organization)
+	apiUrl := fmt.Sprintf("%s/organizations/%s/inventory/outputs", t.provider.APIUrl, organization)
 
 	var filters []datasource_terraform_output.Filter = nil
 	if !data.Filters.IsNull() && !data.Filters.IsUnknown() {
@@ -108,9 +92,15 @@ func (t *terraformOutputDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 	request.Header.Add("Content-Type", "Application/json")
-	request.Header.Add("Authorization", "Bearer "+t.provider.Jwt.ValueString())
+	request.Header.Add("Authorization", "Bearer "+t.provider.APIKey)
 
 	client := http.DefaultClient
+	client.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: t.provider.Insecure,
+		},
+	}
+
 	response, err := client.Do(request)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list credentials", err.Error())

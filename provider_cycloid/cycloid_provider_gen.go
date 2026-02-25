@@ -4,6 +4,8 @@ package provider_cycloid
 
 import (
 	"context"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -13,20 +15,69 @@ func CycloidProviderSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"jwt": schema.StringAttribute{
-				Required: true,
-			},
-			"organization_canonical": schema.StringAttribute{
-				Required: true,
+				Optional:            true,
+				Sensitive:           true,
+				Description:         "The Cycloid API Key.",
+				MarkdownDescription: "The Cycloid API Key.",
+				DeprecationMessage:  "Use `api_key` instead, will be removed in next release.",
 			},
 			"url": schema.StringAttribute{
-				Required: true,
+				Optional:            true,
+				Description:         "The API URL of the Cycloid instance.",
+				MarkdownDescription: "The API URL of the Cycloid instance.",
+				DeprecationMessage:  `Use api_url instead, will be removed in next release.`,
+			},
+			"organization_canonical": schema.StringAttribute{
+				Optional:            true,
+				Description:         "The default organization canonical",
+				MarkdownDescription: "The default organization canonical",
+				DeprecationMessage:  "Use default_organization instead, will be removed in next release.",
+			},
+			"api_key": schema.StringAttribute{
+				Optional:            true,
+				Sensitive:           true,
+				Description:         "(required) The Cycloid API Key, can also be filled with CY_API_KEY env var.",
+				MarkdownDescription: "(required) The Cycloid API Key, can also be filled with `CY_API_KEY` env var.",
+			},
+			"default_organization": schema.StringAttribute{
+				Optional:            true,
+				Description:         "(required) The default organization canonical, can also be filled by CY_ORG env var",
+				MarkdownDescription: "(required) The default organization canonical, can also be filled by `CY_ORG` env var",
+			},
+			"api_url": schema.StringAttribute{
+				Optional:            true,
+				Description:         "(required) The API URL of the Cycloid instance, can also be filled by the CY_API_URL env var",
+				MarkdownDescription: "(required) The API URL of the Cycloid instance, can also be filled by the `CY_API_URL` env var",
+			},
+			"insecure": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Bypass TLS certificates verification for HTTPS calls. This is insecure, use it at your own risk.",
+				MarkdownDescription: "Bypass TLS certificates verification for HTTPS calls. This is insecure, use it at your own risk.",
 			},
 		},
+		Description: strings.Join([]string{
+			"The Cycloid provider configuration used to authenticate to the console.",
+			"you can use either attributes or theirs affected environments variables:",
+			"api_key - CY_API_KEY",
+			"default_organization - CY_ORG",
+			"url - CY_API_URL",
+		}, "\n"),
+		MarkdownDescription: strings.Join([]string{
+			"The Cycloid provider configuration used to authenticate to the console.",
+			"you can use either attributes or theirs affected environments variables:",
+			"`api_key` - `CY_API_KEY`",
+			"`default_organization` - `CY_ORG`",
+			"`url` - `CY_API_URL`",
+		}, "\n"),
 	}
 }
 
 type CycloidModel struct {
 	Jwt                   types.String `tfsdk:"jwt"`
+	APIKey                types.String `tfsdk:"api_key"`
 	OrganizationCanonical types.String `tfsdk:"organization_canonical"`
+	DefaultOrganization   types.String `tfsdk:"default_organization"`
 	Url                   types.String `tfsdk:"url"`
+	APIUrl                types.String `tfsdk:"api_url"`
+	Insecure              types.Bool   `tfsdk:"insecure"`
 }

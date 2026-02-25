@@ -5,10 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -24,7 +21,7 @@ var _ datasource.DataSource = &credentialDataSource{}
 type credentialDatasourceModel = datasource_credential.CredentialModel
 
 type credentialDataSource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 func NewCredentialDataSource() datasource.DataSource {
@@ -64,7 +61,7 @@ func (s *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to init client")
 	}
@@ -81,24 +78,10 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	if s.provider.Jwt.IsUnknown() || s.provider.Jwt.IsNull() {
-		resp.Diagnostics.AddError("API token for cycloid is mising", "")
-		return
-	}
-
-	var organization string
-	if data.Organization.IsNull() || data.Organization.IsUnknown() {
-		organization = s.provider.OrganizationCanonical.ValueString()
-	} else {
-		organization = data.Organization.ValueString()
-	}
+	var organization = getOrganizationCanonical(s.provider, data.Organization)
 
 	// Fetch logic
-	api := common.NewAPI(
-		common.WithURL(s.provider.Url.ValueString()),
-		common.WithToken(s.provider.Jwt.ValueString()),
-	)
-	m := middleware.NewMiddleware(api)
+	m := s.provider.Middleware
 
 	canonical := data.Canonical.ValueString()
 

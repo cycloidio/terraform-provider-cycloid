@@ -4,9 +4,6 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -22,7 +19,7 @@ func NewExternalBackendResource() resource.Resource {
 }
 
 type externalBackendResource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type externalBackendResourceModel resource_external_backend.ExternalBackendModel
@@ -40,7 +37,7 @@ func (r *externalBackendResource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to prepare client")
 		return
@@ -69,8 +66,7 @@ func (r *externalBackendResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	project := data.ProjectCanonical.ValueString()
 	env := data.EnvironmentCanonical.ValueString()
@@ -224,11 +220,8 @@ func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
-
+	mid := r.provider.Middleware
 	id := data.ExternalBackendId.ValueInt64()
-
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	eb, err := mid.GetExternalBackend(orgCan, uint32(id))
@@ -261,8 +254,7 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 
 	// Update API call logic
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
@@ -327,8 +319,7 @@ func (r *externalBackendResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
