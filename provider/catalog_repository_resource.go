@@ -5,9 +5,6 @@ import (
 	"regexp"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -28,7 +25,7 @@ func NewCatalogRepositoryResource() resource.Resource {
 }
 
 type catalogRepositoryResource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type catalogRepositoryResourceModel resource_catalog_repository.CatalogRepositoryModel
@@ -64,7 +61,7 @@ func (r *catalogRepositoryResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to prepare client")
 		return
@@ -81,9 +78,7 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	// Create API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
@@ -119,11 +114,8 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Read API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
-
+	mid := r.provider.Middleware
 	can := data.Canonical.ValueString()
-
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 
 	cr, err := mid.GetCatalogRepository(orgCan, can)
@@ -152,8 +144,7 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Update API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
@@ -198,8 +189,7 @@ func (r *catalogRepositoryResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	// Delete API call logic
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)

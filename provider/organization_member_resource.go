@@ -4,9 +4,6 @@ import (
 	"context"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_member"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -21,7 +18,7 @@ func NewOrganizationMemberResource() resource.Resource {
 }
 
 type organizationMemberResource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 type organizationMemberResourceModel resource_organization_member.OrganizationMemberModel
@@ -39,7 +36,7 @@ func (r *organizationMemberResource) Configure(ctx context.Context, req resource
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to prepare client")
 		return
@@ -57,8 +54,7 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	email := data.Email.ValueString()
 	role := data.RoleCanonical.ValueString()
@@ -106,8 +102,7 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	memberID := data.MemberId
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
@@ -137,8 +132,7 @@ func (r *organizationMemberResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
 	memberID := data.MemberId.ValueInt64()
@@ -180,8 +174,7 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	api := common.NewAPI(common.WithURL(r.provider.Url.ValueString()), common.WithToken(r.provider.Jwt.ValueString()))
-	mid := middleware.NewMiddleware(api)
+	mid := r.provider.Middleware
 
 	memberID := data.MemberId.ValueInt64()
 	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)

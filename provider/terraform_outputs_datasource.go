@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,9 +11,7 @@ import (
 
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_terraform_outputs"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -21,7 +20,7 @@ var _ datasource.DataSource = &terraformOutputsDataSource{}
 type terraformOutputsDatasourceModel = datasource_terraform_outputs.TerraformOutputsModel
 
 type terraformOutputsDataSource struct {
-	provider provider_cycloid.CycloidModel
+	provider CycloidProvider
 }
 
 func NewTerraformOutputsDataSource() datasource.DataSource {
@@ -42,7 +41,7 @@ func (t *terraformOutputsDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	pv, ok := req.ProviderData.(provider_cycloid.CycloidModel)
+	pv, ok := req.ProviderData.(CycloidProvider)
 	if !ok {
 		tflog.Error(ctx, "Unable to init client")
 	}
@@ -58,26 +57,11 @@ func (t *terraformOutputsDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	if t.provider.Jwt.IsUnknown() || t.provider.Jwt.IsNull() {
-		resp.Diagnostics.AddError("API token for cycloid is mising", "")
-		return
-	}
-
-	var organization string
-	if data.Organization.IsNull() || data.Organization.IsUnknown() {
-		organization = t.provider.OrganizationCanonical.ValueString()
-	} else {
-		organization = data.Organization.ValueString()
-	}
-
-	if organization == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("organization"), "org should not be empty", "fill it by the provider or the datasource settings")
-		return
-	}
+	organization := getOrganizationCanonical(t.provider, data.Organization)
 
 	// Fetch logic
 	// We will not use the middleware because we need LHS filter that are undocumented
-	apiUrl := fmt.Sprintf("%s/organizations/%s/inventory/outputs", t.provider.Url.ValueString(), organization)
+	apiUrl := fmt.Sprintf("%s/organizations/%s/inventory/outputs", t.provider.APIUrl, organization)
 
 	var filters []datasource_terraform_outputs.Filter = nil
 	if !data.Filters.IsNull() && !data.Filters.IsUnknown() {
@@ -107,9 +91,15 @@ func (t *terraformOutputsDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 	request.Header.Add("Content-Type", "Application/json")
-	request.Header.Add("Authorization", "Bearer "+t.provider.Jwt.ValueString())
+	request.Header.Add("Authorization", "Bearer "+t.provider.APIKey)
 
 	client := http.DefaultClient
+	client.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: t.provider.Insecure,
+		},
+	}
+
 	response, err := client.Do(request)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list credentials", err.Error())
