@@ -29,6 +29,10 @@ type CycloidProvider struct {
 	Middleware          middleware.Middleware
 }
 
+func (p *CycloidProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "cycloid"
+}
+
 func (p *CycloidProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = provider_cycloid.CycloidProviderSchema(ctx)
 }
@@ -108,10 +112,6 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	resp.DataSourceData = p
 }
 
-func (p *CycloidProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "cycloid"
-}
-
 func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewStacksDataSource,
@@ -131,5 +131,7 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewExternalBackendResource,
 		NewOrganizationMemberResource,
 		NewStackResource,
+		NewProjectResource,
+		NewEnvironmentResource,
 	}
 }
