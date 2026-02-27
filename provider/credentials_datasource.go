@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/sanity-io/litter"
 )
 
@@ -24,7 +23,7 @@ var _ datasource.DataSource = &credentialsDataSource{}
 type credentialsDatasourceModel = datasource_credentials.CredentialsModel
 
 type credentialsDataSource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 func NewCredentialsDataSource() datasource.DataSource {
@@ -57,9 +56,13 @@ func (s *credentialsDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to init client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
+		return
 	}
 
 	s.provider = pv
@@ -74,7 +77,7 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	organization := getOrganizationCanonical(s.provider, data.Organization)
+	organization := getOrganizationCanonical(*s.provider, data.Organization)
 
 	// Fetch logic
 	// We will not use the middleware as the current mid version does not support credential_types parameters

@@ -2,12 +2,12 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_config_repository"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
@@ -19,7 +19,7 @@ func NewConfigRepositoryResource() resource.Resource {
 }
 
 type configRepositoryResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type configRepositoryResourceModel resource_config_repository.ConfigRepositoryModel
@@ -32,16 +32,20 @@ func (r *configRepositoryResource) Schema(ctx context.Context, req resource.Sche
 	resp.Schema = resource_config_repository.ConfigRepositoryResourceSchema(ctx)
 }
 
-func (r *configRepositoryResource) Configure(ctx context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *configRepositoryResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
+
 	r.provider = pv
 }
 
@@ -58,7 +62,7 @@ func (r *configRepositoryResource) Create(ctx context.Context, req resource.Crea
 	// Create API call logic
 	mid := r.provider.Middleware
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
 	can := data.Canonical.ValueString()
 	url := data.Url.ValueString()
@@ -96,7 +100,7 @@ func (r *configRepositoryResource) Read(ctx context.Context, req resource.ReadRe
 
 	can := data.Canonical.ValueString()
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	cr, err := mid.GetConfigRepository(orgCan, can)
 	if err != nil {
@@ -126,7 +130,7 @@ func (r *configRepositoryResource) Update(ctx context.Context, req resource.Upda
 	// Update API call logic
 	mid := r.provider.Middleware
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
 	url := data.Url.ValueString()
 	branch := data.Branch.ValueString()
@@ -173,7 +177,7 @@ func (r *configRepositoryResource) Delete(ctx context.Context, req resource.Dele
 	mid := r.provider.Middleware
 
 	can := data.Canonical.ValueString()
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	err := mid.DeleteConfigRepository(orgCan, can)
 	if err != nil {

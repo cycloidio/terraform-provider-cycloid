@@ -22,7 +22,7 @@ var _ datasource.DataSource = &terraformOutputDataSource{}
 type terraformOutputDatasourceModel = datasource_terraform_output.TerraformOutputModel
 
 type terraformOutputDataSource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 func NewTerraformOutputDataSource() datasource.DataSource {
@@ -43,9 +43,13 @@ func (t *terraformOutputDataSource) Configure(ctx context.Context, req datasourc
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to init client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
+		return
 	}
 
 	t.provider = pv
@@ -59,7 +63,7 @@ func (t *terraformOutputDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	organization := getOrganizationCanonical(t.provider, data.Organization)
+	organization := getOrganizationCanonical(*t.provider, data.Organization)
 
 	// We will not use the middleware because we need LHS filter that are undocumented
 	apiUrl := fmt.Sprintf("%s/organizations/%s/inventory/outputs", t.provider.APIUrl, organization)

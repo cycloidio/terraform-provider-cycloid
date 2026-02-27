@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // AnyToDynamicValue will convert any data to a terraform DynamicValue.
@@ -61,9 +60,7 @@ func AnyToDynamicValue(ctx context.Context, data any) (basetypes.DynamicValue, d
 // Int and Float will all use 64 versions, UInt will be converted to numbers
 func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.Value, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	tflog.Debug(ctx, "Evaluating value", map[string]any{
-		"type": reflect.ValueOf(data).Kind().String(),
-	})
+
 	switch v := reflect.ValueOf(data); v.Kind() {
 	case reflect.String:
 		return types.StringType, types.StringValue(v.String()), nil

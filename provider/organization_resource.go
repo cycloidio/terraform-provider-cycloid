@@ -2,12 +2,12 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*organizationResource)(nil)
@@ -17,7 +17,7 @@ func NewOrganizationResource() resource.Resource {
 }
 
 type organizationResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type organizationResourceModel resource_organization.OrganizationModel
@@ -30,16 +30,20 @@ func (r *organizationResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = resource_organization.OrganizationResourceSchema(ctx)
 }
 
-func (r *organizationResource) Configure(ctx context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *organizationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
+
 	r.provider = pv
 }
 
@@ -53,7 +57,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	mid := r.provider.Middleware
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	co, err := mid.CreateOrganizationChild(orgCan, data.Canonical.ValueString(), data.Name.ValueStringPointer())
 	if err != nil {
@@ -103,7 +107,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	organizationCYModelToData(orgCan, org, &data)
 
@@ -147,7 +151,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	organizationCYModelToData(orgCan, uo, &data)
 

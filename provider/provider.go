@@ -8,8 +8,10 @@ import (
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var _ provider.Provider = (*CycloidProvider)(nil)
@@ -21,6 +23,7 @@ func New() func() provider.Provider {
 }
 
 type CycloidProvider struct {
+	Test                types.String `tfsdk:"test"`
 	APIKey              string
 	APIUrl              string
 	DefaultOrganization string
@@ -77,7 +80,8 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	if p.DefaultOrganization == "" {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddAttributeError(
+			path.Root("default_organization"),
 			"organization parameter is empty",
 			"please fill it using `default_organization` attribute in the provider or `CY_ORG` environment variable.",
 		)
@@ -85,7 +89,8 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	if p.APIKey == "" {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
 			"api_key parameter is empty",
 			"please fill it using `api_key` attribute in the provider or `CY_API_KEY` environment variable.",
 		)
@@ -93,7 +98,8 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	if p.APIUrl == "" {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_url"),
 			"api_url parameter is empty",
 			"please fill it using `api_url` attribute in the provider or `CY_API_URL` environment variable.",
 		)
@@ -108,6 +114,8 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 	)
 	p.Middleware = middleware.NewMiddleware(p.APIClient)
 
+	p.Test = types.StringValue("test")
+
 	resp.ResourceData = p
 	resp.DataSourceData = p
 }
@@ -117,8 +125,8 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewStacksDataSource,
 		NewCredentialsDataSource,
 		NewCredentialDataSource,
-		NewTerraformOutputsDataSource,
 		NewTerraformOutputDataSource,
+		NewTerraformOutputsDataSource,
 	}
 }
 

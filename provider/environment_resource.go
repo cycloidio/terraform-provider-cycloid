@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
@@ -12,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/sanity-io/litter"
 )
 
 var _ resource.Resource = (*environmentResource)(nil)
@@ -24,7 +24,7 @@ func NewEnvironmentResource() resource.Resource {
 type environmentResourceModel resource_environment.EnvironmentModel
 
 type environmentResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 func (p *environmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -42,11 +42,14 @@ func (p *environmentResource) Configure(ctx context.Context, req resource.Config
 
 	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		resp.Diagnostics.AddError("missing provider data", litter.Sdump(req))
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
 
-	p.provider = *pv
+	p.provider = pv
 }
 
 func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -59,7 +62,7 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 
 	m := p.provider.Middleware
 	canonical := data.Canonical.ValueString()
-	org := getOrganizationCanonical(p.provider, data.Organization)
+	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 
 	// Check that the project exists
@@ -112,7 +115,7 @@ func (p *environmentResource) Create(ctx context.Context, req resource.CreateReq
 
 	name := data.Name.ValueString()
 	canonical := data.Canonical.ValueString()
-	org := getOrganizationCanonical(p.provider, data.Organization)
+	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 	color := data.Color.ValueString()
 	if color == "" {
@@ -138,7 +141,7 @@ func (p *environmentResource) Update(ctx context.Context, req resource.UpdateReq
 
 	name := data.Name.ValueString()
 	canonical := data.Canonical.ValueString()
-	org := getOrganizationCanonical(p.provider, data.Organization)
+	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 	color := data.Color.ValueString()
 	if color == "" {
@@ -163,7 +166,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	m := p.provider.Middleware
-	org := getOrganizationCanonical(p.provider, data.Organization)
+	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
