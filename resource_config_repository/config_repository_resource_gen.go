@@ -4,16 +4,18 @@ package resource_config_repository
 
 import (
 	"context"
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
 func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
+		Version: 1,
 		Attributes: map[string]schema.Attribute{
 			"branch": schema.StringAttribute{
 				Required:            true,

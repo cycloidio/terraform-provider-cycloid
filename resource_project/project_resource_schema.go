@@ -14,6 +14,7 @@ import (
 
 func ProjectResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
+		Version:             1,
 		Description:         "This resource manage Cycloid projects. Docs: https://docs.cycloid.io/reference/projects/",
 		MarkdownDescription: "This resource manage Cycloid projects. [Docs](https://docs.cycloid.io/reference/projects/).",
 		Attributes: map[string]schema.Attribute{
