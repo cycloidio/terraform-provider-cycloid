@@ -41,6 +41,7 @@ func ProjectResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
+				Computed:            true,
 				Description:         "Description of the project, displayed in the UI",
 				MarkdownDescription: "Description of the project, displayed in the UI",
 				Validators: []validator.String{
