@@ -90,17 +90,17 @@ func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.
 
 		// Terraform lists don't support multiple types, so if
 		// the slice has more than one type, we use a tuple instead.
-		singleType := slices.Clone(ts)
-		singleType = slices.Compact(singleType)
-		if len(singleType) > 1 {
-			tuple, d := types.TupleValue(ts, vs)
-			diags.Append(d...)
-			if diags.HasError() {
-				return types.TupleType{ElemTypes: ts}, tuple, diags
+		singleType := true
+		if len(ts) > 1 {
+			for _, t := range ts[1:] {
+				if ts[0].String() != t.String() {
+					singleType = false
+					break
+				}
 			}
+		}
 
-			return tuple.Type(ctx), tuple, diags
-		} else {
+		if singleType {
 			var singleType attr.Type
 			if len(slices.Compact(ts)) == 0 {
 				singleType = types.StringType
@@ -115,6 +115,14 @@ func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.
 			}
 
 			return types.ListType{ElemType: singleType}, list, diags
+		} else {
+			tuple, d := types.TupleValue(ts, vs)
+			diags.Append(d...)
+			if diags.HasError() {
+				return types.TupleType{ElemTypes: ts}, tuple, diags
+			}
+
+			return tuple.Type(ctx), tuple, diags
 		}
 
 	case reflect.Map:
