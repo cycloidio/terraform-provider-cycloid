@@ -20,7 +20,7 @@ var _ datasource.DataSource = &terraformOutputsDataSource{}
 type terraformOutputsDatasourceModel = datasource_terraform_outputs.TerraformOutputsModel
 
 type terraformOutputsDataSource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 func NewTerraformOutputsDataSource() datasource.DataSource {
@@ -41,9 +41,13 @@ func (t *terraformOutputsDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to init client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
+		return
 	}
 
 	t.provider = pv
@@ -57,7 +61,7 @@ func (t *terraformOutputsDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	organization := getOrganizationCanonical(t.provider, data.Organization)
+	organization := getOrganizationCanonical(*t.provider, data.Organization)
 
 	// Fetch logic
 	// We will not use the middleware because we need LHS filter that are undocumented
@@ -102,7 +106,7 @@ func (t *terraformOutputsDataSource) Read(ctx context.Context, req datasource.Re
 
 	response, err := client.Do(request)
 	if err != nil {
-		resp.Diagnostics.AddError("failed to list credentials", err.Error())
+		resp.Diagnostics.AddError("failed to list terraform outputs", err.Error())
 		return
 	}
 	defer func() {

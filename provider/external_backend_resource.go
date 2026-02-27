@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*externalBackendResource)(nil)
@@ -19,7 +19,7 @@ func NewExternalBackendResource() resource.Resource {
 }
 
 type externalBackendResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type externalBackendResourceModel resource_external_backend.ExternalBackendModel
@@ -32,16 +32,20 @@ func (r *externalBackendResource) Schema(ctx context.Context, req resource.Schem
 	resp.Schema = resource_external_backend.ExternalBackendResourceSchema(ctx)
 }
 
-func (r *externalBackendResource) Configure(ctx context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *externalBackendResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
+
 	r.provider = pv
 }
 
@@ -79,7 +83,7 @@ func (r *externalBackendResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	eb, err := mid.CreateExternalBackends(orgCan, project, env, purpose, cred, def, configuration)
 	if err != nil {
@@ -222,7 +226,7 @@ func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadReq
 	// Read API call logic
 	mid := r.provider.Middleware
 	id := data.ExternalBackendId.ValueInt64()
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	eb, err := mid.GetExternalBackend(orgCan, uint32(id))
 	if err != nil {
@@ -256,7 +260,7 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 	// Read API call logic
 	mid := r.provider.Middleware
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	configuration := readEBConfiguration(ctx, resp.Diagnostics, data)
 	if resp.Diagnostics.HasError() {
@@ -321,7 +325,7 @@ func (r *externalBackendResource) Delete(ctx context.Context, req resource.Delet
 	// Delete API call logic
 	mid := r.provider.Middleware
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	id := data.ExternalBackendId.ValueInt64()
 	err := mid.DeleteExternalBackend(orgCan, uint32(id))

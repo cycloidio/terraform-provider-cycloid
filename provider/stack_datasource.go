@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_stacks"
@@ -10,13 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ datasource.DataSource = &stackDataSource{}
 
 type stackDataSource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type stackDatasourceModel = datasource_stacks.StacksModel
@@ -38,9 +38,13 @@ func (s *stackDataSource) Configure(ctx context.Context, req datasource.Configur
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to init client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
+		return
 	}
 
 	s.provider = pv
@@ -55,9 +59,13 @@ func (s *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
+	if s.provider.Middleware == nil {
+		return
+	}
+
 	mid := s.provider.Middleware
 
-	org := data.OrganizationCanonical.ValueString()
+	org := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
 	stacks, err := mid.ListStacks(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list stacks from api", err.Error())
@@ -120,6 +128,9 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 				"canonical": types.StringValue(teamCan),
 			},
 		)
+		if errDiags.HasError() {
+			return basetypes.ListValue{}, errDiags
+		}
 
 		stackElements[index], errDiags = datasource_stacks.NewStacksValue(
 			stackType,

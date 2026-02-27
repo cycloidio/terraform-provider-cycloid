@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ datasource.DataSource = &credentialDataSource{}
@@ -21,7 +20,7 @@ var _ datasource.DataSource = &credentialDataSource{}
 type credentialDatasourceModel = datasource_credential.CredentialModel
 
 type credentialDataSource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 func NewCredentialDataSource() datasource.DataSource {
@@ -61,9 +60,13 @@ func (s *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to init client")
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
+		return
 	}
 
 	s.provider = pv
@@ -78,9 +81,11 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	var organization = getOrganizationCanonical(s.provider, data.Organization)
+	var organization = getOrganizationCanonical(*s.provider, data.Organization)
 
-	// Fetch logic
+	if s.provider.Middleware == nil {
+		return
+	}
 	m := s.provider.Middleware
 
 	canonical := data.Canonical.ValueString()

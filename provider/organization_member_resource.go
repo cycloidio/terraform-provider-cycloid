@@ -2,13 +2,13 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_member"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*organizationMemberResource)(nil)
@@ -18,7 +18,7 @@ func NewOrganizationMemberResource() resource.Resource {
 }
 
 type organizationMemberResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type organizationMemberResourceModel resource_organization_member.OrganizationMemberModel
@@ -31,16 +31,20 @@ func (r *organizationMemberResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = resource_organization_member.OrganizationMemberResourceSchema(ctx)
 }
 
-func (r *organizationMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *organizationMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
+
 	r.provider = pv
 }
 
@@ -59,7 +63,7 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 	email := data.Email.ValueString()
 	role := data.RoleCanonical.ValueString()
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	m, err := mid.InviteMember(orgCan, email, role)
 	if err != nil {
@@ -105,7 +109,7 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 	mid := r.provider.Middleware
 
 	memberID := data.MemberId
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	m, err := mid.GetMember(orgCan, uint32(memberID.ValueInt64()))
 	if err != nil {
@@ -134,7 +138,7 @@ func (r *organizationMemberResource) Update(ctx context.Context, req resource.Up
 
 	mid := r.provider.Middleware
 
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	memberID := data.MemberId.ValueInt64()
 	roleCan := data.RoleCanonical.ValueString()
 
@@ -177,7 +181,7 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 	mid := r.provider.Middleware
 
 	memberID := data.MemberId.ValueInt64()
-	orgCan := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	err := mid.DeleteMember(orgCan, uint32(memberID))
 	if err != nil {

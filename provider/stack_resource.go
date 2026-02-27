@@ -10,13 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*stackResource)(nil)
 
 type stackResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type stackResourceModel resource_stack.StackModel
@@ -37,9 +36,12 @@ func (s *stackResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
 
@@ -56,7 +58,7 @@ func (s *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	mid := s.provider.Middleware
 
-	orgCan := getOrganizationCanonical(s.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
 	stack, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -80,7 +82,7 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Create API call logic
 	mid := s.provider.Middleware
 
-	orgCan := getOrganizationCanonical(s.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
 	stackRef := fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString())
 	stack, err := mid.GetStack(orgCan, stackRef)
 	if err != nil {
@@ -108,7 +110,7 @@ func (s *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	mid := s.provider.Middleware
 
-	orgCan := getOrganizationCanonical(s.provider, data.OrganizationCanonical)
+	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
 	stack, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(

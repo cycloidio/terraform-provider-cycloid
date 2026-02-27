@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*credentialResource)(nil)
@@ -21,7 +20,7 @@ func NewCredentialResource() resource.Resource {
 }
 
 type credentialResource struct {
-	provider CycloidProvider
+	provider *CycloidProvider
 }
 
 type credentialResourceModel resource_credential.CredentialModel
@@ -34,16 +33,20 @@ func (r *credentialResource) Schema(ctx context.Context, req resource.SchemaRequ
 	resp.Schema = resource_credential.CredentialResourceSchema(ctx)
 }
 
-func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	pv, ok := req.ProviderData.(CycloidProvider)
+	pv, ok := req.ProviderData.(*CycloidProvider)
 	if !ok {
-		tflog.Error(ctx, "Unable to prepare client")
+		resp.Diagnostics.AddError(
+			"Unexpected Provider data at Configure()",
+			fmt.Sprintf("Expected *CycloidProvider, got: %T. Please report this issue.", req.ProviderData),
+		)
 		return
 	}
+
 	r.provider = pv
 }
 
@@ -79,7 +82,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	path := data.Path.ValueString()
 	canonical := data.Canonical.ValueString()
 	description := data.Description.ValueString()
-	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	cred, err := m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	if err != nil {
@@ -109,7 +112,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	m := r.provider.Middleware
 
 	canonical := data.Canonical.ValueString()
-	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	// Check if the credential exists first
 	credentials, err := m.ListCredentials(organization, data.Type.ValueString())
@@ -186,7 +189,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		canonical = plandata.Canonical.ValueString()
 	}
 
-	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	// we need to check first if the cred exists, it could be deleted outside terraform
 	// in that case, we'll just re-create it
@@ -224,7 +227,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 
 	canonical := data.Canonical.ValueString()
-	organization := getOrganizationCanonical(r.provider, data.OrganizationCanonical)
+	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	// Delete API call logic
 	m := r.provider.Middleware
@@ -290,7 +293,7 @@ func credentialCYModelToData(ctx context.Context, org string, credential *models
 
 func validateCredential(data credentialResourceModel) error {
 	if strings.HasPrefix(data.Body.SshKey.ValueString(), "\n") || strings.HasSuffix(data.Body.SshKey.ValueString(), "\n") {
-		return fmt.Errorf("Expected 'body.ssh_key' to not have \\n at the beginning or end of it, use 'chomp()' Terraform function to fix this")
+		return fmt.Errorf("expected 'body.ssh_key' to not have \\n at the beginning or end of it, use 'chomp()' Terraform function to fix this")
 	}
 
 	return nil
