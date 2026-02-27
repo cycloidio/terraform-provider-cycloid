@@ -5,9 +5,6 @@ package resource_catalog_repository
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,13 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
 func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Version: 1,
 		Attributes: map[string]schema.Attribute{
 			"branch": schema.StringAttribute{
 				Required: true,

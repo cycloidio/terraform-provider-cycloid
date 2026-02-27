@@ -14,7 +14,6 @@ import (
 
 func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Version:             1,
 		Description:         "This resource manage Cycloid environments. Environments are part of a project, see `cycloid_project` resource. Docs: https://docs.cycloid.io/reference/core-concepts/",
 		MarkdownDescription: "This resource manage Cycloid environments. Environments are part of a project, see `cycloid_project` resource. [Docs](https://docs.cycloid.io/reference/core-concepts/).",
 		Attributes: map[string]schema.Attribute{
