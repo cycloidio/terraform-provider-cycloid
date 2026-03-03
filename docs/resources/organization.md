@@ -17,22 +17,33 @@ See [this documentation on how to manage it](https://docs.cycloid.io/reference/o
 ## example usage
 
 ```terraform
-resource "cycloid_organization" "tf_organization" {
-  name = "tforganization"
-  organization_canonical = var.cycloid_organization
+resource "cycloid_organization" "some_organization" {
+  name = "My org"
+  // Canonical will be inferred from the name to be a value like
+  // canonical = "my-org"
 }
 
-provider "cycloid" {
-  url                    = var.cycloid_api_url
-  jwt                    = var.cycloid_api_key
-  organization_canonical = var.cycloid_organization
+// Organization with licence
+resource "cycloid_organization" "org_with_licence" {
+  name = "Licenced org"
+  licence = {
+    key = "my_licence_jwt (sensitive!)"
+  }
 }
 
-terraform {
-  required_providers {
-    cycloid = {
-      source = "cycloidio/cycloid"
-    }
+// Child organization with a subscription plan
+// Please, use the terraform `time_offset` resource to fill the expiration timestamp
+resource "time_offset" "one_year" {
+  offset_years = 1 // Licence valid 1 year
+}
+
+resource "cycloid_organization" "some_organization" {
+  name                = "My sub org"
+  parent_organization = cycloid_organization.org_with_licence.canonical
+  subscription = {
+    expires_at_rfc3339 = time_offset.one_year.rfc3339
+    plan               = "platform_team"
+    members_count      = 5
   }
 }
 ```
@@ -59,17 +70,17 @@ terraform {
 <a id="nestedatt--licence"></a>
 ### Nested Schema for `licence`
 
-Optional:
+Required:
 
-- `expires_at_rfc3339` (String) Unix timestamp (precise at the milliseconds) in rfc3339 format where where this licence expires.
 - `key` (String, Sensitive) The licence key in JWT format. Required if `apply_licence` attribute is set.
-- `members_count` (Number) number of allowed members for this licence, default to 5.
 
 Read-Only:
 
 - `current_members` (Number) number of current members for this licence.
+- `expires_at_rfc3339` (String) Unix timestamp (precise at the milliseconds) in rfc3339 format where where this licence expires.
 - `expires_at_unix_timestamp` (Number) Unix timestamp (precise at the milliseconds) where this licence expires.
 - `is_on_prem` (Boolean) `true` if this licence is made for on-premise deployment
+- `members_count` (Number) number of allowed members for this licence, default to 5.
 
 
 <a id="nestedatt--subscription"></a>

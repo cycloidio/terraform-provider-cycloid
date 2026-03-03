@@ -116,13 +116,11 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Description:         "Unix timestamp (precise at the milliseconds) in rfc3339 format where this licence expires.",
 						MarkdownDescription: "Unix timestamp (precise at the milliseconds) in rfc3339 format where where this licence expires.",
 						Computed:            true,
-						Optional:            true,
 					},
 					"key": schema.StringAttribute{
 						Description:         "The licence key in JWT format. Required if `apply_licence` attribute is set.",
 						MarkdownDescription: "The licence key in JWT format. Required if `apply_licence` attribute is set.",
-						Optional:            true,
-						Computed:            true,
+						Required:            true,
 						Sensitive:           true,
 						Validators: []validator.String{
 							stringvalidator.LengthAtLeast(10),
@@ -131,7 +129,6 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					"members_count": schema.Int64Attribute{
 						Description:         "number of allowed members for this licence, default to 5.",
 						MarkdownDescription: "number of allowed members for this licence, default to 5.",
-						Optional:            true,
 						Computed:            true,
 					},
 					"current_members": schema.Int64Attribute{
