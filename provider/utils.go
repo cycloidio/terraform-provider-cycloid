@@ -53,3 +53,15 @@ func NameOrCanonical(name, canonical string) (string, string, error) {
 
 	return name, canonical, nil
 }
+
+// Coalesce will return the first non empty value, or empty if all are empty
+func Coalesce[T string | int | uint | bool](values ...T) T {
+	var noop T
+	for _, v := range values {
+		if v != noop {
+			return v
+		}
+	}
+
+	return noop
+}
