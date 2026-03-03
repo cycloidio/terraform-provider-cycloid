@@ -141,5 +141,8 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewStackResource,
 		NewProjectResource,
 		NewEnvironmentResource,
+		NewTeamResource,
 	}
 }
+
+func (p *CycloidProvider) GetResourceIdentitySchema() {}
