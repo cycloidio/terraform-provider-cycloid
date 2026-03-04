@@ -280,25 +280,36 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var orgState organizationResourceModel
+	var orgPlan organizationResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &orgPlan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &orgState)...)
+	var orgState organizationResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &orgState)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	m := r.provider.Middleware
-	name, canonical, err := NameOrCanonical(orgState.Name.ValueString(), orgState.Canonical.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("canonical"),
-			fmt.Sprintf("failed to infer canonical, from name %q and canonical %q", name, canonical),
-			"Fill either `name` or `canonical` attribute. subsequent error: "+err.Error(),
-		)
-		return
+	var name, canonical string
+	var err error
+	if orgState.Canonical.IsNull() || orgState.Canonical.IsUnknown() {
+		name, canonical, err = NameOrCanonical(orgPlan.Name.ValueString(), orgPlan.Canonical.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("canonical"),
+				fmt.Sprintf("failed to infer canonical, from name %q and canonical %q", name, canonical),
+				"Fill either `name` or `canonical` attribute. subsequent error: "+err.Error(),
+			)
+			return
+		}
+	} else {
+		name, canonical = Coalesce(orgPlan.Name.ValueString(), orgState.Name.ValueString()), orgState.Canonical.ValueString()
 	}
 
-	parentOrg := orgState.ParentOrganization.ValueString()
+	parentOrg := orgPlan.ParentOrganization.ValueString()
 	orgs, err := m.ListOrganizationChildrens(Coalesce(parentOrg, canonical))
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -345,8 +356,8 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	// Manage licence
 	var licence *models.Licence
 	var licenceState licenceResourceModel
-	if !orgState.Licence.IsNull() && !orgState.Licence.IsUnknown() {
-		if diags := orgState.Licence.As(ctx, &licenceState, basetypes.ObjectAsOptions{}); diags.HasError() {
+	if !orgPlan.Licence.IsNull() && !orgPlan.Licence.IsUnknown() {
+		if diags := orgPlan.Licence.As(ctx, &licenceState, basetypes.ObjectAsOptions{}); diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
@@ -380,8 +391,8 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	// Manage subscription
 	var subscription *models.Subscription
 	var subscriptionState subscriptionResourceModel
-	if !orgState.Subscription.IsUnknown() && !orgState.Subscription.IsNull() {
-		if diags := orgState.Subscription.As(ctx, &subscriptionState, basetypes.ObjectAsOptions{}); diags.HasError() {
+	if !orgPlan.Subscription.IsUnknown() && !orgPlan.Subscription.IsNull() {
+		if diags := orgPlan.Subscription.As(ctx, &subscriptionState, basetypes.ObjectAsOptions{}); diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
@@ -432,13 +443,13 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 
 	resp.Diagnostics.Append(
 		organizationCYModelToData(
-			ctx, &orgState, &licenceState, &subscriptionState,
-			*org, orgState.ParentOrganization.ValueStringPointer(), licence, subscription,
+			ctx, &orgPlan, &licenceState, &subscriptionState,
+			*org, orgPlan.ParentOrganization.ValueStringPointer(), licence, subscription,
 		)...,
 	)
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &orgState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &orgPlan)...)
 }
 
 func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
