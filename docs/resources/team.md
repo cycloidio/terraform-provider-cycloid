@@ -4,14 +4,14 @@ page_title: "cycloid_team Resource - cycloid"
 subcategory: ""
 description: |-
   Manage team in an organization.
-  Teams allows you to groupe people and assign permissions to it.
+  Teams allows you to group people and assign permissions to it.
   A team can get multiple roles assigned for custom permissions.
 ---
 
 # cycloid_team (Resource)
 
 Manage team in an organization.
-Teams allows you to groupe people and assign permissions to it.
+Teams allows you to group people and assign permissions to it.
 
 A team can get multiple roles assigned for custom permissions.
 
