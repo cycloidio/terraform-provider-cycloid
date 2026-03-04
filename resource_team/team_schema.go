@@ -12,10 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TeamResourcesSchema(ctx context.Context) schema.Schema {
+func TeamResourceSchema(ctx context.Context) schema.Schema {
 	teamDesc := strings.Join([]string{
 		"Manage team in an organization.",
-		"Teams allows you to groupe people and assign permissions to it.",
+		"Teams allows you to group people and assign permissions to it.",
 		"",
 		"A team can get multiple roles assigned for custom permissions.",
 	}, "\n")

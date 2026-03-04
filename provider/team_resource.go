@@ -29,7 +29,7 @@ func (r *teamResource) Metadata(ctx context.Context, req resource.MetadataReques
 }
 
 func (r *teamResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = resource_team.TeamResourcesSchema(ctx)
+	resp.Schema = resource_team.TeamResourceSchema(ctx)
 }
 
 func (r *teamResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -60,10 +60,16 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	m := r.provider.Middleware
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
-	name, canonical, err := NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("failed to infer canonical", err.Error())
-		return
+	var name, _ string
+	var err error
+	if teamState.Canonical.IsNull() && teamState.Canonical.IsUnknown() {
+		name, _, err = NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("failed to infer canonical", err.Error())
+			return
+		}
+	} else {
+		name, _ = teamState.Name.ValueString(), teamState.Canonical.ValueString()
 	}
 
 	teams, err := m.ListTeams(org, &name, nil, nil, nil)
@@ -74,7 +80,7 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	var team *models.Team
 	for _, t := range teams {
-		if ptr.Value(t.Canonical) == canonical {
+		if ptr.Value(t.Name) == name {
 			team = t
 		}
 	}
@@ -82,6 +88,11 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	resp.Diagnostics.Append(
 		TeamToModel(ctx, org, team, &teamState)...,
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &teamState)...)
 }
 
 func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -95,15 +106,21 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 	m := r.provider.Middleware
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
-	name, canonical, err := NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("failed to infer canonical", err.Error())
-		return
+	var name, canonical string
+	var err error
+	if teamState.Canonical.IsNull() || teamState.Canonical.IsUnknown() {
+		name, canonical, err = NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("failed to infer canonical", err.Error())
+			return
+		}
+	} else {
+		name, canonical = teamState.Name.ValueString(), teamState.Canonical.ValueString()
 	}
 
 	// Resource is idempotent, so we check if current team exists to decide if we
 	// create or update
-	teams, err := m.ListTeams(org, &name, nil, nil, nil)
+	teams, err := m.ListTeams(org, nil, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -143,29 +160,43 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, teamState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &teamState)...)
 }
 
 func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var teamPlan teamResourceModel
 	var teamState teamResourceModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &teamState)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &teamState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &teamPlan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	m := r.provider.Middleware
 
-	org := getOrganizationCanonical(*r.provider, teamState.Organization)
-	name, canonical, err := NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("failed to infer canonical", err.Error())
-		return
+	org := getOrganizationCanonical(*r.provider, teamPlan.Organization)
+	var name, canonical string
+	var err error
+	if teamPlan.Canonical.IsNull() && teamPlan.Canonical.IsUnknown() {
+		name, canonical, err = NameOrCanonical(teamPlan.Name.ValueString(), teamPlan.Canonical.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("failed to infer canonical", err.Error())
+			return
+		}
+	} else {
+		name, canonical = teamPlan.Name.ValueString(), teamPlan.Canonical.ValueString()
 	}
+
+	nameState := teamState.Name.ValueStringPointer()
 
 	// Resource is idempotent, so we check if current team exists to decide if we
 	// create or update
-	teams, err := m.ListTeams(org, &name, nil, nil, nil)
+	teams, err := m.ListTeams(org, nameState, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -173,25 +204,25 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	var team *models.Team
 	for _, t := range teams {
-		if ptr.Value(t.Canonical) == canonical {
+		if ptr.Value(t.Name) == ptr.Value(nameState) {
 			team = t
 		}
 	}
 
 	var roles = []string{}
-	resp.Diagnostics.Append(teamState.Roles.ElementsAs(ctx, &roles, true)...)
+	resp.Diagnostics.Append(teamPlan.Roles.ElementsAs(ctx, &roles, true)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if team == nil {
-		team, err = m.CreateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
+		team, err = m.CreateTeam(org, &name, &canonical, teamPlan.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to create team %q in org %q", canonical, org), err.Error())
 			return
 		}
 	} else {
-		team, err = m.UpdateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
+		team, err = m.UpdateTeam(org, &name, team.Canonical, teamPlan.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to update existing team %q in org %q", canonical, org), err.Error())
 			return
@@ -199,13 +230,13 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	resp.Diagnostics.Append(
-		TeamToModel(ctx, org, team, &teamState)...,
+		TeamToModel(ctx, org, team, &teamPlan)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, teamState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &teamPlan)...)
 }
 
 func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -219,10 +250,16 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	m := r.provider.Middleware
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
-	_, canonical, err := NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("failed to infer canonical", err.Error())
-		return
+	var canonical string
+	var err error
+	if teamState.Canonical.IsNull() || teamState.Canonical.IsUnknown() {
+		_, canonical, err = NameOrCanonical(teamState.Name.ValueString(), teamState.Canonical.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("failed to infer canonical", err.Error())
+			return
+		}
+	} else {
+		canonical = teamState.Canonical.ValueString()
 	}
 
 	// We need to check if the team exists before delete
@@ -256,7 +293,7 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, teamState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &teamState)...)
 }
 
 func TeamToModel(ctx context.Context, org string, team *models.Team, teamState *teamResourceModel) diag.Diagnostics {
