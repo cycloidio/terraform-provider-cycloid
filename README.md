@@ -1,26 +1,8 @@
 # Terraform Provider Cycloid
 
-How it works:
+## User documentation
 
-```hcl
-terraform {
-  required_providers {
-    cycloid = {
-      source = "cycloidio/cycloid"
-    }
-  }
-}
-
-resource "cycloid_organization" "child_test" {
-  name = "terraform organization test"
-}
-
-provider "cycloid" {
-  url                    = "URL"
-  jwt                    = "JWT"
-  organization_canonical = "ORG_CAN"
-}
-```
+Follow the provider documentation on the [terraform registry](https://registry.terraform.io/providers/cycloidio/cycloid/latest/docs).
 
 ## Contibuting (cycloid only)
 
