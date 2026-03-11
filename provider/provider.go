@@ -143,6 +143,7 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewEnvironmentResource,
 		NewTeamResource,
 		NewTeamMemberResource,
+		NewComponentResource,
 	}
 }
 

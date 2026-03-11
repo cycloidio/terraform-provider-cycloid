@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/sanity-io/litter"
 )
 
 // AnyToDynamicValue will convert any data to a terraform DynamicValue.
@@ -51,7 +51,7 @@ func AnyToDynamicValue(ctx context.Context, data any) (basetypes.DynamicValue, d
 	default:
 		return types.DynamicNull(), diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Unsupported type",
-			fmt.Sprintf("Cannot convert type %T to a dynamic Terraform value", data),
+			fmt.Sprintf("Cannot convert type %s to a dynamic Terraform value", v.Kind().String()),
 		)}
 	}
 }
@@ -60,6 +60,10 @@ func AnyToDynamicValue(ctx context.Context, data any) (basetypes.DynamicValue, d
 // Int and Float will all use 64 versions, UInt will be converted to numbers
 func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.Value, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	if data == nil {
+		return types.DynamicType, types.DynamicNull(), nil
+	}
 
 	switch v := reflect.ValueOf(data); v.Kind() {
 	case reflect.String:
@@ -88,42 +92,47 @@ func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.
 			vs[i] = v
 		}
 
+		// TODO:
+		// The usage of lists instead of tuples can create errors in state
+		// evaluation by terraform.
+		// Keeping the logic here because it deserves further investigation.
+
 		// Terraform lists don't support multiple types, so if
 		// the slice has more than one type, we use a tuple instead.
-		singleType := true
-		if len(ts) > 1 {
-			for _, t := range ts[1:] {
-				if ts[0].String() != t.String() {
-					singleType = false
-					break
-				}
-			}
+		// singleType := true
+		// if len(ts) > 1 {
+		// 	for _, t := range ts[1:] {
+		// 		if ts[0].String() != t.String() {
+		// 			singleType = false
+		// 			break
+		// 		}
+		// 	}
+		// }
+
+		// if singleType {
+		// 	var singleType attr.Type
+		// 	if len(slices.Compact(ts)) == 0 {
+		// 		singleType = types.StringType
+		// 	} else {
+		// 		singleType = ts[0]
+		// 	}
+		//
+		// 	list, d := types.ListValue(singleType, vs)
+		// 	diags.Append(d...)
+		// 	if diags.HasError() {
+		// 		return nil, nil, diags
+		// 	}
+		//
+		// 	return types.ListType{ElemType: singleType}, list, diags
+		// } else {
+		tuple, d := types.TupleValue(ts, vs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.TupleType{ElemTypes: ts}, tuple, diags
 		}
 
-		if singleType {
-			var singleType attr.Type
-			if len(slices.Compact(ts)) == 0 {
-				singleType = types.StringType
-			} else {
-				singleType = ts[0]
-			}
-
-			list, d := types.ListValue(singleType, vs)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, nil, diags
-			}
-
-			return types.ListType{ElemType: singleType}, list, diags
-		} else {
-			tuple, d := types.TupleValue(ts, vs)
-			diags.Append(d...)
-			if diags.HasError() {
-				return types.TupleType{ElemTypes: ts}, tuple, diags
-			}
-
-			return tuple.Type(ctx), tuple, diags
-		}
+		return tuple.Type(ctx), tuple, diags
+		// }
 
 	case reflect.Map:
 		// Maps don't support dynamic type attributes nor attributes of different types.
@@ -187,7 +196,71 @@ func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.
 		return types.ObjectType{AttrTypes: attrTypes}, objValue, diags
 
 	default:
-		diags.AddError("Unsuported type "+v.Kind().String()+" for value", "This is an error from the provider, please reach out to the developper")
+		diags.AddError("Unsuported type "+v.Kind().String()+" for value convertion to dynamic value.", "This is an error from the provider, please reach out to the developper")
 		return types.StringType, types.StringNull(), diags
 	}
+}
+
+// AttrValueToAny converts an attr.Value to any go value
+func AttrValueToAny(ctx context.Context, value attr.Value) (any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var output any
+
+	if value == nil {
+		return types.DynamicNull(), nil
+	}
+
+	switch typedValue := value.(type) {
+	case types.String:
+		output = typedValue.ValueString()
+	case types.Int32:
+		output = typedValue.ValueInt32()
+	case types.Int64:
+		output = typedValue.ValueInt64()
+	case types.Float32:
+		output = typedValue.ValueFloat32()
+	case types.Float64:
+		output = typedValue.ValueFloat64()
+	case types.Bool:
+		output = typedValue.ValueBool()
+	case types.Object:
+		var object = make(map[string]any)
+
+		for key, attrValue := range typedValue.Attributes() {
+			val, diags := AttrValueToAny(ctx, attrValue)
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			object[key] = val
+		}
+
+		output = object
+	case types.Tuple:
+		tupleElements, _ := typedValue.Elements(), typedValue.ElementTypes(ctx)
+		outList := make([]any, len(tupleElements))
+		for i, element := range tupleElements {
+			outList[i], diags = AttrValueToAny(ctx, element)
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			output = outList
+		}
+
+	case types.Dynamic:
+		val, diags := AttrValueToAny(ctx, typedValue.UnderlyingValue())
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		output = val
+
+	default:
+		diags.AddError("Unsupported type "+typedValue.String(),
+			litter.Sdump("This is an error from the provider, please reach out to the developper", value))
+		return nil, diags
+	}
+
+	return output, nil
 }
