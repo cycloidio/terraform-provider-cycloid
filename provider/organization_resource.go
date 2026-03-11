@@ -84,6 +84,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 			"fail to read current organizations",
 			err.Error(),
 		)
+		return
 	}
 
 	for _, o := range orgs {
@@ -164,7 +165,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		t, err := time.Parse(time.RFC3339, timestampValue)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("subscription.expire_at_rfc3339"),
+				path.Root("subscription.expires_at_rfc3339"),
 				fmt.Sprintf("failed to parse timestamp %q", timestampValue),
 				err.Error(),
 			)
@@ -256,7 +257,13 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	for _, o := range orgs {
 		if ptr.Value(o.Canonical) == canonical {
 			org = o
+			break
 		}
+	}
+
+	if org == nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Organization %q not found", canonical), "")
+		return
 	}
 
 	var licence *models.Licence
@@ -269,7 +276,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	resp.Diagnostics.Append(
 		organizationCYModelToData(
 			ctx, &orgState, &licenceState, &subscriptionState,
-			ptr.Value(org), orgState.ParentOrganization.ValueStringPointer(), licence, ptr.Value(org).Subscription,
+			*org, orgState.ParentOrganization.ValueStringPointer(), licence, org.Subscription,
 		)...,
 	)
 	if resp.Diagnostics.HasError() {
@@ -331,25 +338,28 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		org, err = m.CreateOrganizationChild(parentOrg, canonical, &name)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("Failed to re-create org %s", canonical),
+				fmt.Sprintf("Failed to create org %s", canonical),
 				err.Error(),
 			)
+			return
 		}
 	} else if currentOrg == nil && parentOrg == "" {
 		org, err = m.CreateOrganization(name)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("Failed to re-create org %s", canonical),
+				fmt.Sprintf("Failed to create org %s", canonical),
 				err.Error(),
 			)
+			return
 		}
 	} else {
 		org, err = m.UpdateOrganization(canonical, name)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("Failed to re-create org %s", canonical),
+				fmt.Sprintf("Failed to update org %s", canonical),
 				err.Error(),
 			)
+			return
 		}
 	}
 
@@ -401,7 +411,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		t, err := time.Parse(time.RFC3339, timestampValue)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
-				path.Root("subscription.expire_at_rfc3339"),
+				path.Root("subscription.expires_at_rfc3339"),
 				fmt.Sprintf("failed to parse timestamp %q", timestampValue),
 				err.Error(),
 			)
@@ -455,24 +465,36 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var orgState organizationResourceModel
 
-	var licenceState licenceResourceModel
-	if !orgState.Licence.IsNull() && !orgState.Licence.IsUnknown() {
-		if diags := orgState.Licence.As(ctx, &licenceState, basetypes.ObjectAsOptions{}); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-	}
-
-	var subscriptionState subscriptionResourceModel
-	if !orgState.Subscription.IsNull() && !orgState.Subscription.IsUnknown() {
-		if diags := orgState.Subscription.As(ctx, &subscriptionState, basetypes.ObjectAsOptions{}); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-	}
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &orgState)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if soft destroy is enabled
+	if orgState.SoftDestroy.ValueBool() {
+		// Soft destroy: just remove from state, don't delete from Cycloid
+		resp.Diagnostics.AddWarning(
+			"Soft destroy performed",
+			fmt.Sprintf("Organization %q has been removed from Terraform state but still exists in Cycloid. You can now manage it manually through the UI or API.", orgState.Canonical.ValueString()),
+		)
+		return
+	}
+
+	// Check if destruction is allowed
+	if !orgState.AllowDestroy.ValueBool() {
+		resp.Diagnostics.AddError(
+			"Organization destruction blocked",
+			"allow_destroy is set to false. Set allow_destroy to true and apply again to destroy this organization. This prevents accidental deletion of organizations containing projects, environments, and components.",
+		)
+		return
+	}
+
+	// Ensure canonical exists in state
+	if orgState.Canonical.IsNull() || orgState.Canonical.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"Invalid organization state",
+			"Organization canonical is not available in state. This indicates an inconsistent state that requires manual intervention.",
+		)
 		return
 	}
 
@@ -483,6 +505,8 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	var licenceState licenceResourceModel
+	var subscriptionState subscriptionResourceModel
 	resp.Diagnostics.Append(
 		organizationCYModelToData(
 			ctx, &orgState, &licenceState, &subscriptionState, models.Organization{}, nil, nil, nil,
@@ -492,6 +516,9 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 
 func organizationCYModelToData(ctx context.Context, orgState *organizationResourceModel, licenceState *licenceResourceModel, subscriptionState *subscriptionResourceModel, org models.Organization, parentOrg *string, licence *models.Licence, subscription *models.Subscription) diag.Diagnostics {
 	var diags diag.Diagnostics
+	// Store the protection-related fields before modifying orgState
+	preserveAllowDestroy := orgState.AllowDestroy
+	preserveSoftDestroy := orgState.SoftDestroy
 	// var licenceState basetypes.ObjectValue
 	var licenceValue basetypes.ObjectValue
 	if licence == nil {
@@ -561,6 +588,9 @@ func organizationCYModelToData(ctx context.Context, orgState *organizationResour
 	orgState.Name = types.StringPointerValue(org.Name)
 	orgState.ParentOrganization = types.StringPointerValue(parentOrg)
 	orgState.Subscription = subscriptionValue
+	// Restore the protection-related fields from the input state
+	orgState.AllowDestroy = preserveAllowDestroy
+	orgState.SoftDestroy = preserveSoftDestroy
 	return nil
 }
 

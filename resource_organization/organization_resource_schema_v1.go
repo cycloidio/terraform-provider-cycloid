@@ -5,14 +5,15 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
 
 var (
@@ -161,7 +162,7 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					},
 					"expires_at_rfc3339": schema.StringAttribute{
 						Description:         "Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.",
-						MarkdownDescription: "Unix timestamp (precise at the milliseconds) in rfc3339 format where where this subscription expires.",
+						MarkdownDescription: "Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.",
 						Computed:            true,
 						Optional:            true,
 					},
@@ -187,11 +188,36 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					},
 				},
 			},
+			"allow_destroy": schema.BoolAttribute{
+				Description:         "Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.",
+				MarkdownDescription: "Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					boolvalidator.ConflictsWith(
+						path.MatchRoot("soft_destroy"),
+					),
+				},
+			},
+			"soft_destroy": schema.BoolAttribute{
+				Description:         "Whether to perform a soft destroy operation. When set to true, removes the organization from Terraform state but keeps it in Cycloid. This allows manual management of the organization through the UI or API after Terraform stops managing it.",
+				MarkdownDescription: "Whether to perform a soft destroy operation. When set to true, removes the organization from Terraform state but keeps it in Cycloid. This allows manual management of the organization through the UI or API after Terraform stops managing it.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					boolvalidator.ConflictsWith(
+						path.MatchRoot("allow_destroy"),
+					),
+				},
+			},
 		},
 	}
 }
 
 type OrganizationModel struct {
+	AllowDestroy       types.Bool   `tfsdk:"allow_destroy"`
 	Canonical          types.String `tfsdk:"canonical"`
 	Concourse          types.Object `tfsdk:"concourse"`
 	HasChildren        types.Bool   `tfsdk:"has_children"`
@@ -200,6 +226,7 @@ type OrganizationModel struct {
 	Licence            types.Object `tfsdk:"licence"`
 	Name               types.String `tfsdk:"name"`
 	ParentOrganization types.String `tfsdk:"parent_organization"`
+	SoftDestroy        types.Bool   `tfsdk:"soft_destroy"`
 	Subscription       types.Object `tfsdk:"subscription"`
 }
 

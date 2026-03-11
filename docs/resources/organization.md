@@ -59,10 +59,12 @@ resource "cycloid_organization" "some_organization" {
 
 ### Optional
 
+- `allow_destroy` (Boolean) Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.
 - `canonical` (String) The canonical of an organization, fill either this or name at creation.
 - `licence` (Attributes) Attributes related to the org licence, [docs here](https://docs.cycloid.io/reference/organizations/concepts/licencing). (see [below for nested schema](#nestedatt--licence))
 - `name` (String) The name of an organization, fill either this or canonical at creation.
 - `parent_organization` (String) The canonical of the parent organization if you want this org to be a child organization.
+- `soft_destroy` (Boolean) Whether to perform a soft destroy operation. When set to true, removes the organization from Terraform state but keeps it in Cycloid. This allows manual management of the organization through the UI or API after Terraform stops managing it.
 - `subscription` (Attributes) Attributes related to the org subscription, [docs here](https://docs.cycloid.io/reference/organizations/concepts/licencing). (see [below for nested schema](#nestedatt--subscription))
 
 ### Read-Only
@@ -93,7 +95,7 @@ Read-Only:
 
 Optional:
 
-- `expires_at_rfc3339` (String) Unix timestamp (precise at the milliseconds) in rfc3339 format where where this subscription expires.
+- `expires_at_rfc3339` (String) Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.
 - `members_count` (Number) number of allowed members for this plan, default to 5.
 - `plan` (String) The type of plan of this subscription, can be either `free_tier` or `platform_teams`, default to `platform_teams`
 
