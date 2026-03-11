@@ -1,7 +1,6 @@
 package dynamic
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
