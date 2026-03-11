@@ -167,7 +167,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
-				"Failed to list version for stack %q in org %q",
+				fmt.Sprintf("Failed to list version for stack %q in org %q", stackRef, org),
 				err.Error(),
 			)
 			return
@@ -271,7 +271,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
-				"Failed to list version for stack %q in org %q",
+				fmt.Sprintf("Failed to list version for stack %q in org %q", stackRef, org),
 				err.Error(),
 			)
 			return
