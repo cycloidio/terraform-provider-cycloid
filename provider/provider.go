@@ -138,6 +138,7 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewConfigRepositoryResource,
 		NewExternalBackendResource,
 		NewOrganizationMemberResource,
+		NewOrganizationRoleResource,
 		NewStackResource,
 		NewProjectResource,
 		NewEnvironmentResource,
