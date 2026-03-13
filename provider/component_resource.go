@@ -388,24 +388,9 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
 }
 
-// getInputVariablesForRead determines input variables for the Read method based on allowVariableUpdate flag.
-// When true, filters current config to only include user-provided variables for change detection.
-// When false, returns component state input variables to prevent Terraform updates.
-func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, currentConfig map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
-	if componentState.AllowVariableUpdate.ValueBool() {
-		userInputValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
-		if diags.HasError() {
-			return nil, diags
-		}
-		userInput, diags := dynamicValueToVariables(ctx, userInputValue)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		filteredConfig := filterVariablesByUserInput(currentConfig, userInput)
-		return filteredConfig, diags
-	}
-
+// getInputVariablesForRead always returns the user-managed input_variables from state.
+// current_config is tracked separately and may evolve in the backend.
+func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, _ map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
 	variablesValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
 	if diags.HasError() {
 		return nil, diags
@@ -415,42 +400,6 @@ func getInputVariablesForRead(ctx context.Context, componentState componentResou
 		return nil, diags
 	}
 	return inputVariables, diags
-}
-
-// filterVariablesByUserInput returns only variables from currentConfig that exist in userInput.
-// This ensures Terraform only tracks variables the user actually provided.
-func filterVariablesByUserInput(currentConfig, userInput map[string]map[string]map[string]any) map[string]map[string]map[string]any {
-	filtered := make(map[string]map[string]map[string]any)
-
-	for sectionName, section := range userInput {
-		if _, exists := currentConfig[sectionName]; !exists {
-			continue
-		}
-
-		filteredSection := make(map[string]map[string]any)
-		for groupName, group := range section {
-			if _, exists := currentConfig[sectionName][groupName]; !exists {
-				continue
-			}
-
-			filteredGroup := make(map[string]any)
-			for keyName := range group {
-				if _, exists := currentConfig[sectionName][groupName][keyName]; exists {
-					filteredGroup[keyName] = currentConfig[sectionName][groupName][keyName]
-				}
-			}
-
-			if len(filteredGroup) > 0 {
-				filteredSection[groupName] = filteredGroup
-			}
-		}
-
-		if len(filteredSection) > 0 {
-			filtered[sectionName] = filteredSection
-		}
-	}
-
-	return filtered
 }
 
 func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables map[string]map[string]map[string]any, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel) diag.Diagnostics {
@@ -558,14 +507,14 @@ func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (m
 					}
 
 					if output[section] == nil {
-						output[section] = map[string]map[string]any{group: {key: keyOutput}}
+						output[section] = map[string]map[string]any{}
 					}
 
 					if output[section][group] == nil {
-						output[section][group] = map[string]any{
-							key: keyOutput,
-						}
+						output[section][group] = map[string]any{}
 					}
+
+					output[section][group][key] = keyOutput
 				}
 			}
 		}
