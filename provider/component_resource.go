@@ -117,29 +117,29 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r *ComponentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var componentState componentResourceModel
+	var componentPlan componentResourceModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &componentState)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &componentPlan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	m := r.provider.Middleware
 
-	org := getOrganizationCanonical(*r.provider, componentState.Organization)
-	project := componentState.Project.ValueString()
-	environment := componentState.Environment.ValueString()
+	org := getOrganizationCanonical(*r.provider, componentPlan.Organization)
+	project := componentPlan.Project.ValueString()
+	environment := componentPlan.Environment.ValueString()
 
 	var name, canonical string
 	var err error
-	if componentState.Canonical.IsNull() || componentState.Canonical.IsUnknown() {
-		name, canonical, err = NameOrCanonical(componentState.Name.ValueString(), componentState.Canonical.ValueString())
+	if componentPlan.Canonical.IsNull() || componentPlan.Canonical.IsUnknown() {
+		name, canonical, err = NameOrCanonical(componentPlan.Name.ValueString(), componentPlan.Canonical.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError("failed to infer canonical", err.Error())
 			return
 		}
 	} else {
-		name, canonical = componentState.Name.ValueString(), componentState.Canonical.ValueString()
+		name, canonical = componentPlan.Name.ValueString(), componentPlan.Canonical.ValueString()
 	}
 
 	components, err := m.ListComponents(org, project, environment)
@@ -156,10 +156,10 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	stackRef := componentState.StackRef.ValueString()
-	useCase := componentState.UseCase.ValueString()
-	stackVersion := componentState.StackVersion.ValueStringPointer()
-	description := componentState.Description.ValueStringPointer()
+	stackRef := componentPlan.StackRef.ValueString()
+	useCase := componentPlan.UseCase.ValueString()
+	stackVersion := componentPlan.StackVersion.ValueStringPointer()
+	description := componentPlan.Description.ValueStringPointer()
 
 	var tag, branch, commit string
 	if stackVersion != nil {
@@ -175,21 +175,17 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		tag, branch, commit = matchStackVersion(versions, stackVersion)
 	}
 
-	var variables models.FormVariables
+	var inputVariables models.FormVariables
 	var diags diag.Diagnostics
-	if !componentState.InputVariables.IsNull() && !componentState.InputVariables.IsUnknown() {
-		variables, diags = dynamicValueToVariables(ctx, componentState.InputVariables)
+	if !componentPlan.InputVariables.IsNull() && !componentPlan.InputVariables.IsUnknown() {
+		inputVariables, diags = dynamicValueToVariables(ctx, componentPlan.InputVariables)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	var inputs models.FormVariables
-	if componentState.AllowVariableUpdate.ValueBool() {
-		inputs = variables
-	}
-	component, err = m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
+	component, err = m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -202,13 +198,13 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	resp.Diagnostics.Append(
-		ComponentToModel(ctx, org, component, variables, currentConfig, &componentState)...,
+		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentPlan)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &componentPlan)...)
 }
 
 func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -353,7 +349,6 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 		canonical = componentState.Canonical.ValueString()
 	}
 
-	// We need to check if the component exists before delete
 	components, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
@@ -388,8 +383,6 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
 }
 
-// getInputVariablesForRead always returns the user-managed input_variables from state.
-// current_config is tracked separately and may evolve in the backend.
 func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, _ map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
 	variablesValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
 	if diags.HasError() {
@@ -456,10 +449,6 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 	}
 
 	var diags diag.Diagnostics
-	componentState.InputVariables, diags = dynamic.AnyToDynamicValue(ctx, inputVariables)
-	if diags.HasError() {
-		return diags
-	}
 	componentState.CurrentConfig, diags = dynamic.AnyToDynamicValue(ctx, currentConfig)
 	if diags.HasError() {
 		return diags
@@ -531,7 +520,6 @@ func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (m
 	return output, nil
 }
 
-// matchStackVersion finds the matching stack version and returns tag, branch, and commit
 func matchStackVersion(versions []*models.ServiceCatalogSourceVersion, stackVersion *string) (tag, branch, commit string) {
 	if stackVersion == nil {
 		return "", "", ""
