@@ -383,7 +383,20 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
 }
 
-func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, _ map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
+func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, currentConfig map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
+	if componentState.AllowVariableUpdate.ValueBool() {
+		userInputValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		userInput, diags := dynamicValueToVariables(ctx, userInputValue)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		return filterVariablesByUserInput(currentConfig, userInput), diags
+	}
+
 	variablesValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
 	if diags.HasError() {
 		return nil, diags
@@ -393,6 +406,40 @@ func getInputVariablesForRead(ctx context.Context, componentState componentResou
 		return nil, diags
 	}
 	return inputVariables, diags
+}
+
+func filterVariablesByUserInput(currentConfig, userInput map[string]map[string]map[string]any) map[string]map[string]map[string]any {
+	filtered := make(map[string]map[string]map[string]any)
+
+	for sectionName, section := range userInput {
+		if _, exists := currentConfig[sectionName]; !exists {
+			continue
+		}
+
+		filteredSection := make(map[string]map[string]any)
+		for groupName, group := range section {
+			if _, exists := currentConfig[sectionName][groupName]; !exists {
+				continue
+			}
+
+			filteredGroup := make(map[string]any)
+			for keyName := range group {
+				if _, exists := currentConfig[sectionName][groupName][keyName]; exists {
+					filteredGroup[keyName] = currentConfig[sectionName][groupName][keyName]
+				}
+			}
+
+			if len(filteredGroup) > 0 {
+				filteredSection[groupName] = filteredGroup
+			}
+		}
+
+		if len(filteredSection) > 0 {
+			filtered[sectionName] = filteredSection
+		}
+	}
+
+	return filtered
 }
 
 func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables map[string]map[string]map[string]any, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel) diag.Diagnostics {
@@ -409,6 +456,7 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		componentState.AllowVersionUpdate = types.BoolNull()
 		componentState.AllowVariableUpdate = types.BoolNull()
 		componentState.AllowDestroy = types.BoolNull()
+		componentState.InputVariables = types.DynamicNull()
 		componentState.CurrentConfig = types.DynamicNull()
 		return nil
 	}
@@ -449,6 +497,10 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 	}
 
 	var diags diag.Diagnostics
+	componentState.InputVariables, diags = dynamic.AnyToDynamicValue(ctx, inputVariables)
+	if diags.HasError() {
+		return diags
+	}
 	componentState.CurrentConfig, diags = dynamic.AnyToDynamicValue(ctx, currentConfig)
 	if diags.HasError() {
 		return diags
