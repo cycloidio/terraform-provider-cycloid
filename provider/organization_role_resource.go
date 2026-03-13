@@ -53,22 +53,22 @@ func (r *organizationRoleResource) Configure(ctx context.Context, req resource.C
 }
 
 func (r *organizationRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var roleState organizationRoleResourceModel
+	var rolePlan organizationRoleResourceModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &roleState)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &rolePlan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	m := r.provider.Middleware
-	org := getOrganizationCanonical(*r.provider, roleState.Organization)
-	name, canonical, err := NameOrCanonical(roleState.Name.ValueString(), roleState.Canonical.ValueString())
+	org := getOrganizationCanonical(*r.provider, rolePlan.Organization)
+	name, canonical, err := NameOrCanonical(rolePlan.Name.ValueString(), rolePlan.Canonical.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("failed to infer role canonical", err.Error())
 		return
 	}
 
-	rules, diags := organizationRolePlanRulesToCYModel(ctx, roleState.Rules)
+	rules, diags := organizationRolePlanRulesToCYModel(ctx, rolePlan.Rules)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -88,7 +88,7 @@ func (r *organizationRoleResource) Create(ctx context.Context, req resource.Crea
 		}
 	}
 
-	description := roleState.Description.ValueStringPointer()
+	description := rolePlan.Description.ValueStringPointer()
 	if existingRole == nil {
 		_, err = m.CreateRole(org, &name, &canonical, description, rules)
 		if err != nil {
@@ -109,12 +109,12 @@ func (r *organizationRoleResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	resp.Diagnostics.Append(organizationRoleCYModelToData(ctx, org, role, &roleState)...)
+	resp.Diagnostics.Append(organizationRoleCYModelToData(ctx, org, role, &rolePlan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &roleState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &rolePlan)...)
 }
 
 func (r *organizationRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -223,6 +223,13 @@ func (r *organizationRoleResource) Delete(ctx context.Context, req resource.Dele
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete role %q in org %q", canonical, org), err.Error())
 		return
 	}
+
+	resp.Diagnostics.Append(organizationRoleCYModelToData(ctx, org, nil, &roleState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &roleState)...)
 }
 
 func (r *organizationRoleResource) updateRole(
