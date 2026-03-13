@@ -89,5 +89,6 @@ To test the provider with Terraform, create a dev override file (see `README.md`
 - Go 1.25+ is required (per `go.mod`). The VM already has Go 1.25.0 pre-installed.
 - Terraform is installed at `/usr/local/bin/terraform`.
 - Use `make install-provider` or `go install .` for the provider binary. Do not use `make install` or any codegen targets (`make tf-generate`, `make convert-swagger`) — codegen is being dropped in a future release.
-- All provider operations require a remote Cycloid API (`CY_API_URL`, `CY_API_KEY`, `CY_ORG` env vars). A dedicated testing environment is used for tests — do not run against production. No local services to start.
+- All provider operations require a remote Cycloid API (`CY_API_URL`, `CY_API_KEY`, `CY_ORG` env vars). No local services to start.
+- **Testing uses a dedicated testing environment** — always point `CY_API_URL` at the Cycloid staging/test API, never production. Ensure `CY_API_KEY` and `CY_ORG` correspond to the test environment as well.
 - `staticcheck` reports pre-existing warnings (unused vars/funcs); these are not blockers.
