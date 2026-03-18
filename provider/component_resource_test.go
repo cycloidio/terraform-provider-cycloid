@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +31,7 @@ func TestDynamicValueToVariablesPreservesAllGroupKeys(t *testing.T) {
 	assert.Equal(t, input, output, "all nested input_variables keys must be preserved")
 }
 
-func TestGetInputVariablesForReadReturnsStateInputsWhenVariableUpdatesEnabled(t *testing.T) {
+func TestGetInputVariablesForReadAppliesAPIDriftOnOverlappingKeys(t *testing.T) {
 	stateInputVariables := map[string]map[string]map[string]any{
 		"Definition of the development project": {
 			"Users settings": {
@@ -49,8 +48,7 @@ func TestGetInputVariablesForReadReturnsStateInputsWhenVariableUpdatesEnabled(t 
 	}
 
 	componentState := componentResourceModel{
-		AllowVariableUpdate: types.BoolValue(true),
-		InputVariables:      stateInputDynamic,
+		InputVariables: stateInputDynamic,
 	}
 
 	backendCurrentConfig := map[string]map[string]map[string]any{
@@ -61,10 +59,42 @@ func TestGetInputVariablesForReadReturnsStateInputsWhenVariableUpdatesEnabled(t 
 		},
 	}
 
+	want := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner-from-backend@example.com",
+				"project_maintainers_raw": "maintainer@example.com",
+				"project_developers_raw":  "developer@example.com",
+			},
+		},
+	}
+
 	output, diags := getInputVariablesForRead(t.Context(), componentState, backendCurrentConfig)
 	if diags.HasError() {
 		t.Fatalf("failed to get input variables for read: %v", diags)
 	}
 
-	assert.Equal(t, stateInputVariables, output, "Read must preserve user-provided input_variables from state")
+	assert.Equal(t, want, output)
+}
+
+func TestGetInputVariablesForReadPreservesStateWhenOverlappingValuesMatchAPI(t *testing.T) {
+	stateInputVariables := map[string]map[string]map[string]any{
+		"s": {
+			"g": {"k": "same"},
+		},
+	}
+	stateInputDynamic, diags := dynamic.AnyToDynamicValue(t.Context(), stateInputVariables)
+	if diags.HasError() {
+		t.Fatalf("failed to build state dynamic: %v", diags)
+	}
+	api := map[string]map[string]map[string]any{
+		"s": {
+			"g": {"k": "same", "extra": "only-in-api"},
+		},
+	}
+	output, diags := getInputVariablesForRead(t.Context(), componentResourceModel{InputVariables: stateInputDynamic}, api)
+	if diags.HasError() {
+		t.Fatalf("failed: %v", diags)
+	}
+	assert.Equal(t, stateInputVariables, output)
 }
