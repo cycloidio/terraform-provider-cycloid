@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/cycloidio/cycloid-cli/client/client/organization_service_catalog_sources"
 	"github.com/cycloidio/cycloid-cli/client/models"
+	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
+	strfmt "github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -16,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/pkg/errors"
 )
 
 var _ resource.Resource = (*catalogRepositoryResource)(nil)
@@ -76,13 +80,16 @@ func (r *catalogRepositoryResource) Configure(ctx context.Context, req resource.
 func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data catalogRepositoryResourceModel
 
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	mid := r.provider.Middleware
+	var configData catalogRepositoryResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
@@ -91,9 +98,17 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 	credCan := data.CredentialCanonical.ValueString()
 	visibility := data.OnCreateVisibility.ValueString()
 	team := data.OnCreateTeam.ValueString()
+	owner, ownerConfigured := configuredCatalogRepositoryOwner(configData.Owner)
 
-	cr, err := mid.CreateCatalogRepository(orgCan, name, url, branch, credCan, visibility, team)
+	cr, err := r.createCatalogRepository(orgCan, name, url, branch, credCan, visibility, team, owner)
 	if err != nil {
+		if ownerConfigured {
+			resp.Diagnostics.AddError(
+				"Unable create catalog repository with requested owner",
+				fmt.Sprintf("Unable to assign owner %q to catalog repository %q in organization %q: %s. A common cause is that this user is not invited in the target organization.", owner, name, orgCan, err.Error()),
+			)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable create catalog repository",
 			err.Error(),
@@ -140,26 +155,27 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data catalogRepositoryResourceModel
 
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Update API call logic
-	mid := r.provider.Middleware
+	var configData catalogRepositoryResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
 	url := data.Url.ValueString()
 	branch := data.Branch.ValueString()
 	credCan := data.CredentialCanonical.ValueString()
+	owner, ownerConfigured := configuredCatalogRepositoryOwner(configData.Owner)
 	can := data.Canonical.ValueString()
 
 	if can == "" {
 		var plandata catalogRepositoryResourceModel
-		// Read Terraform prior state data into the model
 		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -167,8 +183,15 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 		can = plandata.Canonical.ValueString()
 	}
 
-	cr, err := mid.UpdateCatalogRepository(orgCan, can, name, url, branch, credCan)
+	cr, err := r.updateCatalogRepository(orgCan, can, name, url, branch, credCan, owner)
 	if err != nil {
+		if ownerConfigured {
+			resp.Diagnostics.AddError(
+				"Unable update catalog repository with requested owner",
+				fmt.Sprintf("Unable to assign owner %q to catalog repository %q in organization %q: %s. A common cause is that this user is not invited in the target organization.", owner, can, orgCan, err.Error()),
+			)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable update catalog repository",
 			err.Error(),
@@ -212,8 +235,15 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 	var diags diag.Diagnostics
 	ctx := context.Background()
 
-	if cr.Owner != nil {
+	if cr.Owner != nil && cr.Owner.Username != nil {
 		data.Owner = types.StringPointerValue(cr.Owner.Username)
+	} else {
+		data.Owner = types.StringValue("")
+	}
+
+	stackCount := int64(0)
+	if cr.StackCount != nil {
+		stackCount = int64(*cr.StackCount)
 	}
 
 	data.Name = types.StringPointerValue(cr.Name)
@@ -222,9 +252,6 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 	data.Canonical = types.StringPointerValue(cr.Canonical)
 	data.OrganizationCanonical = types.StringValue(org)
 	data.CredentialCanonical = types.StringValue(cr.CredentialCanonical)
-	if cr.Owner != nil {
-		data.Owner = types.StringValue(*cr.Owner.Username)
-	}
 
 	stacksValue, diagErr := crStacksToListValue(ctx, cr.ServiceCatalogs)
 	diags.Append(diagErr...)
@@ -242,18 +269,98 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 			"url": basetypes.StringType{},
 		},
 		map[string]attr.Value{
-			"name":                 types.StringValue(*cr.Canonical),
+			"name":                 types.StringPointerValue(cr.Name),
 			"branch":               types.StringValue(cr.Branch),
-			"canonical":            types.StringValue(*cr.Canonical),
-			"credential_canonical": types.StringValue(*cr.Canonical),
-			"stack_count":          types.Int64Value(int64(*cr.StackCount)),
-			"url":                  types.StringValue(*cr.URL),
+			"canonical":            types.StringPointerValue(cr.Canonical),
+			"credential_canonical": types.StringValue(cr.CredentialCanonical),
+			"stack_count":          types.Int64Value(stackCount),
+			"url":                  types.StringPointerValue(cr.URL),
 			"stacks":               stacksValue,
 		})
 	diags.Append(diagErr...)
 	data.Data = dataValue
 
 	return diags
+}
+
+func configuredCatalogRepositoryOwner(owner types.String) (string, bool) {
+	if owner.IsNull() || owner.IsUnknown() {
+		return "", false
+	}
+
+	ownerValue := owner.ValueString()
+	if ownerValue == "" {
+		return "", false
+	}
+
+	return ownerValue, true
+}
+
+func (r *catalogRepositoryResource) createCatalogRepository(org, name, url, branch, cred, visibility, teamCanonical, owner string) (*models.ServiceCatalogSource, error) {
+	params := organization_service_catalog_sources.NewCreateServiceCatalogSourceParams()
+	params.SetOrganizationCanonical(org)
+
+	body := &models.NewServiceCatalogSource{
+		Branch: &branch,
+		Name:   &name,
+		URL:    &url,
+	}
+	if cred != "" {
+		body.CredentialCanonical = cred
+	}
+	if owner != "" {
+		body.Owner = owner
+	}
+	switch visibility {
+	case "shared", "local", "hidden":
+		body.Visibility = visibility
+	case "":
+	default:
+		return nil, errors.New("invalid visibility parameter for CreateCatalogRepository, accepted values are 'local', 'shared' or 'hidden'")
+	}
+	if teamCanonical != "" {
+		body.TeamCanonical = teamCanonical
+	}
+
+	params.SetBody(body)
+	if err := body.Validate(strfmt.Default); err != nil {
+		return nil, err
+	}
+
+	resp, err := r.provider.APIClient.OrganizationServiceCatalogSources.CreateServiceCatalogSource(params, r.provider.APIClient.Credentials(&org))
+	if err != nil {
+		return nil, cycloidmiddleware.NewAPIError(err)
+	}
+
+	return resp.GetPayload().Data, nil
+}
+
+func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, name, url, branch, cred, owner string) (*models.ServiceCatalogSource, error) {
+	params := organization_service_catalog_sources.NewUpdateServiceCatalogSourceParams()
+	params.SetOrganizationCanonical(org)
+	params.SetServiceCatalogSourceCanonical(catalogRepo)
+
+	body := &models.UpdateServiceCatalogSource{
+		Branch:              branch,
+		CredentialCanonical: cred,
+		Name:                &name,
+		URL:                 &url,
+	}
+	if owner != "" {
+		body.Owner = owner
+	}
+
+	params.SetBody(body)
+	if err := body.Validate(strfmt.Default); err != nil {
+		return nil, err
+	}
+
+	resp, err := r.provider.APIClient.OrganizationServiceCatalogSources.UpdateServiceCatalogSource(params, r.provider.APIClient.Credentials(&org))
+	if err != nil {
+		return nil, cycloidmiddleware.NewAPIError(err)
+	}
+
+	return resp.GetPayload().Data, nil
 }
 
 func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (basetypes.ListValue, diag.Diagnostics) {
