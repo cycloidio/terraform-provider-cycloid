@@ -217,6 +217,23 @@ func AttrValueToAny(ctx context.Context, value attr.Value) (any, diag.Diagnostic
 		output = typedValue.ValueInt32()
 	case types.Int64:
 		output = typedValue.ValueInt64()
+	case types.Number:
+		numberValue := typedValue.ValueBigFloat()
+		if numberValue == nil {
+			output = float64(0)
+			break
+		}
+
+		if numberValue.IsInt() {
+			numberAsInt, accuracy := numberValue.Int64()
+			if accuracy == big.Exact {
+				output = numberAsInt
+				break
+			}
+		}
+
+		numberAsFloat, _ := numberValue.Float64()
+		output = numberAsFloat
 	case types.Float32:
 		output = typedValue.ValueFloat32()
 	case types.Float64:
