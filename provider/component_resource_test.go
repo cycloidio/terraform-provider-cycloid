@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,4 +100,61 @@ func TestGetInputVariablesForReadPreservesStateWhenOverlappingValuesMatchAPI(t *
 		t.Fatalf("failed: %v", diags)
 	}
 	assert.Equal(t, stateInputVariables, output)
+}
+
+func TestDynamicValueToVariablesConvertsNumberValues(t *testing.T) {
+	inputDynamic := types.DynamicValue(types.ObjectValueMust(
+		map[string]attr.Type{
+			"section": types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"group": types.ObjectType{
+						AttrTypes: map[string]attr.Type{
+							"integer_key": types.NumberType,
+							"float_key":   types.NumberType,
+						},
+					},
+				},
+			},
+		},
+		map[string]attr.Value{
+			"section": types.ObjectValueMust(
+				map[string]attr.Type{
+					"group": types.ObjectType{
+						AttrTypes: map[string]attr.Type{
+							"integer_key": types.NumberType,
+							"float_key":   types.NumberType,
+						},
+					},
+				},
+				map[string]attr.Value{
+					"group": types.ObjectValueMust(
+						map[string]attr.Type{
+							"integer_key": types.NumberType,
+							"float_key":   types.NumberType,
+						},
+						map[string]attr.Value{
+							"integer_key": types.NumberValue(big.NewFloat(2)),
+							"float_key":   types.NumberValue(big.NewFloat(2.5)),
+						},
+					),
+				},
+			),
+		},
+	))
+
+	output, diags := dynamicValueToVariables(t.Context(), inputDynamic)
+	if diags.HasError() {
+		t.Fatalf("failed to convert dynamic to variables: %v", diags)
+	}
+
+	expected := map[string]map[string]map[string]any{
+		"section": {
+			"group": {
+				"integer_key": int64(2),
+				"float_key":   2.5,
+			},
+		},
+	}
+
+	assert.Equal(t, expected, output)
 }
