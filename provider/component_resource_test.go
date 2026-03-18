@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
@@ -67,4 +68,39 @@ func TestGetInputVariablesForReadReturnsStateInputsWhenVariableUpdatesEnabled(t 
 	}
 
 	assert.Equal(t, stateInputVariables, output, "Read must preserve user-provided input_variables from state")
+}
+
+func TestIsComponentNotFoundError(t *testing.T) {
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "component config not found operation",
+			err:      errors.New("A 404 error was returned on \"getComponentConfigNotFound\" call with message: The Component was not found"),
+			expected: true,
+		},
+		{
+			name:     "component not found message",
+			err:      errors.New("The Component was not found"),
+			expected: true,
+		},
+		{
+			name:     "different not found message",
+			err:      errors.New("A 404 error was returned on \"getProjectNotFound\" call"),
+			expected: false,
+		},
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expected, isComponentNotFoundError(testCase.err))
+		})
+	}
 }

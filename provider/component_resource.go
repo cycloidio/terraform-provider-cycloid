@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
@@ -90,12 +91,32 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 			break
 		}
 	}
+	if component == nil {
+		resp.Diagnostics.Append(
+			ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+		)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
+		return
+	}
 
 	var inputVariables map[string]map[string]map[string]any
 	var currentConfig map[string]map[string]map[string]any
 	var diags diag.Diagnostics
 	currentConfig, err = m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
+		if isComponentNotFoundError(err) {
+			resp.Diagnostics.Append(
+				ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+			)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
 	}
@@ -366,6 +387,16 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	if component != nil {
 		err = m.DeleteComponent(org, project, environment, canonical)
 		if err != nil {
+			if isComponentNotFoundError(err) {
+				resp.Diagnostics.Append(
+					ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+				)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
+				return
+			}
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("failed to delete component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error(),
 			)
@@ -552,4 +583,14 @@ func matchStackVersion(versions []*models.ServiceCatalogSourceVersion, stackVers
 	}
 
 	return tag, branch, commit
+}
+
+func isComponentNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "component was not found") ||
+		strings.Contains(errMsg, "getcomponentconfignotfound")
 }
