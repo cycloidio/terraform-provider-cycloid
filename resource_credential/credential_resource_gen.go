@@ -68,14 +68,6 @@ func CredentialResourceSchema(ctx context.Context) schema.Schema {
 					"environment": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"public",
-								"usgovernment",
-								"china",
-								"german",
-							),
-						},
 					},
 					"json_key": schema.StringAttribute{
 						Optional:            true,
