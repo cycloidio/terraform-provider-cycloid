@@ -8,6 +8,7 @@ import (
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -93,7 +94,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, organization, cred, &data)
+	resp.Diagnostics.Append(credentialCYModelToData(ctx, organization, cred, &data)...)
+	resp.Diagnostics.Append(credentialRawCYModelToDataBody(ctx, credentialType, rawCred, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -137,7 +142,10 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		}
 	}
 
-	credentialCYModelToData(ctx, organization, credential, &data)
+	resp.Diagnostics.Append(credentialCYModelToData(ctx, organization, credential, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -210,7 +218,11 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	credentialCYModelToData(ctx, organization, credential, &data)
+	resp.Diagnostics.Append(credentialCYModelToData(ctx, organization, credential, &data)...)
+	resp.Diagnostics.Append(credentialRawCYModelToDataBody(ctx, credentialType, rawCred, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -288,6 +300,55 @@ func credentialCYModelToData(ctx context.Context, org string, credential *models
 		}
 	}
 
+	return diags
+}
+
+func credentialRawCYModelToDataBody(ctx context.Context, credentialType string, rawCredential *models.CredentialRaw, data *credentialResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if rawCredential == nil {
+		rawCredential = &models.CredentialRaw{}
+	}
+
+	var rawValue types.Map
+	if credentialType == "custom" && rawCredential.Raw != nil {
+		var rawDiags diag.Diagnostics
+		rawValue, rawDiags = types.MapValueFrom(ctx, types.StringType, rawCredential.Raw)
+		diags.Append(rawDiags...)
+		if diags.HasError() {
+			return diags
+		}
+	} else {
+		rawValue = types.MapNull(types.StringType)
+	}
+
+	bodyValue, bodyDiags := resource_credential.NewBodyValue(
+		resource_credential.NewBodyValueNull().AttributeTypes(ctx),
+		map[string]attr.Value{
+			"access_key":      types.StringValue(rawCredential.AccessKey),
+			"secret_key":      types.StringValue(rawCredential.SecretKey),
+			"account_name":    types.StringValue(rawCredential.AccountName),
+			"auth_url":        types.StringValue(rawCredential.AuthURL),
+			"ca_cert":         types.StringValue(rawCredential.CaCert),
+			"client_id":       types.StringValue(rawCredential.ClientID),
+			"client_secret":   types.StringValue(rawCredential.ClientSecret),
+			"domain_id":       types.StringValue(rawCredential.DomainID),
+			"json_key":        types.StringValue(rawCredential.JSONKey),
+			"password":        types.StringValue(rawCredential.Password),
+			"environment":     types.StringValue(rawCredential.Environment),
+			"ssh_key":         types.StringValue(rawCredential.SSHKey),
+			"subscription_id": types.StringValue(rawCredential.SubscriptionID),
+			"tenant_id":       types.StringValue(rawCredential.TenantID),
+			"username":        types.StringValue(rawCredential.Username),
+			"raw":             rawValue,
+		},
+	)
+	diags.Append(bodyDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	data.Body = bodyValue
 	return diags
 }
 

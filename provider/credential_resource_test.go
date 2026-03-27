@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/stretchr/testify/assert"
 )
 
 // generateTestSSHKey generates an RSA SSH key for testing
@@ -528,4 +531,50 @@ resource "cycloid_credential" "test" {
   }
 }
 `, org, name, desc, name)
+}
+
+func TestCredentialRawCYModelToDataBodyForCustomCredential(t *testing.T) {
+	data := credentialResourceModel{}
+	rawCredential := &models.CredentialRaw{
+		Raw: map[string]string{
+			"first_key":  "first_value",
+			"second_key": "second_value",
+		},
+		Password: "password_value",
+	}
+
+	diags := credentialRawCYModelToDataBody(t.Context(), "custom", rawCredential, &data)
+	if diags.HasError() {
+		t.Fatalf("expected no diagnostics, got: %v", diags)
+	}
+
+	assert.Equal(t, "password_value", data.Body.Password.ValueString())
+	assert.False(t, data.Body.Raw.IsNull(), "body.raw should be set for custom credentials")
+
+	var rawValues map[string]types.String
+	rawDiags := data.Body.Raw.ElementsAs(t.Context(), &rawValues, false)
+	if rawDiags.HasError() {
+		t.Fatalf("expected raw map conversion without diagnostics, got: %v", rawDiags)
+	}
+
+	assert.Equal(t, "first_value", rawValues["first_key"].ValueString())
+	assert.Equal(t, "second_value", rawValues["second_key"].ValueString())
+}
+
+func TestCredentialRawCYModelToDataBodyForNonCustomCredential(t *testing.T) {
+	data := credentialResourceModel{}
+	rawCredential := &models.CredentialRaw{
+		AccessKey: "access_key_value",
+		Raw: map[string]string{
+			"should_be_ignored": "ignored_value",
+		},
+	}
+
+	diags := credentialRawCYModelToDataBody(t.Context(), "aws", rawCredential, &data)
+	if diags.HasError() {
+		t.Fatalf("expected no diagnostics, got: %v", diags)
+	}
+
+	assert.Equal(t, "access_key_value", data.Body.AccessKey.ValueString())
+	assert.True(t, data.Body.Raw.IsNull(), "body.raw should be null for non-custom credentials")
 }
