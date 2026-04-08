@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -38,6 +39,54 @@ func TestDynamicValueToVariablesPreservesAllGroupKeys(t *testing.T) {
 	}
 
 	assert.Equal(t, input, output, "all nested input_variables keys must be preserved")
+}
+
+func TestGetInputVariablesForReadReturnsFilteredBackendInputsWhenVariableUpdatesEnabled(t *testing.T) {
+	stateInputVariables := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner@example.com",
+				"project_maintainers_raw": "maintainer@example.com",
+				"project_developers_raw":  "developer@example.com",
+			},
+		},
+	}
+
+	stateInputDynamic, diags := dynamic.AnyToDynamicValue(t.Context(), stateInputVariables)
+	if diags.HasError() {
+		t.Fatalf("failed to build state dynamic input: %v", diags)
+	}
+
+	componentState := componentResourceModel{
+		AllowVariableUpdate: types.BoolValue(true),
+		InputVariables:      stateInputDynamic,
+	}
+
+	backendCurrentConfig := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner-from-backend@example.com",
+				"project_maintainers_raw": "maintainer-from-backend@example.com",
+				"project_extra_raw":       "extra-from-backend@example.com",
+			},
+		},
+	}
+
+	output, diags := getInputVariablesForRead(t.Context(), componentState, backendCurrentConfig)
+	if diags.HasError() {
+		t.Fatalf("failed to get input variables for read: %v", diags)
+	}
+
+	expected := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner-from-backend@example.com",
+				"project_maintainers_raw": "maintainer-from-backend@example.com",
+			},
+		},
+	}
+
+	assert.Equal(t, expected, output, "when variable updates are enabled, Read returns backend values for user-defined keys that exist in the API config")
 }
 
 func TestGetInputVariablesForReadAppliesAPIDriftOnOverlappingKeys(t *testing.T) {
@@ -163,6 +212,89 @@ func TestDynamicValueToVariablesConvertsNumberValues(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, output)
+}
+
+func TestGetInputVariablesForReadReturnsStateInputsWhenVariableUpdatesDisabled(t *testing.T) {
+	stateInputVariables := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner@example.com",
+				"project_maintainers_raw": "maintainer@example.com",
+				"project_developers_raw":  "developer@example.com",
+			},
+		},
+	}
+
+	stateInputDynamic, diags := dynamic.AnyToDynamicValue(t.Context(), stateInputVariables)
+	if diags.HasError() {
+		t.Fatalf("failed to build state dynamic input: %v", diags)
+	}
+
+	componentState := componentResourceModel{
+		AllowVariableUpdate: types.BoolValue(false),
+		InputVariables:      stateInputDynamic,
+	}
+
+	backendCurrentConfig := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw": "owner-from-backend@example.com",
+			},
+		},
+	}
+
+	want := map[string]map[string]map[string]any{
+		"Definition of the development project": {
+			"Users settings": {
+				"project_owners_raw":      "owner-from-backend@example.com",
+				"project_maintainers_raw": "maintainer@example.com",
+				"project_developers_raw":  "developer@example.com",
+			},
+		},
+	}
+
+	output, diags := getInputVariablesForRead(t.Context(), componentState, backendCurrentConfig)
+	if diags.HasError() {
+		t.Fatalf("failed to get input variables for read: %v", diags)
+	}
+
+	assert.Equal(t, want, output)
+}
+
+func TestComponentToModelSetsInputVariables(t *testing.T) {
+	inputVariables := map[string]map[string]map[string]any{
+		"section": {
+			"group": {
+				"key": "value",
+			},
+		},
+	}
+	currentConfig := map[string]map[string]map[string]any{
+		"section": {
+			"group": {
+				"key": "value",
+			},
+		},
+	}
+
+	componentState := componentResourceModel{}
+	component := &models.Component{
+		ServiceCatalog: &models.ServiceCatalog{
+			Ref: ptr.Ptr("org:stack"),
+		},
+	}
+
+	diags := ComponentToModel(t.Context(), "org", component, inputVariables, currentConfig, &componentState, true)
+	if diags.HasError() {
+		t.Fatalf("failed to map component to model: %v", diags)
+	}
+
+	output, diags := dynamicValueToVariables(t.Context(), componentState.InputVariables)
+	if diags.HasError() {
+		t.Fatalf("failed to convert model input_variables: %v", diags)
+	}
+
+	assert.Equal(t, inputVariables, output, "ComponentToModel must refresh input_variables in state when refreshInputVariables is true")
 }
 
 // defaultComponentInputVarsJSON is used when test config component.input_variables is empty.
