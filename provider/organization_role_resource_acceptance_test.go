@@ -13,7 +13,7 @@ import (
 
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/cycloid-cli/internal/ptr"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/stretchr/testify/require"
 )
 
