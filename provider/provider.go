@@ -125,6 +125,8 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewStacksDataSource,
 		NewCredentialsDataSource,
 		NewCredentialDataSource,
+		NewInventoryValueDataSource,
+		NewInventoryValuesDataSource,
 		NewTerraformOutputDataSource,
 		NewTerraformOutputsDataSource,
 	}
