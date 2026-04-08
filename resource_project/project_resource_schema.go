@@ -44,10 +44,6 @@ func ProjectResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "Description of the project, displayed in the UI",
 				MarkdownDescription: "Description of the project, displayed in the UI",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
-				},
 			},
 			"color": schema.StringAttribute{
 				Optional:            true,

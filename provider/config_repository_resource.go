@@ -70,7 +70,7 @@ func (r *configRepositoryResource) Create(ctx context.Context, req resource.Crea
 	credCan := data.CredentialCanonical.ValueString()
 	def := data.Default.ValueBool()
 
-	cr, err := mid.CreateConfigRepository(orgCan, name, can, url, branch, credCan, def)
+	cr, _, err := mid.CreateConfigRepository(orgCan, name, can, url, branch, credCan, def)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create config repository",
@@ -102,7 +102,7 @@ func (r *configRepositoryResource) Read(ctx context.Context, req resource.ReadRe
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	cr, err := mid.GetConfigRepository(orgCan, can)
+	cr, _, err := mid.GetConfigRepository(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read config repository",
@@ -148,7 +148,7 @@ func (r *configRepositoryResource) Update(ctx context.Context, req resource.Upda
 		can = plandata.Canonical.ValueString()
 	}
 
-	cr, err := mid.UpdateConfigRepository(orgCan, can, credCan, name, url, branch, def)
+	cr, _, err := mid.UpdateConfigRepository(orgCan, can, credCan, name, url, branch, def)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to update config repository",
@@ -179,7 +179,7 @@ func (r *configRepositoryResource) Delete(ctx context.Context, req resource.Dele
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	err := mid.DeleteConfigRepository(orgCan, can)
+	_, err := mid.DeleteConfigRepository(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete config repository",

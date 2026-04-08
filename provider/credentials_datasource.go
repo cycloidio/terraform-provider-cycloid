@@ -2,14 +2,11 @@ package provider
 
 import (
 	"context"
-	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -79,9 +76,10 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	organization := getOrganizationCanonical(*s.provider, data.Organization)
 
-	// Fetch logic
-	// We will not use the middleware as the current mid version does not support credential_types parameters
-	apiUrl := s.provider.APIUrl + "/organizations/" + organization + "/credentials"
+	query := url.Values{
+		"page_index": []string{"1"},
+		"page_size":  []string{"1000"},
+	}
 
 	var credentialTypes []string = nil
 	if !data.CredentialTypes.IsNull() && !data.CredentialTypes.IsUnknown() {
@@ -99,59 +97,20 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		}
 	}
 
-	if credentialTypes != nil {
-		apiUrl = apiUrl + "?" + url.Values(map[string][]string{
-			"credential_types": credentialTypes,
-		}).Encode()
-	}
-
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to create http client, API url may be invalid", err.Error())
-		return
-	}
-	request.Header.Add("Content-Type", "Application/json")
-	request.Header.Add("Authorization", "Bearer "+s.provider.APIKey)
-
-	client := http.DefaultClient
-	if s.provider.Insecure {
-		client.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-	}
-
-	response, err := client.Do(request)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to list credentials", err.Error())
-		return
-	}
-	defer response.Body.Close()
-
-	payload, err := io.ReadAll(response.Body)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to read response body from API", err.Error())
-		return
+	for _, credentialType := range credentialTypes {
+		query.Add("credential_types", credentialType)
 	}
 
 	var credentials []*CredentialSimple
-	var payloadData struct {
-		Data   []*CredentialSimple `json:"data,omitempty"`
-		Errors []struct {
-			Message string
-			Code    string
-			Details []string
-		} `json:"errors,omitempty"`
-	}
-
-	err = json.Unmarshal(payload, &payloadData)
+	_, err := s.provider.Middleware.GenericRequest(middleware.Request{
+		Method:       "GET",
+		Organization: &organization,
+		Route:        []string{"organizations", organization, "credentials"},
+		Query:        query,
+	}, &credentials)
 	if err != nil {
-		resp.Diagnostics.AddError("failed to parse JSON response from API", err.Error()+":\n"+litter.Sdump(payloadData.Errors))
+		resp.Diagnostics.AddError("failed to list credentials", err.Error())
 		return
-	}
-	if payloadData.Data != nil {
-		credentials = payloadData.Data
 	}
 
 	diags := dataModelFrom(ctx, &data, credentials)
