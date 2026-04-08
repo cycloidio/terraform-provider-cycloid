@@ -668,3 +668,80 @@ func TestCredentialCanonicalForCreate(t *testing.T) {
 		})
 	}
 }
+
+func TestConfiguredCredentialOwner(t *testing.T) {
+	testCases := []struct {
+		name          string
+		owner         types.String
+		expectedOwner string
+		expectedSet   bool
+	}{
+		{
+			name:          "known owner",
+			owner:         types.StringValue("alice"),
+			expectedOwner: "alice",
+			expectedSet:   true,
+		},
+		{
+			name:          "empty owner",
+			owner:         types.StringValue(""),
+			expectedOwner: "",
+			expectedSet:   false,
+		},
+		{
+			name:          "null owner",
+			owner:         types.StringNull(),
+			expectedOwner: "",
+			expectedSet:   false,
+		},
+		{
+			name:          "unknown owner",
+			owner:         types.StringUnknown(),
+			expectedOwner: "",
+			expectedSet:   false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			owner, set := configuredCredentialOwner(testCase.owner)
+			assert.Equal(t, testCase.expectedOwner, owner)
+			assert.Equal(t, testCase.expectedSet, set)
+		})
+	}
+}
+
+func TestResolveCredentialUpdateOwner(t *testing.T) {
+	testCases := []struct {
+		name        string
+		configOwner types.String
+		stateOwner  types.String
+		expected    string
+	}{
+		{
+			name:        "config owner takes precedence",
+			configOwner: types.StringValue("configured-owner"),
+			stateOwner:  types.StringValue("state-owner"),
+			expected:    "configured-owner",
+		},
+		{
+			name:        "state owner used when config owner missing",
+			configOwner: types.StringNull(),
+			stateOwner:  types.StringValue("state-owner"),
+			expected:    "state-owner",
+		},
+		{
+			name:        "empty when neither owner exists",
+			configOwner: types.StringUnknown(),
+			stateOwner:  types.StringNull(),
+			expected:    "",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			owner := resolveCredentialUpdateOwner(testCase.configOwner, testCase.stateOwner)
+			assert.Equal(t, testCase.expected, owner)
+		})
+	}
+}
