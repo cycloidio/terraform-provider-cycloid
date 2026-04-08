@@ -1,77 +1,72 @@
 package provider
 
-//
+import (
+	"context"
+	"fmt"
+	"testing"
 
-// The fwresource import alias is so there is no collision
-// with the more typical acceptance testing import:
-// "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+)
 
-// fwresource "github.com/hashicorp/terraform-plugin-framework/helper/resource"
+func TestAccTeamResource(t *testing.T) {
+	t.Parallel()
 
-// func TestThingResourceSchema(t *testing.T) {
-// 	t.Parallel()
-//
-// 	ctx := context.Background()
-// 	schemaRequest := fwresource.SchemaRequest{}
-// 	schemaResponse := &fwresource.SchemaResponse{}
-//
-// 	// Instantiate the resource.Resource and call its Schema method
-// 	NewTeamResource().Schema(ctx, schemaRequest, schemaResponse)
-//
-// 	if schemaResponse.Diagnostics.HasError() {
-// 		t.Fatalf("Schema method diagnostics: %+v", schemaResponse.Diagnostics)
-// 	}
-//
-// 	// Validate the schema
-// 	diagnostics := schemaResponse.Schema.ValidateImplementation(ctx)
-//
-// 	if diagnostics.HasError() {
-// 		t.Fatalf("Schema validation diagnostics: %+v", diagnostics)
-// 	}
-// }
+	ctx := context.Background()
+	orgCanonical := testAccGetOrganizationCanonical()
+	teamName := RandomCanonical("test-team")
+	depManager := NewTestDependencyManager(t)
+	defer depManager.Cleanup(ctx, t)
 
-// 	func TestAccTeamResource(t *testing.T) {
-// 	t.Parallel()
-// 	// var teamBefore, teamAfter teamResourceModel
-// 	compareValueSame := statecheck.CompareValue(compare.ValuesSame())
-//
-// 	resource.Test(t, resource.TestCase{
-// 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-// 			"cycloid": providerserver.NewProtocol6WithError(&CycloidProvider{}),
-// 		},
-// 		PreCheck: func() { testAccPreCheck(t) },
-// 		// Providers:    testAccProviders,
-// 		// CheckDestroy: testAccCheckExampleResourceDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: `
-// resource "cycloid_team" "test_team" {
-//   name         = "Test Team"
-//   roles = [
-//     "organization-admin",
-//   ]
-// }
-// 				`,
-// 				ConfigStateChecks: []statecheck.StateCheck{
-// 					compareValueSame.AddStateValue(
-// 						"cycloid_team.test_team", tfjsonpath.New("canonical"),
-// 					),
-// 				},
-// 			},
-// 		},
-// 	})
-// }
-//
-// func testAccPreCheck(t *testing.T) {
-// 	if v := os.Getenv("CY_API_URL"); v == "" {
-// 		t.Fatal("CY_API_URL is required for testing.")
-// 	}
-//
-// 	if v := os.Getenv("CY_API_KEY"); v == "" {
-// 		t.Fatal("CY_API_KEY is required for testing.")
-// 	}
-//
-// 	if v := os.Getenv("CY_ORG"); v == "" {
-// 		t.Fatal("CY_ORG is required for testing.")
-// 	}
-// }
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Create team with organization parameter and required roles
+			{
+				Config: testAccTeamConfig_basic(orgCanonical, teamName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("cycloid_team.test", "organization", orgCanonical),
+					resource.TestCheckResourceAttr("cycloid_team.test", "name", teamName),
+					resource.TestCheckResourceAttr("cycloid_team.test", "roles.#", "1"),
+					resource.TestCheckResourceAttr("cycloid_team.test", "roles.0", "organization-admin"),
+				),
+			},
+			// Update team
+			{
+				Config: testAccTeamConfig_updated(orgCanonical, teamName+"-updated"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("cycloid_team.test", "organization", orgCanonical),
+					resource.TestCheckResourceAttr("cycloid_team.test", "name", teamName+"-updated"),
+					resource.TestCheckResourceAttr("cycloid_team.test", "roles.#", "1"),
+					resource.TestCheckResourceAttr("cycloid_team.test", "roles.0", "organization-admin"),
+				),
+			},
+			// Destroy testing
+			{
+				Config:  " ", // Empty config to trigger destroy
+				Destroy: true,
+			},
+		},
+	})
+}
+
+// Test configuration functions
+func testAccTeamConfig_basic(org, name string) string {
+	return fmt.Sprintf(`
+resource "cycloid_team" "test" {
+  organization = "%s"
+  name         = "%s"
+  roles        = ["organization-admin"]
+}
+`, org, name)
+}
+
+func testAccTeamConfig_updated(org, name string) string {
+	return fmt.Sprintf(`
+resource "cycloid_team" "test" {
+  organization = "%s"
+  name         = "%s"
+  roles        = ["organization-admin"]
+}
+`, org, name)
+}

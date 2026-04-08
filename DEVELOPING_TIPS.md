@@ -139,3 +139,73 @@ provider_installation {
 
 Then you can just run `terraform plan`, the current `main.tf` is just connecting to staging so that is where things are gonna be created
 after you ran the `terraform apply -auto-approve`.
+
+## Test Dependency Management
+
+When working with acceptance tests that require dependencies (e.g., environment resources needing projects), use the TestDependencyManager system.
+
+### Key Principles
+
+- **Idempotent Provisioning**: Dependency creation is idempotent - overwrites existing entities if needed
+- **Robust Cleanup**: Cleanup failures are logged but never cause test failures
+- **Dual Mode Support**: Works for both unit tests (without middleware) and acceptance tests (with middleware)
+
+### Usage Example
+
+```go
+func TestAccEnvironmentResource(t *testing.T) {
+    ctx := context.Background()
+    orgCanonical := testAccGetOrganizationCanonical()
+
+    // Set up dependency manager
+    depManager := NewTestDependencyManager(t)
+    defer depManager.Cleanup(ctx, t)
+
+    // Create test project dependency
+    projectCanonical, err := depManager.EnsureTestProject(ctx, t, projectName, "Test project for environment testing")
+    if err != nil {
+        t.Fatalf("Failed to create test project dependency: %v", err)
+    }
+
+    resource.Test(t, resource.TestCase{
+        ProtoV6ProviderFactories: depManager.GetProviderFactories(),
+        PreCheck: func() { testAccPreCheck(t) },
+        Steps: []resource.TestStep{
+            {
+                Config: testAccEnvironmentConfig_basic_withDependency(orgCanonical, projectCanonical, envName),
+                // ... test checks
+            },
+        },
+    })
+}
+```
+
+### Configuration Functions
+
+Create dependency-aware configuration functions:
+
+```go
+func testAccEnvironmentConfig_basic_withDependency(org, projectCanonical, env string) string {
+    return fmt.Sprintf(`
+resource "cycloid_environment" "test" {
+  organization = "%s"
+  project     = "%s"
+  name        = "%s"
+}
+`, org, projectCanonical, env)
+}
+```
+
+### Behavior
+
+- **Unit Tests** (no env vars): Returns project names as canonicals, middleware not initialized
+- **Acceptance Tests** (with env vars): Creates real API resources, automatic cleanup
+
+### Extension
+
+To add support for other resource dependencies:
+
+1. Add creation methods to `TestDependencyManager`
+2. Add cleanup logic to track created resources  
+3. Create new configuration functions using pre-existing dependencies
+4. Update tests to use the dependency manager

@@ -1,0 +1,27 @@
+# Test environment dependency configuration for acceptance tests.
+# Copy this file to test_config.yaml and fill in values for your test environment.
+# Override any value with env vars: CY_TEST_<KEY> (e.g. CY_TEST_CONFIG_REPOSITORY).
+# Set a custom path with CY_TEST_CONFIG_FILE.
+
+# Config repository canonical used when creating projects in acceptance tests.
+config_repository: "my-config-repo"
+
+# Repository defaults for tests; each repo needs a credential that exists in the test org.
+repositories:
+  config:
+    url: "git@github.com:my-org/my-config-repo.git"
+    branch: "main"
+    credential: "my-github-credential"
+  catalog:
+    url: "git@github.com:my-org/my-catalog-repo.git"
+    branch: "main"
+    credential: "my-github-credential"
+
+# Component tests: set stack_canonical to a stack that exists in the test org.
+# Tests skip automatically when stack_canonical is empty.
+# stack_ref is built as <CY_ORG>:<stack_canonical> at test time.
+component:
+  stack_canonical: ""        # e.g. "my-stack"
+  use_case: "default"        # use case name on the stack
+  stack_version: "main"      # version tag (branch/tag) on the stack
+  input_variables: {}        # nested map serialized as JSON in the resource

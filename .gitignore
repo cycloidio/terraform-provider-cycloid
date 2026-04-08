@@ -11,3 +11,6 @@ source-openapi.yaml
 .terraform/
 .terraform.lock.hcl
 Playground.mk
+test_config.yaml
+.dev.tfrc
+curl.sh
