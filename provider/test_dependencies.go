@@ -66,7 +66,7 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		return nil, fmt.Errorf("loading test config: %w", err)
 	}
 
-	project, err := dm.provider.Middleware.CreateProject(
+	project, _, err := dm.provider.Middleware.CreateProject(
 		org,
 		name,
 		name, // canonical same as name
@@ -82,7 +82,8 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		resourceType: "project",
 		canonical:    ptr.Value(project.Canonical),
 		cleanupFunc: func() error {
-			return dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical))
+			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical))
+			return err
 		},
 	})
 
@@ -99,7 +100,7 @@ func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testi
 		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
-	projects, err := dm.provider.Middleware.ListProjects(org)
+	projects, _, err := dm.provider.Middleware.ListProjects(org)
 	if err != nil {
 		t.Logf("Warning: failed to list projects, will attempt to create: %v", err)
 	}
@@ -116,7 +117,7 @@ func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testi
 
 // CreateTestEnvironment creates a test environment inside a project using middleware and returns the full environment model.
 func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
-	env, err := dm.provider.Middleware.CreateEnv(org, project, name, name, "")
+	env, _, err := dm.provider.Middleware.CreateEnv(org, project, name, name, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test environment: %w", err)
 	}
@@ -126,7 +127,8 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		resourceType: "environment",
 		canonical:    canonical,
 		cleanupFunc: func() error {
-			return dm.provider.Middleware.DeleteEnv(org, project, canonical)
+			_, err := dm.provider.Middleware.DeleteEnv(org, project, canonical)
+			return err
 		},
 	})
 
@@ -142,7 +144,7 @@ func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *t
 		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
-	envs, err := dm.provider.Middleware.ListProjectsEnv(org, project)
+	envs, _, err := dm.provider.Middleware.ListProjectsEnv(org, project)
 	if err != nil {
 		t.Logf("Warning: failed to list environments, will attempt to create: %v", err)
 	}
