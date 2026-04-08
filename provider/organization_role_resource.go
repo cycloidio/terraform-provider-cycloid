@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/client/organization_roles"
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_role"
@@ -74,7 +73,7 @@ func (r *organizationRoleResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	roles, err := m.ListRoles(org)
+	roles, _, err := m.ListRoles(org)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list roles in org %q", org), err.Error())
 		return
@@ -90,20 +89,20 @@ func (r *organizationRoleResource) Create(ctx context.Context, req resource.Crea
 
 	description := rolePlan.Description.ValueStringPointer()
 	if existingRole == nil {
-		_, err = m.CreateRole(org, &name, &canonical, description, rules)
+		_, _, err = m.CreateRole(org, &name, &canonical, description, rules)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to create role %q in org %q", canonical, org), err.Error())
 			return
 		}
 	} else {
-		_, err = r.updateRole(ctx, org, canonical, &name, &canonical, description, rules)
+		_, _, err = m.UpdateRole(org, canonical, &name, &canonical, description, rules)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to update existing role %q in org %q", canonical, org), err.Error())
 			return
 		}
 	}
 
-	role, err := m.GetRole(org, canonical)
+	role, _, err := m.GetRole(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to read created role %q in org %q", canonical, org), err.Error())
 		return
@@ -133,7 +132,7 @@ func (r *organizationRoleResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	role, err := m.GetRole(org, canonical)
+	role, _, err := m.GetRole(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to read role %q in org %q", canonical, org), err.Error())
 		return
@@ -180,15 +179,9 @@ func (r *organizationRoleResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	role, err := r.updateRole(
-		ctx,
-		org,
-		currentCanonical,
-		&name,
-		&canonical,
-		rolePlan.Description.ValueStringPointer(),
-		rules,
-	)
+	m := r.provider.Middleware
+
+	role, _, err := m.UpdateRole(org, currentCanonical, &name, &canonical, rolePlan.Description.ValueStringPointer(), rules)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update role %q in org %q", currentCanonical, org), err.Error())
 		return
@@ -218,7 +211,7 @@ func (r *organizationRoleResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	err = m.DeleteRole(org, canonical)
+	_, err = m.DeleteRole(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete role %q in org %q", canonical, org), err.Error())
 		return
@@ -230,42 +223,6 @@ func (r *organizationRoleResource) Delete(ctx context.Context, req resource.Dele
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &roleState)...)
-}
-
-func (r *organizationRoleResource) updateRole(
-	ctx context.Context,
-	org string,
-	currentCanonical string,
-	name *string,
-	canonical *string,
-	description *string,
-	rules []*models.NewRule,
-) (*models.Role, error) {
-	updateParams := organization_roles.NewUpdateRoleParamsWithContext(ctx)
-	updateParams.SetOrganizationCanonical(org)
-	updateParams.SetRoleCanonical(currentCanonical)
-
-	descriptionValue := ptr.Value(description)
-	canonicalValue := ptr.Value(canonical)
-	nameValue := ptr.Value(name)
-
-	updateParams.SetBody(&models.NewRole{
-		Name:        &nameValue,
-		Canonical:   canonicalValue,
-		Description: descriptionValue,
-		Rules:       rules,
-	})
-
-	updateResp, err := r.provider.APIClient.OrganizationRoles.UpdateRole(updateParams, r.provider.APIClient.Credentials(&org))
-	if err != nil {
-		return nil, err
-	}
-
-	if updateResp == nil || updateResp.Payload == nil || updateResp.Payload.Data == nil {
-		return nil, fmt.Errorf("organization role update returned an empty response")
-	}
-
-	return updateResp.Payload.Data, nil
 }
 
 func organizationRolePlanRulesToCYModel(ctx context.Context, rulesState types.List) ([]*models.NewRule, diag.Diagnostics) {

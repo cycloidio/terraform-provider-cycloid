@@ -39,7 +39,7 @@ func TestAccOrganizationRoleRecreateFromDefaultAdminRole(t *testing.T) {
 	apiClient := common.NewAPI(common.WithURL(apiURL), common.WithToken(apiKey))
 	mid := middleware.NewMiddleware(apiClient)
 
-	sourceRole, err := mid.GetRole(org, "organization-admin")
+	sourceRole, _, err := mid.GetRole(org, "organization-admin")
 	require.NoError(t, err)
 	require.NotNil(t, sourceRole)
 	require.Greater(t, len(sourceRole.Rules), 0)
@@ -110,16 +110,16 @@ resource "cycloid_organization_role" "recreated" {
 	require.NoError(t, os.WriteFile(mainTFPath, []byte(terraformManifest), 0o600))
 
 	t.Cleanup(func() {
-		_ = mid.DeleteRole(org, roleCanonical)
+		_, _ = mid.DeleteRole(org, roleCanonical)
 	})
 
-	acceptanceRunCommand(t, ctx, repoRoot, os.Environ(), "make", "build")
+	acceptanceRunCommand(t, ctx, repoRoot, os.Environ(), "go", "build", "-gcflags", "all=-l", "-trimpath", ".")
 
 	terraformEnv := append(os.Environ(), "TF_CLI_CONFIG_FILE="+tfrcPath)
 	acceptanceRunCommand(t, ctx, workDir, terraformEnv, "terraform", "init", "-input=false")
 	acceptanceRunCommand(t, ctx, workDir, terraformEnv, "terraform", "apply", "-auto-approve", "-input=false")
 
-	createdRole, err := mid.GetRole(org, roleCanonical)
+	createdRole, _, err := mid.GetRole(org, roleCanonical)
 	require.NoError(t, err)
 	require.NotNil(t, createdRole)
 	require.Equal(t, roleCanonical, ptr.Value(createdRole.Canonical))
@@ -128,7 +128,7 @@ resource "cycloid_organization_role" "recreated" {
 
 	acceptanceRunCommand(t, ctx, workDir, terraformEnv, "terraform", "destroy", "-auto-approve", "-input=false")
 
-	_, err = mid.GetRole(org, roleCanonical)
+	_, _, err = mid.GetRole(org, roleCanonical)
 	require.Error(t, err)
 }
 
