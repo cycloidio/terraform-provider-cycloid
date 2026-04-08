@@ -11,10 +11,8 @@ import (
 func TestAccOrganizationMemberResource(t *testing.T) {
 	t.Parallel()
 
-	const (
-		memberEmail   = "test@example.com"
-		roleCanonical = "organization-admin"
-	)
+	const roleCanonical = "organization-admin"
+	memberEmail := fmt.Sprintf("test+%s@example.com", RandomCanonical(""))
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
@@ -53,12 +51,3 @@ resource "cycloid_organization_member" "test" {
 `, org, email, role)
 }
 
-func testAccOrganizationMemberConfig_updated(org, email, role string) string {
-	return fmt.Sprintf(`
-resource "cycloid_organization_member" "test" {
-  organization_canonical = "%s"
-  email                 = "%s"
-  role_canonical        = "%s"
-}
-`, org, email, role)
-}

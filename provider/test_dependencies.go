@@ -92,10 +92,11 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 
 // EnsureTestProject creates a project if it doesn't exist, or returns the existing one.
 // org must match the organization used by the resource under test.
+// Skips the test when credentials are not configured (middleware is nil).
 func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testing.T, org, name, description string) (*models.Project, error) {
+	t.Helper()
 	if dm.provider.Middleware == nil {
-		t.Logf("Middleware not available, skipping project lookup: %s", name)
-		return &models.Project{Canonical: &name}, nil
+		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
 	projects, err := dm.provider.Middleware.ListProjects(org)
@@ -134,10 +135,11 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 }
 
 // EnsureTestEnvironment creates the environment if it doesn't already exist, returning the full environment model.
+// Skips the test when credentials are not configured (middleware is nil).
 func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
+	t.Helper()
 	if dm.provider.Middleware == nil {
-		t.Logf("Middleware not available, skipping environment lookup: %s", name)
-		return &models.Environment{Canonical: &name}, nil
+		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
 	envs, err := dm.provider.Middleware.ListProjectsEnv(org, project)
@@ -156,16 +158,14 @@ func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *t
 }
 
 // Cleanup runs in reverse order of creation so dependents (e.g. environment) are removed before dependencies (e.g. project).
-// Delete failures are ignored (no error or warning logged).
 func (dm *TestDependencyManager) Cleanup(ctx context.Context, t *testing.T) {
-	if len(dm.cleanupItems) == 0 {
-		return
-	}
-
+	t.Helper()
 	for i := len(dm.cleanupItems) - 1; i >= 0; i-- {
-		_ = dm.cleanupItems[i].cleanupFunc()
+		item := dm.cleanupItems[i]
+		if err := item.cleanupFunc(); err != nil {
+			t.Logf("Warning: cleanup of %s %q failed: %v", item.resourceType, item.canonical, err)
+		}
 	}
-
 	dm.cleanupItems = []cleanupItem{}
 }
 

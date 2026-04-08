@@ -53,13 +53,3 @@ resource "cycloid_project" "test" {
 `, org, name, desc, configRepo)
 }
 
-func testAccProjectConfig_updated(org, name, desc, configRepo string) string {
-	return fmt.Sprintf(`
-resource "cycloid_project" "test" {
-  organization = "%s"
-  name         = "%s"
-  description  = "%s"
-  config_repository = "%s"
-}
-`, org, name, desc, configRepo)
-}

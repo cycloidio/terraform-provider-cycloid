@@ -46,7 +46,7 @@ func testAccGetTestConfig(t *testing.T) *TestConfig {
 	return cfg
 }
 
-// RandomCanonical returns baseName + 4 random digits for unique resource names in acceptance tests.
+// RandomCanonical returns baseName + 6 random digits for unique resource names in acceptance tests.
 func RandomCanonical(baseName string) string {
-	return fmt.Sprintf("%s%04d", baseName, rand.Intn(10000))
+	return fmt.Sprintf("%s%06d", baseName, rand.Intn(1000000))
 }

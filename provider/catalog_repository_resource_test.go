@@ -6,16 +6,11 @@ import (
 	"testing"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
 )
-
-// Return a pointer from a value
-// To be able to build struct literrals with constants
-func p[T any](val T) *T {
-	return &val
-}
 
 func TestCyModelToData(t *testing.T) {
 	testCases := []struct {
@@ -25,18 +20,18 @@ func TestCyModelToData(t *testing.T) {
 		{
 			Model: &models.ServiceCatalogSource{
 				Branch:              "branch",
-				Canonical:           p("stack-canonical"),
+				Canonical:           ptr.Ptr("stack-canonical"),
 				CredentialCanonical: "cred-canonical",
 				ServiceCatalogs: []*models.ServiceCatalog{{
-					Canonical: p("stack-canonical"),
+					Canonical: ptr.Ptr("stack-canonical"),
 				}},
 				Owner: &models.User{
-					Username: p("owner"),
+					Username: ptr.Ptr("owner"),
 				},
-				URL:        p("osef"),
-				Name:       p("stack-name"),
-				StackCount: p(uint32(1)),
-				ID:         p(uint32(1)),
+				URL:        ptr.Ptr("osef"),
+				Name:       ptr.Ptr("stack-name"),
+				StackCount: ptr.Ptr(uint32(1)),
+				ID:         ptr.Ptr(uint32(1)),
 			},
 
 			Data: &catalogRepositoryResourceModel{
@@ -120,14 +115,3 @@ resource "cycloid_catalog_repository" "test" {
 `, name, credCanonical, url, branch, org)
 }
 
-func testAccCatalogRepositoryConfig_updated(org, name, url, branch, credCanonical string) string {
-	return fmt.Sprintf(`
-resource "cycloid_catalog_repository" "test" {
-  name                   = "%s"
-  credential_canonical   = "%s"
-  url                    = "%s"
-  branch                 = "%s"
-  organization_canonical = "%s"
-}
-`, name, credCanonical, url, branch, org)
-}

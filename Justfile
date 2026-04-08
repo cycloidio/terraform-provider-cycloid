@@ -31,8 +31,8 @@ test-acc:
 test-acc-one TEST:
     TF_ACC=1 go test -v -run '^{{ TEST }}$' ./provider/...
 
-# Run all tests (same as previous make test: unit + acceptance)
-test: test-acc
+# Run unit tests (default; use test-acc for acceptance tests)
+test: test-unit
 
 # Convert swagger
 convert-swagger:

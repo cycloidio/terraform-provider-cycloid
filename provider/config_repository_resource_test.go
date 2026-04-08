@@ -62,15 +62,3 @@ resource "cycloid_config_repository" "test" {
 `, org, name, url, credCanonical)
 }
 
-func testAccConfigRepositoryConfig_updated(org, name, url, credCanonical string) string {
-	return fmt.Sprintf(`
-resource "cycloid_config_repository" "test" {
-  organization_canonical = "%s"
-  name                  = "%s"
-  url                   = "%s"
-  branch                = "main"
-  credential_canonical  = "%s"
-  default               = false
-}
-`, org, name, url, credCanonical)
-}

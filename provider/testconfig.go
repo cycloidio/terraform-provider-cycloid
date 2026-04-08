@@ -50,17 +50,18 @@ type TestConfigRepo struct {
 
 var (
 	testConfig     *TestConfig
+	testConfigErr  error
 	testConfigOnce sync.Once
 )
 
 // LoadTestConfig loads test config from YAML with env override (CY_TEST_*).
 // Config file is searched at repo root first, then provider dir, then current dir.
+// The result (including any error) is cached after the first call.
 func LoadTestConfig() (*TestConfig, error) {
-	var err error
 	testConfigOnce.Do(func() {
-		testConfig, err = loadTestConfigOnce()
+		testConfig, testConfigErr = loadTestConfigOnce()
 	})
-	return testConfig, err
+	return testConfig, testConfigErr
 }
 
 func loadTestConfigOnce() (*TestConfig, error) {

@@ -10,8 +10,7 @@ import (
 )
 
 func TestAccOrganizationResource_WithAllowDestroy(t *testing.T) {
-	t.Parallel()
-	t.Skip("Skipping organization resource test")
+	t.Skip("Skipping: child org creation requires elevated permissions not available in the test environment")
 
 	// Test constants
 	const (

@@ -52,9 +52,9 @@ terraform {
 
 ### Required
 
-- `branch` (String)
-- `name` (String)
-- `url` (String)
+- `branch` (String) Branch needs to be valid git repository branch
+- `name` (String) The name of an entity
+- `url` (String) GitURL represents all git URL formats we accept.
 
 ### Optional
 
@@ -90,8 +90,61 @@ Read-Only:
 
 Read-Only:
 
+- `author` (String)
+- `blueprint` (Boolean) Determines if given stack is a blueprint
 - `canonical` (String)
+- `cloud_providers` (Attributes List) Cloud providers supported by the stack (see [below for nested schema](#nestedatt--data--stacks--cloud_providers))
+- `dependencies` (Attributes List) (see [below for nested schema](#nestedatt--data--stacks--dependencies))
+- `description` (String)
+- `directory` (String) Directory where the stacks configuration is found.
+- `form_enabled` (Boolean) Indicates if this stack can be configured with form's or not. Based on the presence or not of a valid .forms.yaml file since it's creation or last refresh.
+- `keywords` (List of String)
+- `name` (String)
+- `organization_canonical` (String) Organization that the stack belongs to
+- `quota_enabled` (Boolean) Indicates if this stack can be configured with form's and has a Quota configuration.
+- `readme` (String) Readme of the stack
 - `ref` (String)
+- `team` (Attributes) The entity which represents the information of a team a bit simplified. (see [below for nested schema](#nestedatt--data--stacks--team))
+- `technologies` (Attributes List) (see [below for nested schema](#nestedatt--data--stacks--technologies))
+- `trusted` (Boolean) If 'true' the stacks is from the main organization and can be trusted.
+- `visibility` (String)
+
+<a id="nestedatt--data--stacks--cloud_providers"></a>
+### Nested Schema for `data.stacks.cloud_providers`
+
+Read-Only:
+
+- `abbreviation` (String)
+- `canonical` (String)
+- `name` (String)
+- `regions` (List of String)
+
+
+<a id="nestedatt--data--stacks--dependencies"></a>
+### Nested Schema for `data.stacks.dependencies`
+
+Read-Only:
+
+- `ref` (String)
+- `required` (Boolean)
+
+
+<a id="nestedatt--data--stacks--team"></a>
+### Nested Schema for `data.stacks.team`
+
+Read-Only:
+
+- `canonical` (String)
+
+
+<a id="nestedatt--data--stacks--technologies"></a>
+### Nested Schema for `data.stacks.technologies`
+
+Read-Only:
+
+- `technology` (String)
+- `version` (String)
+
 
 
 
