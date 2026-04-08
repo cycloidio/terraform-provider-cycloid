@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_organization"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -78,7 +79,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	// Check if the org exists, if so, put a valid error
 	var org *models.Organization
 	parentOrg := orgState.ParentOrganization.ValueString()
-	orgs, err := m.ListOrganizationChildrens(Coalesce(parentOrg, canonical))
+	orgs, _, err := m.ListOrganizationChildrens(Coalesce(parentOrg, canonical))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"fail to read current organizations",
@@ -98,7 +99,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	if parentOrg != "" {
-		org, err = m.CreateOrganizationChild(parentOrg, canonical, &name)
+		org, _, err = m.CreateOrganizationChild(parentOrg, canonical, &name)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to create organization",
@@ -107,7 +108,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 			return
 		}
 	} else {
-		org, err = m.CreateOrganization(name)
+		org, _, err = m.CreateOrganization(name)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to create organization",
@@ -135,7 +136,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 			return
 		}
 
-		err := m.ActivateLicence(canonical, key)
+		_, err := m.ActivateLicence(canonical, key)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update licence for org %q", canonical),
@@ -146,7 +147,11 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	var licence *models.Licence
-	_, err = m.GenericRequest("GET", &canonical, nil, nil, nil, licence, "organizations", canonical, "licence")
+	_, err = m.GenericRequest(middleware.Request{
+		Method:       "GET",
+		Organization: &canonical,
+		Route:        []string{"organizations", canonical, "licence"},
+	}, licence)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch licence for org \""+canonical+"\"", err.Error())
 		return
@@ -173,8 +178,8 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		}
 
 		// Middleware doesn't send back the sub
-		_, err = m.CreateOrUpdateSubscription(
-			canonical, subscriptionState.Plan.ValueStringPointer(), t,
+		_, _, err = m.CreateOrUpdateSubscription(
+			canonical, subscriptionState.Plan.ValueString(), t,
 			uint64(subscriptionState.MembersCount.ValueInt64()), true,
 		)
 		if err != nil {
@@ -247,7 +252,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		)
 	}
 
-	orgs, err := m.ListOrganizationChildrens(Coalesce(orgState.ParentOrganization.ValueString(), canonical))
+	orgs, _, err := m.ListOrganizationChildrens(Coalesce(orgState.ParentOrganization.ValueString(), canonical))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to read org %q from API", canonical), err.Error())
 		return
@@ -267,7 +272,11 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	var licence *models.Licence
-	_, err = m.GenericRequest("GET", &canonical, nil, nil, nil, licence, "organizations", canonical, "licence")
+	_, err = m.GenericRequest(middleware.Request{
+		Method:       "GET",
+		Organization: &canonical,
+		Route:        []string{"organizations", canonical, "licence"},
+	}, licence)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch licence for org \""+canonical+"\"", err.Error())
 		return
@@ -317,7 +326,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	parentOrg := orgPlan.ParentOrganization.ValueString()
-	orgs, err := m.ListOrganizationChildrens(Coalesce(parentOrg, canonical))
+	orgs, _, err := m.ListOrganizationChildrens(Coalesce(parentOrg, canonical))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to update organization "+canonical,
@@ -335,7 +344,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 
 	var org *models.Organization
 	if currentOrg == nil && parentOrg != "" {
-		org, err = m.CreateOrganizationChild(parentOrg, canonical, &name)
+		org, _, err = m.CreateOrganizationChild(parentOrg, canonical, &name)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to create org %s", canonical),
@@ -344,7 +353,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 	} else if currentOrg == nil && parentOrg == "" {
-		org, err = m.CreateOrganization(name)
+		org, _, err = m.CreateOrganization(name)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to create org %s", canonical),
@@ -353,7 +362,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 	} else {
-		org, err = m.UpdateOrganization(canonical, name)
+		org, _, err = m.UpdateOrganization(canonical, name)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update org %s", canonical),
@@ -382,7 +391,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 
-		err := m.ActivateLicence(canonical, key)
+		_, err := m.ActivateLicence(canonical, key)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update licence for org %q", canonical),
@@ -392,7 +401,11 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	_, err = m.GenericRequest("GET", &canonical, nil, nil, nil, licence, "organizations", canonical, "licence")
+	_, err = m.GenericRequest(middleware.Request{
+		Method:       "GET",
+		Organization: &canonical,
+		Route:        []string{"organizations", canonical, "licence"},
+	}, licence)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch licence for org \""+canonical+"\"", err.Error())
 		return
@@ -423,7 +436,12 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			"members_count": subscriptionState.MembersCount.ValueInt64(),
 			"overwrite":     true,
 		}
-		r, err := m.GenericRequest("PUT", org.Canonical, nil, nil, body, subscription, "organizations", canonical, "subscriptions")
+		r, err := m.GenericRequest(middleware.Request{
+			Method:       "PUT",
+			Organization: org.Canonical,
+			Route:        []string{"organizations", canonical, "subscriptions"},
+			Body:         body,
+		}, subscription)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update subscription for org %q", canonical),
@@ -499,7 +517,7 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	m := r.provider.Middleware
-	err := m.DeleteOrganization(orgState.Canonical.ValueString())
+	_, err := m.DeleteOrganization(orgState.Canonical.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("failed to delete org "+orgState.Canonical.ValueString(), err.Error())
 		return

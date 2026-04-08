@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_component"
@@ -78,7 +79,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		_, canonical = componentState.Name.ValueString(), componentState.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -95,7 +96,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 	var inputVariables map[string]map[string]map[string]any
 	var currentConfig map[string]map[string]map[string]any
 	var diags diag.Diagnostics
-	currentConfig, err = m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err = m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -143,7 +144,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		name, canonical = componentPlan.Name.ValueString(), componentPlan.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -164,7 +165,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 
 	var tag, branch, commit string
 	if stackVersion != nil {
-		versions, err := m.ListStackVersions(org, stackRef)
+		versions, _, err := m.ListStackVersions(org, stackRef)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
@@ -186,13 +187,13 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	component, err = m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
+	component, _, err = m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
-	currentConfig, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to fetch created config of create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -264,7 +265,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 
 	var tag, branch, commit string
 	if stackVersion != nil && allowVersionUpdate {
-		versions, err := m.ListStackVersions(org, stackRef)
+		versions, _, err := m.ListStackVersions(org, stackRef)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
@@ -274,32 +275,15 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 			return
 		}
 		tag, branch, commit = matchStackVersion(versions, stackVersion)
-	} else {
-		component, err := m.GetComponent(org, project, environment, canonical)
-		if err != nil {
-			resp.Diagnostics.AddError(fmt.Sprintf("failed to get component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
-			return
-		}
-
-		if component.Version != nil {
-			switch ptr.Value(component.Version.Type) {
-			case "tag":
-				tag = ptr.Value(component.Version.Name)
-			case "branch":
-				branch = ptr.Value(component.Version.Name)
-			default:
-				commit = ptr.Value(component.Version.CommitHash)
-			}
-		}
 	}
 
-	component, err := m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
+	component, _, err := m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
-	currentConfig, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -350,7 +334,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 		canonical = componentState.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -365,7 +349,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	if component != nil {
-		err = m.DeleteComponent(org, project, environment, canonical)
+		_, err = m.DeleteComponent(org, project, environment, canonical)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("failed to delete component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error(),
@@ -497,19 +481,8 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		componentState.Description = types.StringValue(component.Description)
 	}
 	componentState.StackRef = types.StringPointerValue(ptr.Value(component.ServiceCatalog).Ref)
-	componentState.UseCase = types.StringValue(component.UseCase)
-	if component.Version != nil {
-		switch ptr.Value(component.Version.Type) {
-		case "tag":
-			componentState.StackVersion = types.StringPointerValue(component.Version.Name)
-		case "branch":
-			componentState.StackVersion = types.StringPointerValue(component.Version.Name)
-		default:
-			componentState.StackVersion = types.StringPointerValue(component.Version.CommitHash)
-		}
-	} else {
-		componentState.StackVersion = types.StringNull()
-	}
+	componentState.UseCase = types.StringPointerValue(component.UseCase)
+	componentState.StackVersion = types.StringNull()
 
 	var diags diag.Diagnostics
 	if refreshInputVariables || inputVariables != nil {
@@ -590,7 +563,7 @@ func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (m
 	return output, nil
 }
 
-func matchStackVersion(versions []*models.ServiceCatalogSourceVersion, stackVersion *string) (tag, branch, commit string) {
+func matchStackVersion(versions []*middleware.StackVersion, stackVersion *string) (tag, branch, commit string) {
 	if stackVersion == nil {
 		return "", "", ""
 	}

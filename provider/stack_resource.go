@@ -59,7 +59,7 @@ func (s *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 	mid := s.provider.Middleware
 
 	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
-	stack, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
+	stack, _, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Cannot edit stack with canonical '%s', stack must exist to be edited.", data.Canonical.ValueString()),
@@ -84,7 +84,7 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
 	stackRef := fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString())
-	stack, err := mid.GetStack(orgCan, stackRef)
+	stack, _, err := mid.GetStack(orgCan, stackRef)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to get stack informations with ref '%s'.", stackRef), err.Error())
 		return
@@ -111,7 +111,7 @@ func (s *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	mid := s.provider.Middleware
 
 	orgCan := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
-	stack, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
+	stack, _, err := mid.GetStack(orgCan, fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Cannot edit stack with canonical '%s', stack must exist to be edited.", data.Canonical.ValueString()),
@@ -161,7 +161,7 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	}
 
 	// call api
-	updatedStack, err := s.provider.Middleware.UpdateStack(org, ptr.Value(stack.Ref), team, &visibility)
+	updatedStack, _, err := s.provider.Middleware.UpdateStack(org, ptr.Value(stack.Ref), team, &visibility)
 	if err != nil {
 		diags.AddError(fmt.Sprintf("Failed to update stack %s, API call failed", ptr.Value(stack.Ref)), err.Error())
 		return diags
