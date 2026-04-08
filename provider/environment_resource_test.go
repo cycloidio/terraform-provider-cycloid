@@ -24,14 +24,11 @@ func TestAccEnvironmentResource(t *testing.T) {
 	depManager := NewTestDependencyManager(t)
 	defer depManager.Cleanup(ctx, t)
 
-	projectCanonical := projectName
-	if !testing.Short() {
-		project, err := depManager.EnsureTestProject(ctx, t, orgCanonical, projectName, "Test project for environment testing")
-		if err != nil {
-			t.Fatalf("Failed to create test project dependency: %v", err)
-		}
-		projectCanonical = ptr.Value(project.Canonical)
+	project, err := depManager.EnsureTestProject(ctx, t, orgCanonical, projectName, "Test project for environment testing")
+	if err != nil {
+		t.Fatalf("Failed to create test project dependency: %v", err)
 	}
+	projectCanonical := ptr.Value(project.Canonical)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
@@ -64,50 +61,6 @@ func TestAccEnvironmentResource(t *testing.T) {
 	})
 }
 
-// Test configuration functions (configRepo from test config)
-func testAccEnvironmentConfig_project(org, project, configRepo string) string {
-	return fmt.Sprintf(`
-resource "cycloid_project" "test" {
-  organization = "%s"
-  name         = "%s"
-  config_repository = "%s"
-}
-`, org, project, configRepo)
-}
-
-func testAccEnvironmentConfig_basic(org, project, env, configRepo string) string {
-	return fmt.Sprintf(`
-resource "cycloid_project" "test" {
-  organization = "%s"
-  name         = "%s"
-  config_repository = "%s"
-}
-
-resource "cycloid_environment" "test" {
-  organization = "%s"
-  project     = cycloid_project.test.canonical
-  name        = "%s"
-}
-`, org, project, configRepo, org, env)
-}
-
-func testAccEnvironmentConfig_updated(org, project, env, configRepo string) string {
-	return fmt.Sprintf(`
-resource "cycloid_project" "test" {
-  organization = "%s"
-  name         = "%s"
-  config_repository = "%s"
-}
-
-resource "cycloid_environment" "test" {
-  organization = "%s"
-  project     = cycloid_project.test.canonical
-  name        = "%s"
-}
-`, org, project, configRepo, org, env)
-}
-
-// New configuration functions that work with pre-existing dependencies
 func testAccEnvironmentConfig_basic_withDependency(org, projectCanonical, env string) string {
 	return fmt.Sprintf(`
 resource "cycloid_environment" "test" {

@@ -187,6 +187,8 @@ func componentUseCase(cfg *TestConfig) string {
 }
 
 func TestAccComponentResource(t *testing.T) {
+	t.Parallel()
+
 	const (
 		componentName = "test-component"
 		componentDesc = "Test component for acceptance testing"
@@ -246,7 +248,7 @@ func TestAccComponentResource(t *testing.T) {
 			},
 			// Update component
 			{
-				Config: testAccComponentConfig_fullControlUpdated(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, "staging", stackVersion, componentInputVars(cfg)),
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, "staging", stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName+"-updated"),
 					resource.TestCheckResourceAttr("cycloid_component.test", "description", componentDesc+" updated"),
@@ -278,6 +280,8 @@ func TestAccComponentResource(t *testing.T) {
 }
 
 func TestAccComponentResource_WithVariableUpdateFalse(t *testing.T) {
+	t.Parallel()
+
 	const componentName = "no-var-update-component"
 	projectName := RandomCanonical("test-project")
 	envName := RandomCanonical("test-env")
@@ -321,7 +325,7 @@ func TestAccComponentResource_WithVariableUpdateFalse(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccComponentConfig_noVariableUpdateUpdated(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, stackVersion, componentInputVars(cfg)),
+				Config: testAccComponentConfig_noVariableUpdate(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName),
@@ -329,7 +333,7 @@ func TestAccComponentResource_WithVariableUpdateFalse(t *testing.T) {
 				),
 			},
 			{
-				Config:  testAccComponentConfig_noVariableUpdateUpdated(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, stackVersion, componentInputVars(cfg)),
+				Config:  testAccComponentConfig_noVariableUpdate(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Destroy: true,
 			},
 		},
@@ -337,6 +341,8 @@ func TestAccComponentResource_WithVariableUpdateFalse(t *testing.T) {
 }
 
 func TestAccComponentResource_DriftDetection(t *testing.T) {
+	t.Parallel()
+
 	const componentName = "drift-test-component"
 	projectName := RandomCanonical("test-project")
 	envName := RandomCanonical("test-env")
@@ -381,7 +387,7 @@ func TestAccComponentResource_DriftDetection(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccComponentConfig_fullControlUpdated(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName),
@@ -390,7 +396,7 @@ func TestAccComponentResource_DriftDetection(t *testing.T) {
 				),
 			},
 			{
-				Config:  testAccComponentConfig_fullControlUpdated(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
+				Config:  testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Destroy: true,
 			},
 		},
@@ -398,6 +404,8 @@ func TestAccComponentResource_DriftDetection(t *testing.T) {
 }
 
 func TestAccComponentResource_CreateAndUpdateOnly(t *testing.T) {
+	t.Parallel()
+
 	const componentName = "create-update-component"
 	projectName := RandomCanonical("test-project")
 	envName := RandomCanonical("test-env")
@@ -460,6 +468,8 @@ func TestAccComponentResource_CreateAndUpdateOnly(t *testing.T) {
 }
 
 func TestAccComponentResource_WithPreventDestroy(t *testing.T) {
+	t.Parallel()
+
 	const componentName = "protected-component"
 	projectName := RandomCanonical("test-project")
 	envName := RandomCanonical("test-env")
@@ -507,24 +517,6 @@ func TestAccComponentResource_WithPreventDestroy(t *testing.T) {
 	})
 }
 
-// Test configuration functions (configRepo from test config)
-func testAccComponentConfig_projectEnv(org, project, env, configRepo string) string {
-	return fmt.Sprintf(`
-resource "cycloid_project" "test" {
-  organization = "%s"
-  name         = "%s"
-  description  = "Test project for component acceptance tests"
-  config_repository = "%s"
-}
-
-resource "cycloid_environment" "test" {
-  organization = "%s"
-  project     = cycloid_project.test.name
-  name         = "%s"
-}
-`, org, project, configRepo, org, env)
-}
-
 func testAccComponentConfig_fullControl(org, project, env, name, desc, stackRef, useCase, stackVersion, inputVarsJSON string) string {
 	return fmt.Sprintf(`
 resource "cycloid_component" "test" {
@@ -546,48 +538,7 @@ resource "cycloid_component" "test" {
 `, org, project, env, name, desc, stackRef, useCase, stackVersion, inputVarsJSON)
 }
 
-func testAccComponentConfig_fullControlUpdated(org, project, env, name, desc, stackRef, useCase, stackVersion, inputVarsJSON string) string {
-	return fmt.Sprintf(`
-resource "cycloid_component" "test" {
-  organization        = "%s"
-  project           = "%s"
-  environment        = "%s"
-  name              = "%s"
-  description       = "%s"
-  stack_ref         = "%s"
-  use_case          = "%s"
-  stack_version      = "%s"
-
-  input_variables = jsondecode(%q)
-
-  allow_version_update  = true
-  allow_variable_update = true
-  allow_destroy       = true
-}
-`, org, project, env, name, desc, stackRef, useCase, stackVersion, inputVarsJSON)
-}
-
 func testAccComponentConfig_noVariableUpdate(org, project, env, name, stackRef, useCase, stackVersion, inputVarsJSON string) string {
-	return fmt.Sprintf(`
-resource "cycloid_component" "test" {
-  organization        = "%s"
-  project           = "%s"
-  environment        = "%s"
-  name              = "%s"
-  stack_ref         = "%s"
-  use_case          = "%s"
-  stack_version      = "%s"
-
-  input_variables = jsondecode(%q)
-
-  allow_version_update  = true
-  allow_variable_update = false
-  allow_destroy       = true
-}
-`, org, project, env, name, stackRef, useCase, stackVersion, inputVarsJSON)
-}
-
-func testAccComponentConfig_noVariableUpdateUpdated(org, project, env, name, stackRef, useCase, stackVersion, inputVarsJSON string) string {
 	return fmt.Sprintf(`
 resource "cycloid_component" "test" {
   organization        = "%s"
