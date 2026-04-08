@@ -65,7 +65,7 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	m, err := mid.InviteMember(orgCan, email, role)
+	m, _, err := mid.InviteMember(orgCan, email, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create member",
@@ -111,7 +111,7 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 	memberID := data.MemberId
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	m, err := mid.GetMember(orgCan, uint32(memberID.ValueInt64()))
+	m, _, err := mid.GetMember(orgCan, uint32(memberID.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read member",
@@ -153,7 +153,7 @@ func (r *organizationMemberResource) Update(ctx context.Context, req resource.Up
 		memberID = plandata.MemberId.ValueInt64()
 	}
 
-	m, err := mid.UpdateMember(orgCan, uint32(memberID), roleCan)
+	m, _, err := mid.UpdateMember(orgCan, uint32(memberID), roleCan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable update member",
@@ -183,7 +183,7 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 	memberID := data.MemberId.ValueInt64()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	err := mid.DeleteMember(orgCan, uint32(memberID))
+	_, err := mid.DeleteMember(orgCan, uint32(memberID))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete member",

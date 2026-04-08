@@ -66,7 +66,7 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	project := data.Project.ValueString()
 
 	// Check that the project exists
-	projects, err := m.ListProjects(org)
+	projects, _, err := m.ListProjects(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
 		return
@@ -81,7 +81,7 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	environments, err := m.ListProjectsEnv(org, project)
+	environments, _, err := m.ListProjectsEnv(org, project)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch environment from API while reading state", err.Error())
 		return
@@ -170,7 +170,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
-	err := m.DeleteEnv(org, project, canonical)
+	_, err := m.DeleteEnv(org, project, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to delete environment from API while deleting resource", err.Error())
 		return
@@ -207,7 +207,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org
 		return data, diags
 	}
 
-	environments, err := p.provider.Middleware.ListProjectsEnv(org, project)
+	environments, _, err := p.provider.Middleware.ListProjectsEnv(org, project)
 	if err != nil {
 		diags.AddError("failed to fetch environments from API while updating resource", err.Error())
 		return data, diags
@@ -221,13 +221,13 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org
 			tflog.Info(ctx, "did not found current environment, assuming it had been deleted outside the provider, re-creating...", nil)
 		}
 
-		environment, err = p.provider.Middleware.CreateEnv(org, project, canonical, name, color)
+		environment, _, err = p.provider.Middleware.CreateEnv(org, project, canonical, name, color)
 		if err != nil {
 			diags.AddError("failed to create environment from API", err.Error())
 			return data, diags
 		}
 	} else {
-		environment, err = p.provider.Middleware.UpdateEnv(org, project, canonical, name, color)
+		environment, _, err = p.provider.Middleware.UpdateEnv(org, project, canonical, name, color)
 		if err != nil {
 			diags.AddError("failed to update environment from API", err.Error())
 			return data, diags

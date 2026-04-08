@@ -85,7 +85,7 @@ func (r *externalBackendResource) Create(ctx context.Context, req resource.Creat
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	eb, err := mid.CreateExternalBackends(orgCan, project, env, purpose, cred, def, configuration)
+	eb, _, err := mid.CreateExternalBackends(orgCan, project, env, purpose, cred, def, configuration)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create external backend",
@@ -228,7 +228,7 @@ func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadReq
 	id := data.ExternalBackendId.ValueInt64()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	eb, err := mid.GetExternalBackend(orgCan, uint32(id))
+	eb, _, err := mid.GetExternalBackend(orgCan, uint32(id))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read external backend",
@@ -285,7 +285,7 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 		err error
 	)
 
-	eb, err = mid.GetExternalBackend(orgCan, uint32(ebID))
+	eb, _, err = mid.GetExternalBackend(orgCan, uint32(ebID))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read external backend",
@@ -294,7 +294,7 @@ func (r *externalBackendResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	eb, err = mid.UpdateExternalBackend(orgCan, eb.ID, *eb.Purpose, eb.CredentialCanonical, *eb.Default, configuration)
+	eb, _, err = mid.UpdateExternalBackend(orgCan, eb.ID, *eb.Purpose, eb.CredentialCanonical, *eb.Default, configuration)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable update external backend",
@@ -328,7 +328,7 @@ func (r *externalBackendResource) Delete(ctx context.Context, req resource.Delet
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	id := data.ExternalBackendId.ValueInt64()
-	err := mid.DeleteExternalBackend(orgCan, uint32(id))
+	_, err := mid.DeleteExternalBackend(orgCan, uint32(id))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete external backend",

@@ -84,7 +84,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	description := data.Description.ValueString()
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	cred, err := m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	cred, _, err := m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create credential",
@@ -115,7 +115,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	// Check if the credential exists first
-	credentials, err := m.ListCredentials(organization, data.Type.ValueString())
+	credentials, _, err := m.ListCredentials(organization, data.Type.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read credentials, cannot list credentials from API", err.Error())
 		return
@@ -130,7 +130,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool {
 		return *c.Canonical == canonical
 	}) != -1 {
-		credential, err = m.GetCredential(organization, canonical)
+		credential, _, err = m.GetCredential(organization, canonical)
 		if err != nil {
 			resp.Diagnostics.AddError("failed to fetch credential", err.Error())
 			return
@@ -193,7 +193,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// we need to check first if the cred exists, it could be deleted outside terraform
 	// in that case, we'll just re-create it
-	credentials, err := m.ListCredentials(organization, credentialType)
+	credentials, _, err := m.ListCredentials(organization, credentialType)
 	if err != nil {
 		resp.Diagnostics.AddError("unable to check existing credentials from API", err.Error())
 		return
@@ -201,9 +201,9 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	var credential *models.Credential
 	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool { return *c.Canonical == canonical }) == -1 {
-		credential, err = m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+		credential, _, err = m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	} else {
-		credential, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+		credential, _, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to update credential", err.Error())
@@ -232,7 +232,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete API call logic
 	m := r.provider.Middleware
 
-	err := m.DeleteCredential(organization, canonical)
+	_, err := m.DeleteCredential(organization, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete credential",

@@ -92,7 +92,7 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 	visibility := data.OnCreateVisibility.ValueString()
 	team := data.OnCreateTeam.ValueString()
 
-	cr, err := mid.CreateCatalogRepository(orgCan, name, url, branch, credCan, visibility, team)
+	cr, _, err := mid.CreateCatalogRepository(orgCan, name, url, branch, credCan, visibility, team)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable create catalog repository",
@@ -122,7 +122,7 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	cr, err := mid.GetCatalogRepository(orgCan, can)
+	cr, _, err := mid.GetCatalogRepository(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable read catalog repository",
@@ -167,7 +167,7 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 		can = plandata.Canonical.ValueString()
 	}
 
-	cr, err := mid.UpdateCatalogRepository(orgCan, can, name, url, branch, credCan)
+	cr, _, err := mid.UpdateCatalogRepository(orgCan, can, name, url, branch, credCan, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable update catalog repository",
@@ -198,7 +198,7 @@ func (r *catalogRepositoryResource) Delete(ctx context.Context, req resource.Del
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	err := mid.DeleteCatalogRepository(orgCan, can)
+	_, err := mid.DeleteCatalogRepository(orgCan, can)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable delete catalog repository",
