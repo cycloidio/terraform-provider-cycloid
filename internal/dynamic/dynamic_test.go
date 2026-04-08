@@ -1,6 +1,7 @@
 package dynamic
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -269,6 +270,16 @@ func TestAttrValueToAny(t *testing.T) {
 			Name:     "Int64Null",
 			Input:    types.Int64Null(),
 			Expected: int64(0),
+		},
+		{
+			Name:     "NumberIntOK",
+			Input:    types.NumberValue(big.NewFloat(42)),
+			Expected: int64(42),
+		},
+		{
+			Name:     "NumberFloatOK",
+			Input:    types.NumberValue(big.NewFloat(3.14)),
+			Expected: 3.14,
 		},
 		{
 			Name:     "Float32OK",

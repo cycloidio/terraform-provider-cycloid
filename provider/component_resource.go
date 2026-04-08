@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_component"
@@ -78,7 +80,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		_, canonical = componentState.Name.ValueString(), componentState.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -93,7 +95,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 	if component == nil {
 		resp.Diagnostics.Append(
-			ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+			ComponentToModel(ctx, org, nil, nil, nil, &componentState, false)...,
 		)
 		if resp.Diagnostics.HasError() {
 			return
@@ -105,11 +107,11 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 	var inputVariables map[string]map[string]map[string]any
 	var currentConfig map[string]map[string]map[string]any
 	var diags diag.Diagnostics
-	currentConfig, err = m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err = m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		if isComponentNotFoundError(err) {
 			resp.Diagnostics.Append(
-				ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+				ComponentToModel(ctx, org, nil, nil, nil, &componentState, false)...,
 			)
 			if resp.Diagnostics.HasError() {
 				return
@@ -128,7 +130,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	resp.Diagnostics.Append(
-		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentState)...,
+		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentState, true)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
@@ -163,7 +165,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		name, canonical = componentPlan.Name.ValueString(), componentPlan.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -184,7 +186,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 
 	var tag, branch, commit string
 	if stackVersion != nil {
-		versions, err := m.ListStackVersions(org, stackRef)
+		versions, _, err := m.ListStackVersions(org, stackRef)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
@@ -206,20 +208,20 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	component, err = m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
+	component, _, err = m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
-	currentConfig, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to fetch created config of create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
 	resp.Diagnostics.Append(
-		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentPlan)...,
+		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentPlan, false)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
@@ -284,7 +286,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 
 	var tag, branch, commit string
 	if stackVersion != nil && allowVersionUpdate {
-		versions, err := m.ListStackVersions(org, stackRef)
+		versions, _, err := m.ListStackVersions(org, stackRef)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("stack_ref"),
@@ -294,39 +296,22 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 			return
 		}
 		tag, branch, commit = matchStackVersion(versions, stackVersion)
-	} else {
-		component, err := m.GetComponent(org, project, environment, canonical)
-		if err != nil {
-			resp.Diagnostics.AddError(fmt.Sprintf("failed to get component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
-			return
-		}
-
-		if component.Version != nil {
-			switch ptr.Value(component.Version.Type) {
-			case "tag":
-				tag = ptr.Value(component.Version.Name)
-			case "branch":
-				branch = ptr.Value(component.Version.Name)
-			default:
-				commit = ptr.Value(component.Version.CommitHash)
-			}
-		}
 	}
 
-	component, err := m.CreateAndConfigureComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
+	component, _, err := m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
-	currentConfig, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
 
 	resp.Diagnostics.Append(
-		ComponentToModel(ctx, org, component, variables, currentConfig, &componentPlan)...,
+		ComponentToModel(ctx, org, component, variables, currentConfig, &componentPlan, false)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
@@ -370,7 +355,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 		canonical = componentState.Canonical.ValueString()
 	}
 
-	components, err := m.ListComponents(org, project, environment)
+	components, _, err := m.ListComponents(org, project, environment)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
@@ -385,11 +370,11 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	if component != nil {
-		err = m.DeleteComponent(org, project, environment, canonical)
+		_, err = m.DeleteComponent(org, project, environment, canonical)
 		if err != nil {
 			if isComponentNotFoundError(err) {
 				resp.Diagnostics.Append(
-					ComponentToModel(ctx, org, nil, nil, nil, &componentState)...,
+					ComponentToModel(ctx, org, nil, nil, nil, &componentState, false)...,
 				)
 				if resp.Diagnostics.HasError() {
 					return
@@ -405,7 +390,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	resp.Diagnostics.Append(
-		ComponentToModel(ctx, org, &models.Component{}, nil, nil, &componentState)...,
+		ComponentToModel(ctx, org, &models.Component{}, nil, nil, &componentState, false)...,
 	)
 	if resp.Diagnostics.HasError() {
 		return
@@ -414,19 +399,128 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
 }
 
-func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, _ map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
+func getInputVariablesForRead(ctx context.Context, componentState componentResourceModel, currentConfig map[string]map[string]map[string]any) (map[string]map[string]map[string]any, diag.Diagnostics) {
+	if componentState.AllowVariableUpdate.ValueBool() {
+		userInputValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		userInput, diags := dynamicValueToVariables(ctx, userInputValue)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		return filterVariablesByUserInput(currentConfig, userInput), diags
+	}
+
 	variablesValue, diags := componentState.InputVariables.ToDynamicValue(ctx)
 	if diags.HasError() {
 		return nil, diags
 	}
-	inputVariables, diags := dynamicValueToVariables(ctx, variablesValue)
+	fromState, diags := dynamicValueToVariables(ctx, variablesValue)
 	if diags.HasError() {
 		return nil, diags
 	}
-	return inputVariables, diags
+	if len(currentConfig) == 0 {
+		return fromState, diags
+	}
+	return applyAPIDriftToInputVariables(fromState, currentConfig), diags
 }
 
-func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables map[string]map[string]map[string]any, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel) diag.Diagnostics {
+func filterVariablesByUserInput(currentConfig, userInput map[string]map[string]map[string]any) map[string]map[string]map[string]any {
+	filtered := make(map[string]map[string]map[string]any)
+
+	for sectionName, section := range userInput {
+		if _, exists := currentConfig[sectionName]; !exists {
+			continue
+		}
+
+		filteredSection := make(map[string]map[string]any)
+		for groupName, group := range section {
+			if _, exists := currentConfig[sectionName][groupName]; !exists {
+				continue
+			}
+
+			filteredGroup := make(map[string]any)
+			for keyName := range group {
+				if _, exists := currentConfig[sectionName][groupName][keyName]; exists {
+					filteredGroup[keyName] = currentConfig[sectionName][groupName][keyName]
+				}
+			}
+
+			if len(filteredGroup) > 0 {
+				filteredSection[groupName] = filteredGroup
+			}
+		}
+
+		if len(filteredSection) > 0 {
+			filtered[sectionName] = filteredSection
+		}
+	}
+
+	return filtered
+}
+
+func applyAPIDriftToInputVariables(fromState, api map[string]map[string]map[string]any) map[string]map[string]map[string]any {
+	out := cloneNestedStringMapAny(fromState)
+	for sec, groups := range fromState {
+		apiSec := api[sec]
+		if apiSec == nil {
+			continue
+		}
+		for grp, vars := range groups {
+			apiGrp := apiSec[grp]
+			if apiGrp == nil {
+				continue
+			}
+			for k, stateVal := range vars {
+				apiVal, ok := apiGrp[k]
+				if !ok {
+					continue
+				}
+				if variableValuesEqual(stateVal, apiVal) {
+					continue
+				}
+				if out[sec] == nil {
+					out[sec] = make(map[string]map[string]any)
+				}
+				if out[sec][grp] == nil {
+					out[sec][grp] = make(map[string]any)
+				}
+				out[sec][grp][k] = apiVal
+			}
+		}
+	}
+	return out
+}
+
+func cloneNestedStringMapAny(m map[string]map[string]map[string]any) map[string]map[string]map[string]any {
+	if m == nil {
+		return map[string]map[string]map[string]any{}
+	}
+	out := make(map[string]map[string]map[string]any, len(m))
+	for sec, grps := range m {
+		out[sec] = make(map[string]map[string]any, len(grps))
+		for grp, vars := range grps {
+			out[sec][grp] = make(map[string]any, len(vars))
+			for k, v := range vars {
+				out[sec][grp][k] = v
+			}
+		}
+	}
+	return out
+}
+
+func variableValuesEqual(a, b any) bool {
+	ja, errA := json.Marshal(a)
+	jb, errB := json.Marshal(b)
+	if errA != nil || errB != nil {
+		return fmt.Sprint(a) == fmt.Sprint(b)
+	}
+	return string(ja) == string(jb)
+}
+
+func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables map[string]map[string]map[string]any, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel, refreshInputVariables bool) diag.Diagnostics {
 	if component == nil {
 		componentState.Organization = types.StringValue(org)
 		componentState.Project = types.StringNull()
@@ -440,6 +534,7 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		componentState.AllowVersionUpdate = types.BoolNull()
 		componentState.AllowVariableUpdate = types.BoolNull()
 		componentState.AllowDestroy = types.BoolNull()
+		componentState.InputVariables = types.DynamicNull()
 		componentState.CurrentConfig = types.DynamicNull()
 		return nil
 	}
@@ -465,21 +560,17 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		componentState.Description = types.StringValue(component.Description)
 	}
 	componentState.StackRef = types.StringPointerValue(ptr.Value(component.ServiceCatalog).Ref)
-	componentState.UseCase = types.StringValue(component.UseCase)
-	if component.Version != nil {
-		switch ptr.Value(component.Version.Type) {
-		case "tag":
-			componentState.StackVersion = types.StringPointerValue(component.Version.Name)
-		case "branch":
-			componentState.StackVersion = types.StringPointerValue(component.Version.Name)
-		default:
-			componentState.StackVersion = types.StringPointerValue(component.Version.CommitHash)
-		}
-	} else {
-		componentState.StackVersion = types.StringNull()
-	}
+	componentState.UseCase = types.StringPointerValue(component.UseCase)
+	componentState.StackVersion = types.StringNull()
 
 	var diags diag.Diagnostics
+	if refreshInputVariables || inputVariables != nil {
+		componentState.InputVariables, diags = dynamic.AnyToDynamicValue(ctx, inputVariables)
+		if diags.HasError() {
+			return diags
+		}
+	}
+
 	componentState.CurrentConfig, diags = dynamic.AnyToDynamicValue(ctx, currentConfig)
 	if diags.HasError() {
 		return diags
@@ -551,7 +642,7 @@ func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (m
 	return output, nil
 }
 
-func matchStackVersion(versions []*models.ServiceCatalogSourceVersion, stackVersion *string) (tag, branch, commit string) {
+func matchStackVersion(versions []*middleware.StackVersion, stackVersion *string) (tag, branch, commit string) {
 	if stackVersion == nil {
 		return "", "", ""
 	}

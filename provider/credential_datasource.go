@@ -90,7 +90,7 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	canonical := data.Canonical.ValueString()
 
-	credential, err := m.GetCredential(organization, canonical)
+	credential, _, err := m.GetCredential(organization, canonical)
 	if err != nil || credential == nil {
 		resp.Diagnostics.AddError("failed to get credential with canonical '"+canonical+"'", err.Error())
 		return

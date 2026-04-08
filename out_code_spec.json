@@ -406,19 +406,7 @@
                 {
                   "name": "environment",
                   "string": {
-                    "computed_optional_required": "computed_optional",
-                    "validators": [
-                      {
-                        "custom": {
-                          "imports": [
-                            {
-                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-                            }
-                          ],
-                          "schema_definition": "stringvalidator.OneOf(\n\"public\",\n\"usgovernment\",\n\"china\",\n\"german\",\n)"
-                        }
-                      }
-                    ]
+                    "computed_optional_required": "computed_optional"
                   }
                 },
                 {
