@@ -153,9 +153,15 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data credentialResourceModel
+	var stateData credentialResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -181,21 +187,9 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	path := data.Path.ValueString()
-	canonical := data.Canonical.ValueString()
+	updateCanonical := credentialCanonicalForUpdate(data.Canonical.ValueString(), stateData.Canonical.ValueString())
+	createCanonical := credentialCanonicalForCreate(data.Canonical.ValueString(), stateData.Canonical.ValueString())
 	description := data.Description.ValueString()
-
-	// As the canonical is not required to be set we read it from the
-	// state as we set it on creation and we need it to update the
-	// credential to the API
-	if canonical == "" {
-		var plandata credentialResourceModel
-		// Read Terraform prior state data into the model
-		resp.Diagnostics.Append(req.State.Get(ctx, &plandata)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		canonical = plandata.Canonical.ValueString()
-	}
 
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
@@ -208,10 +202,12 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	var credential *models.Credential
-	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool { return *c.Canonical == canonical }) == -1 {
-		credential, _, err = m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool {
+		return c.Canonical != nil && *c.Canonical == updateCanonical
+	}) == -1 {
+		credential, _, err = m.CreateCredential(organization, name, credentialType, rawCred, path, createCanonical, description)
 	} else {
-		credential, _, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+		credential, _, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, updateCanonical, description)
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to update credential", err.Error())
@@ -399,4 +395,12 @@ func dataRawToCredentialRawCYModel(ctx context.Context, data credentialResourceM
 	}
 
 	return rawCred, nil
+}
+
+func credentialCanonicalForUpdate(planCanonical, stateCanonical string) string {
+	return Coalesce(stateCanonical, planCanonical)
+}
+
+func credentialCanonicalForCreate(planCanonical, stateCanonical string) string {
+	return Coalesce(planCanonical, stateCanonical)
 }
