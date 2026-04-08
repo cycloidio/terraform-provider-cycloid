@@ -72,7 +72,7 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		name, _ = teamState.Name.ValueString(), teamState.Canonical.ValueString()
 	}
 
-	teams, err := m.ListTeams(org, &name, nil, nil, nil)
+	teams, _, err := m.ListTeams(org, &name, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -120,7 +120,7 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Resource is idempotent, so we check if current team exists to decide if we
 	// create or update
-	teams, err := m.ListTeams(org, nil, nil, nil, nil)
+	teams, _, err := m.ListTeams(org, nil, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -140,13 +140,13 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	if team == nil {
-		team, err = m.CreateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
+		team, _, err = m.CreateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to create team %q in org %q", canonical, org), err.Error())
 			return
 		}
 	} else {
-		team, err = m.UpdateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
+		team, _, err = m.UpdateTeam(org, &name, &canonical, teamState.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to update existing team %q in org %q", canonical, org), err.Error())
 			return
@@ -196,7 +196,7 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	// Resource is idempotent, so we check if current team exists to decide if we
 	// create or update
-	teams, err := m.ListTeams(org, nameState, nil, nil, nil)
+	teams, _, err := m.ListTeams(org, nameState, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -216,13 +216,13 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	if team == nil {
-		team, err = m.CreateTeam(org, &name, &canonical, teamPlan.Owner.ValueStringPointer(), roles)
+		team, _, err = m.CreateTeam(org, &name, &canonical, teamPlan.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to create team %q in org %q", canonical, org), err.Error())
 			return
 		}
 	} else {
-		team, err = m.UpdateTeam(org, &name, team.Canonical, teamPlan.Owner.ValueStringPointer(), roles)
+		team, _, err = m.UpdateTeam(org, &name, team.Canonical, teamPlan.Owner.ValueStringPointer(), roles)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to update existing team %q in org %q", canonical, org), err.Error())
 			return
@@ -263,7 +263,7 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	// We need to check if the team exists before delete
-	teams, err := m.ListTeams(org, nil, nil, nil, nil)
+	teams, _, err := m.ListTeams(org, nil, nil, nil, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
@@ -277,7 +277,7 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	if team != nil {
-		err = m.DeleteTeam(org, canonical)
+		_, err = m.DeleteTeam(org, canonical)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("failed to delete team %q in org %q", canonical, org), err.Error(),

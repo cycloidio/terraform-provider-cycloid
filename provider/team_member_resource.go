@@ -64,7 +64,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 	username := teamMemberState.Username.ValueString()
 	email := teamMemberState.Email.ValueString()
 
-	teamMembers, err := m.ListTeamMembers(org, team)
+	teamMembers, _, err := m.ListTeamMembers(org, team)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
 		return
@@ -72,7 +72,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -99,7 +99,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Resource is idempotent, so we check if current team_member exists to decide if we
 	// create or update
-	teamMembers, err := m.ListTeamMembers(org, team)
+	teamMembers, _, err := m.ListTeamMembers(org, team)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
 		return
@@ -107,13 +107,13 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
 
 	if teamMember == nil {
-		teamMember, err = m.AssignMemberToTeam(org, team, &username, &email)
+		teamMember, _, err = m.AssignMemberToTeam(org, team, &username, &email)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to assign team member %q to team %q in org %q", Coalesce(username, email), team, org), err.Error())
 			return
@@ -147,7 +147,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Resource is idempotent, so we check if current team_member exists to decide if we
 	// create or update
-	teamMembers, err := m.ListTeamMembers(org, team)
+	teamMembers, _, err := m.ListTeamMembers(org, team)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
 		return
@@ -155,13 +155,13 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
 
 	if teamMember == nil {
-		teamMember, err = m.AssignMemberToTeam(org, team, &username, &email)
+		teamMember, _, err = m.AssignMemberToTeam(org, team, &username, &email)
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to assign team member %q to team %q in org %q", Coalesce(username, email), team, org), err.Error())
 			return
@@ -194,7 +194,7 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 	email := teamMemberState.Email.ValueString()
 
 	// We need to check if the team_member exists before delete
-	teamMembers, err := m.ListTeamMembers(org, team)
+	teamMembers, _, err := m.ListTeamMembers(org, team)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
 		return
@@ -202,13 +202,13 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
 
 	if teamMember != nil {
-		err := m.UnAssignMemberFromTeam(org, team, ptr.Value(teamMember.ID))
+		_, err := m.UnAssignMemberFromTeam(org, team, ptr.Value(teamMember.ID))
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to unassign member %q from team %q in org %q", Coalesce(username, email), team, org), err.Error())
 			return
@@ -232,7 +232,7 @@ func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models
 		teamMemberState.Organization = types.StringNull()
 		teamMemberState.Team = types.StringNull()
 	} else {
-		teamMemberState.Username = types.StringPointerValue(&teamMember.Username)
+		teamMemberState.Username = types.StringPointerValue(teamMember.Username)
 		teamMemberState.Email = types.StringValue(ptr.Value(teamMember.Email).String())
 		teamMemberState.Organization = types.StringValue(org)
 		teamMemberState.Team = types.StringValue(team)

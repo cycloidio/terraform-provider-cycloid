@@ -66,7 +66,7 @@ func (s *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	mid := s.provider.Middleware
 
 	org := getOrganizationCanonical(*s.provider, data.OrganizationCanonical)
-	stacks, err := mid.ListStacks(org)
+	stacks, _, err := mid.ListStacks(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list stacks from api", err.Error())
 		return

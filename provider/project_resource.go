@@ -64,7 +64,7 @@ func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	canonical := data.Canonical.ValueString()
 
 	org := getOrganizationCanonical(*p.provider, data.Organization)
-	projects, err := m.ListProjects(org)
+	projects, _, err := m.ListProjects(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
 		return
@@ -166,7 +166,7 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	err := m.DeleteProject(org, canonical)
+	_, err := m.DeleteProject(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
 		return
@@ -207,7 +207,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 	}
 
 	if configRepository == "" {
-		configRepositories, err := p.provider.Middleware.ListConfigRepositories(org)
+		configRepositories, _, err := p.provider.Middleware.ListConfigRepositories(org)
 		if err != nil {
 			diags.AddError("failed to fetch list of current config repositories to infer default config repository", err.Error())
 			return data, diags
@@ -223,7 +223,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 		}
 	}
 
-	projects, err := p.provider.Middleware.ListProjects(org)
+	projects, _, err := p.provider.Middleware.ListProjects(org)
 	if err != nil {
 		diags.AddError("failed to fetch projects from API", err.Error())
 		return data, diags
@@ -237,13 +237,13 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 			tflog.Info(ctx, "did not found current project, assuming it had been deleted outside the provider, re-creating...", nil)
 		}
 
-		project, err = p.provider.Middleware.CreateProject(org, name, canonical, description, configRepository, owner, owner, color, icon)
+		project, _, err = p.provider.Middleware.CreateProject(org, name, canonical, description, configRepository, owner, owner, color, icon)
 		if err != nil {
 			diags.AddError("failed to create project from API", err.Error())
 			return data, diags
 		}
 	} else {
-		project, err = p.provider.Middleware.UpdateProject(org, name, canonical, description, configRepository, owner, owner, color, icon, "")
+		project, _, err = p.provider.Middleware.UpdateProject(org, name, canonical, description, configRepository, owner, owner, color, icon, "")
 		if err != nil {
 			diags.AddError("failed to update project from API", err.Error())
 			return data, diags
