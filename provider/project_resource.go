@@ -209,7 +209,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 	if configRepository == "" {
 		configRepositories, err := p.provider.Middleware.ListConfigRepositories(org)
 		if err != nil {
-			diags.AddError("failed to fetch list of current config repositories to infer default catalog", err.Error())
+			diags.AddError("failed to fetch list of current config repositories to infer default config repository", err.Error())
 			return data, diags
 		}
 
@@ -218,7 +218,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 		}); i != -1 {
 			configRepository = ptr.Value(configRepositories[i].Canonical)
 		} else {
-			diags.AddError("no default catalog repository was found", "please add a default config repository to the org "+org+" or fill the `catalog_respository` attribute. Docs: https://docs.cycloid.io/reference/config-and-catalog-repository/")
+			diags.AddError("no default config repository was found", "please add a default config repository to the org "+org+" or fill the `config_repository` attribute. Docs: https://docs.cycloid.io/reference/config-and-catalog-repository/")
 			return data, diags
 		}
 	}

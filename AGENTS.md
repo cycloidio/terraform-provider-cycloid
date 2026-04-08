@@ -2,6 +2,28 @@
 
 This file contains important notes and context for the AI agent working on this terraform provider.
 
+## Test Dependency Management
+
+When working with acceptance tests that require dependencies (e.g., environment resources needing projects):
+
+- **Use TestDependencyManager**: Always use the dependency management system for creating test dependencies
+- **Idempotent Provisioning**: Ensure dependency creation is idempotent - overwrite existing entities if needed
+- **Robust Cleanup**: Cleanup failures should be logged but never cause test failures
+- **Dual Mode Support**: System should work for both unit tests (without middleware) and acceptance tests (with middleware)
+
+**Example Usage:**
+```go
+depManager := NewTestDependencyManager(t)
+defer depManager.Cleanup(ctx, t)
+
+projectCanonical, err := depManager.EnsureTestProject(ctx, t, projectName, "Test project")
+```
+
+**Key Principles:**
+- Provisioning should be idempotent - don't fail if entity already exists
+- Cleanup should never fail the test - log warnings and continue
+- Handle missing middleware gracefully for unit tests
+
 ## API Naming Conventions
 
 From the cycloid API or middleware, you can map these names:

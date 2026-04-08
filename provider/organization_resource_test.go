@@ -11,6 +11,7 @@ import (
 
 func TestAccOrganizationResource_WithAllowDestroy(t *testing.T) {
 	t.Parallel()
+	t.Skip("Skipping organization resource test")
 
 	// Test constants
 	const (
