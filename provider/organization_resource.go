@@ -254,6 +254,10 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 
 	orgs, _, err := m.ListOrganizationChildrens(Coalesce(orgState.ParentOrganization.ValueString(), canonical))
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to read org %q from API", canonical), err.Error())
 		return
 	}
@@ -267,7 +271,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	if org == nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Organization %q not found", canonical), "")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

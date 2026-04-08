@@ -134,6 +134,10 @@ func (r *organizationRoleResource) Read(ctx context.Context, req resource.ReadRe
 
 	role, _, err := m.GetRole(org, canonical)
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to read role %q in org %q", canonical, org), err.Error())
 		return
 	}
