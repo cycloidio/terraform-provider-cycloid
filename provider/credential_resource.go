@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = (*credentialResource)(nil)
@@ -251,16 +253,28 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	canonical := data.Canonical.ValueString()
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
-	// Delete API call logic
 	m := r.provider.Middleware
 
-	_, err := m.DeleteCredential(organization, canonical)
+	const maxRetries = 5
+	var err error
+	for attempt := range maxRetries {
+		_, err = m.DeleteCredential(organization, canonical)
+		if err == nil {
+			return
+		}
+		if !isCredentialInUseError(err) {
+			break
+		}
+		delay := time.Duration(attempt+1) * 3 * time.Second
+		tflog.Warn(ctx, fmt.Sprintf(
+			"credential %q is still referenced by a resource (attempt %d/%d); retrying in %s",
+			canonical, attempt+1, maxRetries, delay,
+		))
+		time.Sleep(delay)
+	}
+
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to delete credential",
-			err.Error(),
-		)
-		return
+		resp.Diagnostics.AddError("Unable to delete credential", err.Error())
 	}
 }
 
