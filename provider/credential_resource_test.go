@@ -578,3 +578,93 @@ func TestCredentialRawCYModelToDataBodyForNonCustomCredential(t *testing.T) {
 	assert.Equal(t, "access_key_value", data.Body.AccessKey.ValueString())
 	assert.True(t, data.Body.Raw.IsNull(), "body.raw should be null for non-custom credentials")
 }
+
+func TestCredentialCanonicalForUpdate(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		planCanonical  string
+		stateCanonical string
+		expected       string
+	}{
+		{
+			name:           "uses state canonical when both are set",
+			planCanonical:  "plan-canonical",
+			stateCanonical: "state-canonical",
+			expected:       "state-canonical",
+		},
+		{
+			name:           "uses state canonical when plan is empty",
+			planCanonical:  "",
+			stateCanonical: "state-canonical",
+			expected:       "state-canonical",
+		},
+		{
+			name:           "uses plan canonical when state is empty",
+			planCanonical:  "plan-canonical",
+			stateCanonical: "",
+			expected:       "plan-canonical",
+		},
+		{
+			name:           "returns empty when both are empty",
+			planCanonical:  "",
+			stateCanonical: "",
+			expected:       "",
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			actual := credentialCanonicalForUpdate(testCase.planCanonical, testCase.stateCanonical)
+			assert.Equal(t, testCase.expected, actual)
+		})
+	}
+}
+
+func TestCredentialCanonicalForCreate(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		planCanonical  string
+		stateCanonical string
+		expected       string
+	}{
+		{
+			name:           "uses plan canonical when both are set",
+			planCanonical:  "plan-canonical",
+			stateCanonical: "state-canonical",
+			expected:       "plan-canonical",
+		},
+		{
+			name:           "uses state canonical when plan is empty",
+			planCanonical:  "",
+			stateCanonical: "state-canonical",
+			expected:       "state-canonical",
+		},
+		{
+			name:           "uses plan canonical when state is empty",
+			planCanonical:  "plan-canonical",
+			stateCanonical: "",
+			expected:       "plan-canonical",
+		},
+		{
+			name:           "returns empty when both are empty",
+			planCanonical:  "",
+			stateCanonical: "",
+			expected:       "",
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			actual := credentialCanonicalForCreate(testCase.planCanonical, testCase.stateCanonical)
+			assert.Equal(t, testCase.expected, actual)
+		})
+	}
+}
