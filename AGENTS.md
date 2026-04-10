@@ -56,6 +56,12 @@ When working with the cycloid-cli models, keep in mind:
 - **Clear Messages**: Provide specific error messages that explain what went wrong and what was expected.
 - **Graceful Failures**: Handle unexpected input types gracefully instead of crashing the provider.
 
+**Not-found handling**: Use `isNotFoundError(err)` (in `provider/not_found.go`) in every resource `Read`. On a not-found signal, call `resp.State.RemoveResource(ctx)` and return — do not add an error diagnostic. This lets Terraform recreate the resource cleanly.
+
+**Typed API error matching**: The cycloid middleware returns `*cycloidmiddleware.APIResponseError`. Use `errors.As` with the concrete type to match HTTP status codes precisely — do not match status codes by substring on `err.Error()`. See `isCredentialInUseError` in `provider/not_found.go` for an example.
+
+**Model pointer initialization**: Always initialize API response model pointers with `&models.T{}` before passing to `GenericRequest`. A nil pointer causes `json: Unmarshal(nil *models.T)` at runtime even on HTTP 200 responses.
+
 **Example:**
 ```go
 // Bad: panic(litter.Sdump("Incorrect type", valueType))

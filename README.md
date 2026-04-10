@@ -59,7 +59,7 @@ Terraform should output a warning indicating a local dev provider override that 
 │ Warning: Provider development overrides are in effect
 │
 │ The following provider development overrides are set in the CLI configuration:
-│  - cycloidio/cycloid in /home/stammfrei/projects/cycloid/terraform-provider-cycloid.git/branches/24-stack-visibility-support
+│  - cycloidio/cycloid in /absolute/path/to/your/terraform-provider-cycloid
 │
 │ The behavior may therefore not match any released version of the provider and applying changes may cause the state to become incompatible with published releases.
 ╵
