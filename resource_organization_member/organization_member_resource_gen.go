@@ -19,6 +19,12 @@ func OrganizationMemberResourceSchema(ctx context.Context) schema.Schema {
 				Required:            true,
 				Description:         "Invite user by email",
 				MarkdownDescription: "Invite user by email",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`),
+						"email must be lowercase — Cycloid normalises addresses to lowercase, which would cause a perpetual Terraform diff if uppercase is used. Use lower(var.email) in your configuration if the input may contain uppercase characters.",
+					),
+				},
 			},
 			"member_id": schema.Int64Attribute{
 				Optional:            true,

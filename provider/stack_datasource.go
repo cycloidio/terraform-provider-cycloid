@@ -73,17 +73,12 @@ func (s *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	stacksValues, errDiags := dataStacksToListValue(ctx, stacks)
-	resp.Diagnostics.Append(errDiags...)
-	attrType := basetypes.ObjectType{
-		AttrTypes: datasource_stacks.StacksValue{}.AttributeTypes(ctx),
-	}
-	listValue, errDiags := types.ListValueFrom(ctx, attrType, stacksValues)
 	if errDiags.HasError() {
 		resp.Diagnostics.Append(errDiags...)
 		return
 	}
 
-	data.Stacks = listValue
+	data.Stacks = stacksValues
 
 	// Save data to terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -160,8 +155,8 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 		}
 	}
 
-	return types.ListValueFrom(ctx, basetypes.ObjectType{
-		AttrTypes: stackType,
+	return types.ListValueFrom(ctx, datasource_stacks.StacksType{
+		ObjectType: types.ObjectType{AttrTypes: stackType},
 	}, stackElements)
 }
 
@@ -169,7 +164,7 @@ func dataStackTechnologiesToListValue(ctx context.Context, techs []*models.Servi
 	techType := datasource_stacks.TechnologiesValue{}.AttributeTypes(ctx)
 	stackTechnologies := make([]attr.Value, len(techs))
 	for index, tech := range techs {
-		tech, diag := types.ObjectValue(
+		techValue, diag := datasource_stacks.NewTechnologiesValue(
 			techType,
 			map[string]attr.Value{
 				"technology": types.StringValue(tech.Technology),
@@ -180,11 +175,11 @@ func dataStackTechnologiesToListValue(ctx context.Context, techs []*models.Servi
 			return basetypes.ListValue{}, diag
 		}
 
-		stackTechnologies[index] = tech
+		stackTechnologies[index] = techValue
 	}
 
-	return types.ListValueFrom(ctx, basetypes.ObjectType{
-		AttrTypes: techType,
+	return types.ListValueFrom(ctx, datasource_stacks.TechnologiesType{
+		ObjectType: types.ObjectType{AttrTypes: techType},
 	}, stackTechnologies)
 }
 
@@ -192,7 +187,7 @@ func dataStackDependenciesToListValue(ctx context.Context, dependencies []*model
 	dependencyType := datasource_stacks.DependenciesValue{}.AttributeTypes(ctx)
 	stackDependencies := make([]attr.Value, len(dependencies))
 	for index, dependency := range dependencies {
-		tech, diag := types.ObjectValue(
+		depValue, diag := datasource_stacks.NewDependenciesValue(
 			dependencyType,
 			map[string]attr.Value{
 				"ref":      types.StringValue(dependency.Ref),
@@ -203,11 +198,11 @@ func dataStackDependenciesToListValue(ctx context.Context, dependencies []*model
 			return basetypes.ListValue{}, diag
 		}
 
-		stackDependencies[index] = tech
+		stackDependencies[index] = depValue
 	}
 
-	return types.ListValueFrom(ctx, basetypes.ObjectType{
-		AttrTypes: dependencyType,
+	return types.ListValueFrom(ctx, datasource_stacks.DependenciesType{
+		ObjectType: types.ObjectType{AttrTypes: dependencyType},
 	}, stackDependencies)
 }
 
@@ -220,7 +215,7 @@ func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*m
 			return basetypes.ListValue{}, diag
 		}
 
-		tech, diag := types.ObjectValue(
+		cpValue, diag := datasource_stacks.NewCloudProvidersValue(
 			cloudProviderType,
 			map[string]attr.Value{
 				"abbreviation": types.StringValue(cloudProvider.Abbreviation),
@@ -233,13 +228,13 @@ func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*m
 			return basetypes.ListValue{}, diag
 		}
 
-		stackCloudProviders[index] = tech
+		stackCloudProviders[index] = cpValue
 	}
 
 	return types.ListValueFrom(
 		ctx,
-		basetypes.ObjectType{
-			AttrTypes: cloudProviderType,
+		datasource_stacks.CloudProvidersType{
+			ObjectType: types.ObjectType{AttrTypes: cloudProviderType},
 		},
 		stackCloudProviders)
 }
