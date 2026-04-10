@@ -230,6 +230,10 @@ func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadReq
 
 	eb, _, err := mid.GetExternalBackend(orgCan, uint32(id))
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable read external backend",
 			err.Error(),

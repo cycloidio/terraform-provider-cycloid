@@ -104,6 +104,10 @@ func (r *configRepositoryResource) Read(ctx context.Context, req resource.ReadRe
 
 	cr, _, err := mid.GetConfigRepository(orgCan, can)
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable read config repository",
 			err.Error(),

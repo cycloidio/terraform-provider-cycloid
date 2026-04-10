@@ -113,6 +113,10 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 
 	m, _, err := mid.GetMember(orgCan, uint32(memberID.ValueInt64()))
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable read member",
 			err.Error(),

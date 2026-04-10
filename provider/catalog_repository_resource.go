@@ -137,6 +137,10 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 
 	cr, _, err := mid.GetCatalogRepository(orgCan, can)
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable read catalog repository",
 			err.Error(),
