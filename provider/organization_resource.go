@@ -146,7 +146,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	var licence *models.Licence
+	licence := &models.Licence{}
 	_, err = m.GenericRequest(middleware.Request{
 		Method:       "GET",
 		Organization: &canonical,
@@ -271,7 +271,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	var licence *models.Licence
+	licence := &models.Licence{}
 	_, err = m.GenericRequest(middleware.Request{
 		Method:       "GET",
 		Organization: &canonical,
@@ -373,7 +373,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Manage licence
-	var licence *models.Licence
+	licence := &models.Licence{}
 	var licenceState licenceResourceModel
 	if !orgPlan.Licence.IsNull() && !orgPlan.Licence.IsUnknown() {
 		if diags := orgPlan.Licence.As(ctx, &licenceState, basetypes.ObjectAsOptions{}); diags.HasError() {
@@ -412,7 +412,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Manage subscription
-	var subscription *models.Subscription
+	subscription := &models.Subscription{}
 	var subscriptionState subscriptionResourceModel
 	if !orgPlan.Subscription.IsUnknown() && !orgPlan.Subscription.IsNull() {
 		if diags := orgPlan.Subscription.As(ctx, &subscriptionState, basetypes.ObjectAsOptions{}); diags.HasError() {
