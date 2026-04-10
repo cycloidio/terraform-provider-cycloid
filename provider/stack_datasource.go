@@ -6,6 +6,7 @@ import (
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_stacks"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -114,7 +115,7 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 
 		teamCan := ""
 		if s.Team != nil {
-			teamCan = *s.Team.Canonical
+			teamCan = ptr.Value(s.Team.Canonical)
 		}
 
 		teamValue, errDiags := types.ObjectValue(
@@ -130,23 +131,23 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 		stackElements[index], errDiags = datasource_stacks.NewStacksValue(
 			stackType,
 			map[string]attr.Value{
-				"author":                 types.StringValue(*s.Author),
+				"author":                 types.StringValue(ptr.Value(s.Author)),
 				"blueprint":              types.BoolValue(s.Blueprint),
-				"canonical":              types.StringValue(*s.Canonical),
+				"canonical":              types.StringValue(ptr.Value(s.Canonical)),
 				"cloud_providers":        cloudProviderValues,
 				"dependencies":           dependenciesValues,
 				"description":            types.StringValue(s.Description),
-				"directory":              types.StringValue(*s.Directory),
-				"form_enabled":           types.BoolValue(*s.FormEnabled),
+				"directory":              types.StringValue(ptr.Value(s.Directory)),
+				"form_enabled":           types.BoolValue(ptr.Value(s.FormEnabled)),
 				"keywords":               keywordsValues,
-				"name":                   types.StringValue(*s.Name),
-				"organization_canonical": types.StringValue(*s.OrganizationCanonical),
-				"quota_enabled":          types.BoolValue(*s.QuotaEnabled),
-				"ref":                    types.StringValue(*s.Ref),
+				"name":                   types.StringValue(ptr.Value(s.Name)),
+				"organization_canonical": types.StringValue(ptr.Value(s.OrganizationCanonical)),
+				"quota_enabled":          types.BoolValue(ptr.Value(s.QuotaEnabled)),
+				"ref":                    types.StringValue(ptr.Value(s.Ref)),
 				"team":                   teamValue,
-				"trusted":                types.BoolValue(*s.Trusted),
+				"trusted":                types.BoolValue(ptr.Value(s.Trusted)),
 				"technologies":           technologiesValues,
-				"visibility":             types.StringValue(*s.Visibility),
+				"visibility":             types.StringValue(ptr.Value(s.Visibility)),
 			},
 		)
 		diags.Append(errDiags...)
@@ -219,8 +220,8 @@ func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*m
 			cloudProviderType,
 			map[string]attr.Value{
 				"abbreviation": types.StringValue(cloudProvider.Abbreviation),
-				"canonical":    types.StringValue(*cloudProvider.Canonical),
-				"name":         types.StringValue(*cloudProvider.Name),
+				"canonical":    types.StringValue(ptr.Value(cloudProvider.Canonical)),
+				"name":         types.StringValue(ptr.Value(cloudProvider.Name)),
 				"regions":      regions,
 			},
 		)
