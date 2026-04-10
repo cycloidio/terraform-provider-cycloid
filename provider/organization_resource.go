@@ -416,7 +416,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Manage subscription
-	subscription := &models.Subscription{}
+	var subscription *models.Subscription
 	var subscriptionState subscriptionResourceModel
 	if !orgPlan.Subscription.IsUnknown() && !orgPlan.Subscription.IsNull() {
 		if diags := orgPlan.Subscription.As(ctx, &subscriptionState, basetypes.ObjectAsOptions{}); diags.HasError() {
@@ -440,12 +440,13 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			"members_count": subscriptionState.MembersCount.ValueInt64(),
 			"overwrite":     true,
 		}
+		subscriptionResp := &models.Subscription{}
 		r, err := m.GenericRequest(middleware.Request{
 			Method:       "PUT",
 			Organization: org.Canonical,
 			Route:        []string{"organizations", canonical, "subscriptions"},
 			Body:         body,
-		}, subscription)
+		}, subscriptionResp)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update subscription for org %q", canonical),
@@ -573,13 +574,17 @@ func organizationCYModelToData(ctx context.Context, orgState *organizationResour
 		subscriptionValue = types.ObjectNull(resource_organization.SubscriptionAttrTypes)
 	} else {
 		expiresAt := time.UnixMilli(int64(ptr.Value(subscription.ExpiresAt)))
+		var planCanonical *string
+		if subscription.Plan != nil {
+			planCanonical = subscription.Plan.Canonical
+		}
 		subscriptionValue, diags = types.ObjectValue(
 			resource_organization.SubscriptionAttrTypes,
 			map[string]attr.Value{
 				"current_members":           types.Int64Value(int64(ptr.Value(subscription.CurrentMembers))),
 				"expires_at_rfc3339":        types.StringValue(expiresAt.UTC().Format("2006-01-02T15:04:05Z")),
 				"expires_at_unix_timestamp": types.Int64Value(expiresAt.UnixMilli()),
-				"plan":                      types.StringPointerValue(subscription.Plan.Canonical),
+				"plan":                      types.StringPointerValue(planCanonical),
 				"members_count":             types.Int64Value(int64(ptr.Value(subscription.MembersCount))),
 			},
 		)
