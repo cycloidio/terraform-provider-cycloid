@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -53,6 +55,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data credentialResourceModel
+	var configData credentialResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -60,7 +63,10 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	m := r.provider.Middleware
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	name := data.Name.ValueString()
 	credentialType := data.Type.ValueString()
@@ -84,8 +90,9 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	canonical := data.Canonical.ValueString()
 	description := data.Description.ValueString()
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
+	owner, _ := configuredCredentialOwner(configData.Owner)
 
-	cred, _, err := m.CreateCredential(organization, name, credentialType, rawCred, path, canonical, description)
+	cred, _, err := r.createCredential(organization, name, credentialType, rawCred, path, canonical, description, owner)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create credential",
@@ -153,10 +160,16 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data credentialResourceModel
+	var configData credentialResourceModel
 	var stateData credentialResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -192,6 +205,7 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	description := data.Description.ValueString()
 
 	organization := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
+	owner := resolveCredentialUpdateOwner(configData.Owner, stateData.Owner)
 
 	// we need to check first if the cred exists, it could be deleted outside terraform
 	// in that case, we'll just re-create it
@@ -205,9 +219,9 @@ func (r *credentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	if slices.IndexFunc(credentials, func(c *models.CredentialSimple) bool {
 		return c.Canonical != nil && *c.Canonical == updateCanonical
 	}) == -1 {
-		credential, _, err = m.CreateCredential(organization, name, credentialType, rawCred, path, createCanonical, description)
+		credential, _, err = r.createCredential(organization, name, credentialType, rawCred, path, createCanonical, description, owner)
 	} else {
-		credential, _, err = m.UpdateCredential(organization, name, credentialType, rawCred, path, updateCanonical, description)
+		credential, _, err = r.updateCredential(organization, name, credentialType, rawCred, path, updateCanonical, description, owner)
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to update credential", err.Error())
@@ -254,7 +268,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 func credentialCYModelToData(ctx context.Context, org string, credential *models.Credential, data *credentialResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	if credential.Owner != nil {
+	if credential.Owner != nil && credential.Owner.Username != nil {
 		data.Owner = types.StringPointerValue(credential.Owner.Username)
 	} else {
 		data.Owner = types.StringValue("")
@@ -403,4 +417,78 @@ func credentialCanonicalForUpdate(planCanonical, stateCanonical string) string {
 
 func credentialCanonicalForCreate(planCanonical, stateCanonical string) string {
 	return Coalesce(planCanonical, stateCanonical)
+}
+
+func configuredCredentialOwner(owner types.String) (string, bool) {
+	if owner.IsNull() || owner.IsUnknown() {
+		return "", false
+	}
+
+	ownerValue := owner.ValueString()
+	if ownerValue == "" {
+		return "", false
+	}
+
+	return ownerValue, true
+}
+
+func resolveCredentialUpdateOwner(configOwner, stateOwner types.String) string {
+	if owner, configured := configuredCredentialOwner(configOwner); configured {
+		return owner
+	}
+
+	owner, _ := configuredCredentialOwner(stateOwner)
+	return owner
+}
+
+func (r *credentialResource) createCredential(org, name, credentialType string, rawCred *models.CredentialRaw, path, canonical, description, owner string) (*models.Credential, *http.Response, error) {
+	body := &models.NewCredential{
+		Description: description,
+		Name:        &name,
+		Path:        &path,
+		Raw:         rawCred,
+		Type:        &credentialType,
+		Canonical:   canonical,
+	}
+	if owner != "" {
+		body.Owner = owner
+	}
+
+	var result *models.Credential
+	resp, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
+		Method:       "POST",
+		Organization: &org,
+		Route:        []string{"organizations", org, "credentials"},
+		Body:         body,
+	}, &result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
+}
+
+func (r *credentialResource) updateCredential(org, name, credentialType string, rawCred *models.CredentialRaw, path, canonical, description, owner string) (*models.Credential, *http.Response, error) {
+	body := &models.UpdateCredential{
+		Description: description,
+		Name:        &name,
+		Path:        &path,
+		Raw:         rawCred,
+		Type:        &credentialType,
+		Canonical:   &canonical,
+	}
+	if owner != "" {
+		body.Owner = owner
+	}
+
+	var result *models.Credential
+	resp, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
+		Method:       "PUT",
+		Organization: &org,
+		Route:        []string{"organizations", org, "credentials", canonical},
+		Body:         body,
+	}, &result)
+	if err != nil {
+		return nil, resp, err
+	}
+	return result, resp, nil
 }
