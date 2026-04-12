@@ -110,3 +110,7 @@ require (
 	google.golang.org/grpc v1.79.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+// TODO: remove before merge — points to local cycloid-cli with plugin support.
+// Update to the released version once fbh-feat-plugins is merged.
+replace github.com/cycloidio/cycloid-cli => /home/stammfrei/projects/cycloid/cycloid-cli.git/branches/develop
