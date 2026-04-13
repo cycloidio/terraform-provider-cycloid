@@ -8,7 +8,11 @@ description: |-
 
 # cycloid_team_member (Resource)
 
-Assign an `orgnization_member` (user) to a team.
+Assign an `organization_member` (user) to a team.
+
+A member can be identified either by `username` (their canonical) or by `email`. Exactly one of the two must be provided.
+
+~> **Note:** When using `email`, the address must belong to an existing organization member (even if their invitation is still pending). To add someone to a team who is not yet part of the organization, first create a `cycloid_organization_member` resource for them.
 
 ## Example Usage
 
@@ -33,7 +37,7 @@ resource "cycloid_team_member" "lads" {
 resource "cycloid_team_member" "email_invite" {
   team         = cycloid_team.a_team.canonical
   organization = cycloid_team.a_team.organization
-  username     = "amy.allen@a-team.com"
+  email        = "amy.allen@a-team.com"
 }
 ```
 
@@ -46,6 +50,6 @@ resource "cycloid_team_member" "email_invite" {
 
 ### Optional
 
-- `email` (String) The email of the member to invite.
+- `email` (String) The email of the member to add. The email must belong to an existing organization member (even if their invitation is still pending). Mutually exclusive with `username`.
 - `organization` (String) The organization canonical of the team, default to the provider `default_organization`.
-- `username` (String) The username of the member to invite.
+- `username` (String) The canonical of the member to add. Mutually exclusive with `email`.
