@@ -1,5 +1,16 @@
 # Tips
 
+## Releasing
+
+To publish a new version of the provider, push a tag following the `vX.Y.Z` semver format. A GitHub Action will automatically build and publish the release via GoReleaser.
+
+```bash
+git tag v0.5.3
+git push origin v0.5.3
+```
+
+---
+
 ## Contributing
 
 ### PR workflow with git worktrees
