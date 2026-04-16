@@ -229,7 +229,7 @@ func (r *organizationRoleResource) Delete(ctx context.Context, req resource.Dele
 	resp.Diagnostics.Append(resp.State.Set(ctx, &roleState)...)
 }
 
-func organizationRolePlanRulesToCYModel(ctx context.Context, rulesState types.List) ([]*models.NewRule, diag.Diagnostics) {
+func organizationRolePlanRulesToCYModel(ctx context.Context, rulesState types.Set) ([]*models.NewRule, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if rulesState.IsNull() || rulesState.IsUnknown() {
@@ -280,7 +280,7 @@ func organizationRoleCYModelToData(ctx context.Context, org string, role *models
 		roleState.Description = types.StringNull()
 		roleState.ID = types.Int64Null()
 		roleState.Default = types.BoolNull()
-		roleState.Rules = types.ListNull(ruleObjectType)
+		roleState.Rules = types.SetNull(ruleObjectType)
 		return diags
 	}
 
@@ -317,7 +317,7 @@ func organizationRoleCYModelToData(ctx context.Context, org string, role *models
 		ruleValues = append(ruleValues, ruleValue)
 	}
 
-	rulesList, rulesDiags := types.ListValue(ruleObjectType, ruleValues)
+	rulesSet, rulesDiags := types.SetValue(ruleObjectType, ruleValues)
 	diags.Append(rulesDiags...)
 	if diags.HasError() {
 		return diags
@@ -329,7 +329,7 @@ func organizationRoleCYModelToData(ctx context.Context, org string, role *models
 	roleState.Description = types.StringPointerValue(role.Description)
 	roleState.ID = types.Int64Value(int64(ptr.Value(role.ID)))
 	roleState.Default = types.BoolValue(ptr.Value(role.Default))
-	roleState.Rules = rulesList
+	roleState.Rules = rulesSet
 
 	return diags
 }

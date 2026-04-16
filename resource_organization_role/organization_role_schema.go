@@ -66,7 +66,7 @@ func OrganizationRoleResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 			},
-			"rules": schema.ListNestedAttribute{
+			"rules": schema.SetNestedAttribute{
 				Description:         "Authorization rules attached to this role.",
 				MarkdownDescription: "Authorization rules attached to this role.",
 				Required:            true,
@@ -121,7 +121,7 @@ type OrganizationRoleModel struct {
 	Canonical    types.String `tfsdk:"canonical"`
 	Organization types.String `tfsdk:"organization"`
 	Description  types.String `tfsdk:"description"`
-	Rules        types.List   `tfsdk:"rules"`
+	Rules        types.Set    `tfsdk:"rules"`
 	ID           types.Int64  `tfsdk:"id"`
 	Default      types.Bool   `tfsdk:"default"`
 }
