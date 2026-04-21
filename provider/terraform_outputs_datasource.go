@@ -77,7 +77,7 @@ func (t *terraformOutputsDataSource) Read(ctx context.Context, req datasource.Re
 
 	params := make(url.Values)
 	for _, filter := range filters {
-		params.Add(filter.Attribute+"["+filter.Condition+"]", url.QueryEscape(filter.Value))
+		params.Add(filter.Attribute+"["+filter.Condition+"]", filter.Value)
 	}
 
 	var terraformOutputs []datasource_terraform_outputs.TerraformOutput

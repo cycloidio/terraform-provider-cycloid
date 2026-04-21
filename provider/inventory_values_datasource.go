@@ -75,7 +75,7 @@ func (i *inventoryValuesDataSource) Read(ctx context.Context, req datasource.Rea
 
 	params := make(url.Values)
 	for _, filter := range filters {
-		params.Add(filter.Attribute+"["+filter.Condition+"]", url.QueryEscape(filter.Value))
+		params.Add(filter.Attribute+"["+filter.Condition+"]", filter.Value)
 	}
 
 	var inventoryValues []map[string]any
