@@ -147,6 +147,11 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewTeamResource,
 		NewTeamMemberResource,
 		NewComponentResource,
+		NewPluginRegistryResource,
+		NewPluginManagerResource,
+		NewPluginRegistryPluginResource,
+		NewPluginVersionResource,
+		NewPluginResource,
 	}
 }
 
