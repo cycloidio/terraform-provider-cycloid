@@ -77,16 +77,20 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	var teamMember *models.MemberTeam
-	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(tm.Email).String() == email {
-			teamMember = tm
-		}
+	teamMember := findTeamMember(teamMembers, username, email)
+	if teamMember == nil {
+		resp.State.RemoveResource(ctx)
+		return
 	}
 
 	resp.Diagnostics.Append(
 		TeamMemberToModel(ctx, org, team, teamMember, &teamMemberState)...,
 	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &teamMemberState)...)
 }
 
 func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -112,12 +116,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	var teamMember *models.MemberTeam
-	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(tm.Email).String() == email {
-			teamMember = tm
-		}
-	}
+	teamMember := findTeamMember(teamMembers, username, email)
 
 	if teamMember == nil {
 		teamMember, _, err = m.AssignMemberToTeam(org, team, nilIfEmpty(username), nilIfEmpty(email))
@@ -160,12 +159,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	var teamMember *models.MemberTeam
-	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(tm.Email).String() == email {
-			teamMember = tm
-		}
-	}
+	teamMember := findTeamMember(teamMembers, username, email)
 
 	if teamMember == nil {
 		teamMember, _, err = m.AssignMemberToTeam(org, team, nilIfEmpty(username), nilIfEmpty(email))
@@ -207,12 +201,7 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	var teamMember *models.MemberTeam
-	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(tm.Email).String() == email {
-			teamMember = tm
-		}
-	}
+	teamMember := findTeamMember(teamMembers, username, email)
 
 	if teamMember != nil {
 		_, err := m.UnAssignMemberFromTeam(org, team, ptr.Value(teamMember.ID))
@@ -243,6 +232,18 @@ func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models
 		teamMemberState.Email = types.StringValue(ptr.Value(teamMember.Email).String())
 		teamMemberState.Organization = types.StringValue(org)
 		teamMemberState.Team = types.StringValue(team)
+	}
+	return nil
+}
+
+func findTeamMember(teamMembers []*models.MemberTeam, username, email string) *models.MemberTeam {
+	for _, teamMember := range teamMembers {
+		if username != "" && ptr.Value(teamMember.Username) == username {
+			return teamMember
+		}
+		if email != "" && ptr.Value(teamMember.Email).String() == email {
+			return teamMember
+		}
 	}
 	return nil
 }

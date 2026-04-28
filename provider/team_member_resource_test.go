@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -61,6 +63,60 @@ func TestAccTeamMemberResource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestFindTeamMemberIgnoresEmptyUsername(t *testing.T) {
+	firstUsername := ""
+	firstEmail := strfmt.Email("first@example.com")
+	expectedUsername := ""
+	expectedEmail := strfmt.Email("expected@example.com")
+
+	teamMembers := []*models.MemberTeam{
+		{
+			Username: &firstUsername,
+			Email:    &firstEmail,
+		},
+		{
+			Username: &expectedUsername,
+			Email:    &expectedEmail,
+		},
+	}
+
+	teamMember := findTeamMember(teamMembers, "", "expected@example.com")
+
+	if teamMember == nil {
+		t.Fatal("expected team member to be found")
+	}
+	if teamMember.Email == nil || teamMember.Email.String() != "expected@example.com" {
+		t.Fatalf("expected email %q, got %v", "expected@example.com", teamMember.Email)
+	}
+}
+
+func TestFindTeamMemberIgnoresEmptyEmail(t *testing.T) {
+	firstUsername := "first"
+	firstEmail := strfmt.Email("")
+	expectedUsername := "expected"
+	expectedEmail := strfmt.Email("")
+
+	teamMembers := []*models.MemberTeam{
+		{
+			Username: &firstUsername,
+			Email:    &firstEmail,
+		},
+		{
+			Username: &expectedUsername,
+			Email:    &expectedEmail,
+		},
+	}
+
+	teamMember := findTeamMember(teamMembers, "expected", "")
+
+	if teamMember == nil {
+		t.Fatal("expected team member to be found")
+	}
+	if teamMember.Username == nil || *teamMember.Username != "expected" {
+		t.Fatalf("expected username %q, got %v", "expected", teamMember.Username)
+	}
 }
 
 // Test configuration functions
