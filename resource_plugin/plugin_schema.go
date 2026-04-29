@@ -25,10 +25,22 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"registry_id": schema.Int64Attribute{
+				Description:         "The ID of the plugin registry containing the plugin to install.",
+				MarkdownDescription: "The ID of the plugin registry containing the plugin to install.",
+				Required:            true,
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+			},
+			"plugin_id": schema.Int64Attribute{
+				Description:         "The ID of the plugin within the registry.",
+				MarkdownDescription: "The ID of the plugin within the registry.",
+				Required:            true,
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+			},
 			"plugin_version_id": schema.Int64Attribute{
 				Description:         "The ID of the plugin version to install. Triggers replacement when changed.",
 				MarkdownDescription: "The ID of the plugin version to install. Triggers replacement when changed.",
-				Optional:            true,
+				Required:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"configuration": schema.MapAttribute{
@@ -80,6 +92,8 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 
 type PluginModel struct {
 	Organization    types.String `tfsdk:"organization"`
+	RegistryID      types.Int64  `tfsdk:"registry_id"`
+	PluginID        types.Int64  `tfsdk:"plugin_id"`
 	PluginVersionID types.Int64  `tfsdk:"plugin_version_id"`
 	Configuration   types.Map    `tfsdk:"configuration"`
 	ID              types.Int64  `tfsdk:"id"`

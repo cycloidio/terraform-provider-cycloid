@@ -72,7 +72,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(tm.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -107,13 +107,13 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(tm.Email).String() == email {
 			teamMember = tm
 		}
 	}
 
 	if teamMember == nil {
-		teamMember, _, err = m.AssignMemberToTeam(org, team, &username, &email)
+		teamMember, _, err = m.AssignMemberToTeam(org, team, nilIfEmpty(username), nilIfEmpty(email))
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to assign team member %q to team %q in org %q", Coalesce(username, email), team, org), err.Error())
 			return
@@ -155,13 +155,13 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(tm.Email).String() == email {
 			teamMember = tm
 		}
 	}
 
 	if teamMember == nil {
-		teamMember, _, err = m.AssignMemberToTeam(org, team, &username, &email)
+		teamMember, _, err = m.AssignMemberToTeam(org, team, nilIfEmpty(username), nilIfEmpty(email))
 		if err != nil {
 			resp.Diagnostics.AddError(fmt.Sprintf("failed to assign team member %q to team %q in org %q", Coalesce(username, email), team, org), err.Error())
 			return
@@ -202,7 +202,7 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(tm.Email).String() == email {
 			teamMember = tm
 		}
 	}

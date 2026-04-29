@@ -561,7 +561,8 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 	}
 	componentState.StackRef = types.StringPointerValue(ptr.Value(component.ServiceCatalog).Ref)
 	componentState.UseCase = types.StringValue(component.UseCase)
-	componentState.StackVersion = types.StringNull()
+	// stack_version is never returned by the API after creation; preserve the existing
+	// state value so Terraform does not see spurious null drift on every refresh.
 
 	var diags diag.Diagnostics
 	if refreshInputVariables || inputVariables != nil {

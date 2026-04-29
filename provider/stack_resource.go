@@ -98,12 +98,13 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	data.Canonical = types.StringValue(*stack.Canonical)
 	data.Visibility = types.StringValue(*stack.Visibility)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (s *stackResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data stackResourceModel
 
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -155,9 +156,9 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	if data.Team.IsNull() {
 		if stack.Team != nil {
 			team = *stack.Team.Canonical
-		} else {
-			team = ""
 		}
+	} else {
+		team = data.Team.ValueString()
 	}
 
 	// call api
@@ -167,7 +168,7 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 		return diags
 	}
 
-	if data.Team.IsNull() && ptr.Value(ptr.Value(updatedStack.Team).Canonical) == "" {
+	if updatedStack.Team == nil || ptr.Value(updatedStack.Team.Canonical) == "" {
 		data.Team = types.StringNull()
 	} else {
 		data.Team = types.StringValue(*updatedStack.Team.Canonical)

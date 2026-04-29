@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -56,11 +58,9 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Middleware
 
-	var versionID *uint32
-	if !data.PluginVersionID.IsNull() && !data.PluginVersionID.IsUnknown() {
-		v := uint32(data.PluginVersionID.ValueInt64())
-		versionID = &v
-	}
+	registryID := uint32(data.RegistryID.ValueInt64())
+	pluginID := uint32(data.PluginID.ValueInt64())
+	versionID := uint32(data.PluginVersionID.ValueInt64())
 
 	config := map[string]string{}
 	resp.Diagnostics.Append(data.Configuration.ElementsAs(ctx, &config, false)...)
@@ -68,14 +68,57 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	install, _, err := m.CreatePlugin(org, versionID, config)
+	_, err := m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to install plugin in org %q", org), err.Error())
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to install plugin version %d in org %q", versionID, org), err.Error())
 		return
 	}
 
+	// InstallPluginVersion is async (pending → running). Poll ListPlugins until
+	// the install for this registry+plugin pair appears with a terminal status.
+	install, err := pollPluginInstall(m, org, registryID, pluginID, versionID, 5*time.Minute)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("plugin install did not reach running status in org %q", org), err.Error())
+		return
+	}
+
+	data.RegistryID = types.Int64Value(int64(registryID))
+	data.PluginID = types.Int64Value(int64(pluginID))
 	pluginInstallToModel(org, install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// pollPluginInstall polls ListPlugins until the install for the given registry+plugin
+// appears with status "running", then returns the PluginInstall. Returns an error on
+// timeout or when the install status is "failed".
+func pollPluginInstall(m middleware.Middleware, org string, registryID, pluginID, versionID uint32, timeout time.Duration) (*models.PluginInstall, error) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		plugins, _, err := m.ListPlugins(org)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range plugins {
+			if p.Install == nil || p.Registry == nil {
+				continue
+			}
+			if ptr.Value(p.Registry.ID) != registryID || ptr.Value(p.ID) != pluginID {
+				continue
+			}
+			if p.Install.Version != nil && ptr.Value(p.Install.Version.ID) != versionID {
+				continue
+			}
+			status := ptr.Value(p.Install.Status)
+			if status == "running" {
+				return p.Install, nil
+			}
+			if status == "failed" {
+				return nil, fmt.Errorf("plugin install failed")
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return nil, fmt.Errorf("timeout waiting for plugin install to reach running status")
 }
 
 func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

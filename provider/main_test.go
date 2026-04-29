@@ -3,6 +3,7 @@ package provider
 import (
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cycloidio/cycloid-cli/pkg/testcfg"
@@ -66,19 +67,26 @@ func testConfigFromBootstrap(cfg *testcfg.Config) *TestConfig {
 	}
 
 	if cfg.CatalogRepo != nil {
-		// Do NOT inherit CredentialCanonical from the bootstrap config — testcfg
-		// hardcodes "github" which doesn't exist in a fresh local stack.
-		// TestAccCatalogRepositoryResource skips when Credential == "".
+		// Credential is intentionally empty — the catalog repo is a public GitHub URL
+		// and requires no authentication. TestAccCatalogRepositoryResource now handles
+		// the empty-credential case by omitting the field from the HCL config.
 		tc.Repositories.Catalog = TestConfigRepo{
 			URL:    ptr.Value(cfg.CatalogRepo.URL),
 			Branch: cfg.CatalogRepo.Branch,
 		}
 	}
 
-	// Component tests are left as-is (tc.Component = nil) because the provider's
-	// Read function unconditionally sets stack_version = null after every apply,
-	// causing Terraform to reject the state as inconsistent. This is a pre-existing
-	// provider bug (stack_version is write-only by the API). Tests skip when nil.
+	// Component: derive stack info from the bootstrapped component.
+	// testcfg uses "stack-e2e-stackforms" / "default" as defaults.
+	if cfg.Component != nil && cfg.Component.ServiceCatalog != nil {
+		ref := ptr.Value(cfg.Component.ServiceCatalog.Ref) // e.g. "cycloid:stack-e2e-stackforms"
+		if colonIdx := strings.Index(ref, ":"); colonIdx >= 0 {
+			tc.Component = &TestConfigComponent{
+				StackCanonical: ref[colonIdx+1:],
+				UseCase:        cfg.Component.UseCase,
+			}
+		}
+	}
 
 	return tc
 }

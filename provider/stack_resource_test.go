@@ -10,7 +10,6 @@ import (
 
 func TestAccStackResource(t *testing.T) {
 	t.Parallel()
-	t.Skip("TestAccStackResource will be fixed in a separate PR")
 
 	const stackName = "web-app-stack"
 	ctx := context.Background()
@@ -73,7 +72,6 @@ resource "cycloid_stack" "test" {
   organization_canonical = "%s"
   canonical              = data.cycloid_stacks.existing.stacks[0].canonical
   visibility             = "shared"
-  team                   = "admin-team"
 }
 `, org, org)
 }

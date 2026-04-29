@@ -103,6 +103,7 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The stack version to use, you can specify a branch name, a tag or a commit. Default to the catalog repository's default branch.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"allow_version_update": schema.BoolAttribute{
 				Description:         "Whether Terraform will manage stack versions on each update. When disabled, versions are only applied on component creation. This setting is useful to allow users to manage versions through the UI.",

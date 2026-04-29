@@ -10,12 +10,11 @@ import (
 
 func TestAccTeamMemberResource(t *testing.T) {
 	t.Parallel()
-	t.Skip("Team member assignMemberToTeam returns 500 (entity not created); under investigation – see LINEAR_ISSUE_TEAM_MEMBER_500.md")
 
-	const (
-		username = "testuser"
-		email    = "testuser@example.com"
-	)
+	// The bootstrap admin user is guaranteed to exist; testuser doesn't.
+	// AssignMemberToTeam requires an existing org member.
+	const username = "administrator"
+
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	teamName := RandomCanonical("test-team")
@@ -34,24 +33,12 @@ func TestAccTeamMemberResource(t *testing.T) {
 					resource.TestCheckResourceAttr("cycloid_team.test", "name", teamName),
 				),
 			},
-			// Create team member with organization parameter
+			// Add the bootstrap admin as a team member
 			{
-				Config: testAccTeamMemberConfig_basic(orgCanonical, teamName, username, email),
+				Config: testAccTeamMemberConfig_basic(orgCanonical, teamName, username, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_team_member.test", "organization", orgCanonical),
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "team", "cycloid_team.test.canonical"),
 					resource.TestCheckResourceAttr("cycloid_team_member.test", "username", username),
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "email", email),
-				),
-			},
-			// Update team member
-			{
-				Config: testAccTeamMemberConfig_updated(orgCanonical, teamName, username+"-updated", email+"-updated"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "organization", orgCanonical),
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "team", "cycloid_team.test.canonical"),
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "username", username+"-updated"),
-					resource.TestCheckResourceAttr("cycloid_team_member.test", "email", email+"-updated"),
 				),
 			},
 			// Destroy testing

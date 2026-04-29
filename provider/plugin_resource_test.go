@@ -20,10 +20,6 @@ import (
 // of the plugin pod IP). Widget-query assertions are therefore out of scope here.
 // TODO(plugin-manager-proxy-fix): add widget-query coverage once the bug is fixed.
 func TestAccPluginResource(t *testing.T) {
-	// TODO: POST /organizations/{org}/plugins returns 405 (only GET supported).
-	// The resource must be refactored to use InstallPluginVersion (requires adding
-	// registry_id and plugin_id to the schema). Track as a separate fix.
-	t.Skip("cycloid_plugin install: POST /organizations/{org}/plugins returns 405; requires schema refactor")
 
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
@@ -67,7 +63,7 @@ func TestAccPluginResource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPluginConfig(orgCanonical, int(versionID)),
+				Config: testAccPluginConfig(orgCanonical, int(registryID), int(pluginID), int(versionID)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttrSet("cycloid_plugin.test", "id"),
@@ -97,12 +93,14 @@ func pollPluginVersionStatus(m middleware.Middleware, org string, registryID, pl
 	return fmt.Errorf("timeout waiting for plugin version status %q", want)
 }
 
-func testAccPluginConfig(org string, versionID int) string {
+func testAccPluginConfig(org string, registryID, pluginID, versionID int) string {
 	return fmt.Sprintf(`
 resource "cycloid_plugin" "test" {
   organization      = %q
+  registry_id       = %d
+  plugin_id         = %d
   plugin_version_id = %d
   configuration     = {}
 }
-`, org, versionID)
+`, org, registryID, pluginID, versionID)
 }
