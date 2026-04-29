@@ -3,9 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
 
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_terraform_output"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -77,19 +75,13 @@ func (t *terraformOutputDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 	}
 
-	params := make(url.Values)
-	for _, filter := range filters {
-		params.Add(filter.Attribute+"["+filter.Condition+"]", filter.Value)
+	lhsFilters := make([]lhsFilter, len(filters))
+	for i, f := range filters {
+		lhsFilters[i] = lhsFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
 	}
 
 	var terraformOutputs []datasource_terraform_output.TerraformOutput
-	_, err := t.provider.Middleware.GenericRequest(middleware.Request{
-		Method:       "GET",
-		Organization: &organization,
-		Route:        []string{"organizations", organization, "inventory", "outputs"},
-		Query:        params,
-	}, &terraformOutputs)
-	if err != nil {
+	if err := filterGet(t.provider, organization, []string{"organizations", organization, "inventory", "outputs"}, lhsFilters, &terraformOutputs); err != nil {
 		resp.Diagnostics.AddError("failed to list terraform outputs", err.Error())
 		return
 	}

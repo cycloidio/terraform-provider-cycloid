@@ -3,9 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
 
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_inventory_value"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -73,19 +71,13 @@ func (i *inventoryValueDataSource) Read(ctx context.Context, req datasource.Read
 		}
 	}
 
-	params := make(url.Values)
-	for _, filter := range filters {
-		params.Add(filter.Attribute+"["+filter.Condition+"]", filter.Value)
+	lhsFilters := make([]lhsFilter, len(filters))
+	for i2, f := range filters {
+		lhsFilters[i2] = lhsFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
 	}
 
 	var inventoryValues []map[string]any
-	_, err := i.provider.Middleware.GenericRequest(middleware.Request{
-		Method:       "GET",
-		Organization: &organization,
-		Route:        []string{"organizations", organization, "inventory"},
-		Query:        params,
-	}, &inventoryValues)
-	if err != nil {
+	if err := filterGet(i.provider, organization, []string{"organizations", organization, "inventory"}, lhsFilters, &inventoryValues); err != nil {
 		resp.Diagnostics.AddError("failed to list inventory values", err.Error())
 		return
 	}
