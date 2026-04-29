@@ -93,11 +93,11 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if stack.Team == nil {
 		data.Team = types.StringNull()
 	} else {
-		data.Team = types.StringValue(*stack.Team.Canonical)
+		data.Team = types.StringValue(ptr.Value(stack.Team.Canonical))
 	}
 
-	data.Canonical = types.StringValue(*stack.Canonical)
-	data.Visibility = types.StringValue(*stack.Visibility)
+	data.Canonical = types.StringValue(ptr.Value(stack.Canonical))
+	data.Visibility = types.StringValue(ptr.Value(stack.Visibility))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -155,7 +155,7 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 
 	if data.Team.IsNull() {
 		if stack.Team != nil {
-			team = *stack.Team.Canonical
+			team = ptr.Value(stack.Team.Canonical)
 		}
 	} else {
 		team = data.Team.ValueString()
@@ -171,10 +171,10 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	if updatedStack.Team == nil || ptr.Value(updatedStack.Team.Canonical) == "" {
 		data.Team = types.StringNull()
 	} else {
-		data.Team = types.StringValue(*updatedStack.Team.Canonical)
+		data.Team = types.StringValue(ptr.Value(updatedStack.Team.Canonical))
 	}
 
-	data.Canonical = types.StringValue(*stack.Canonical)
+	data.Canonical = types.StringValue(ptr.Value(stack.Canonical))
 	data.Visibility = types.StringValue(ptr.Value(updatedStack.Visibility))
 
 	return diags

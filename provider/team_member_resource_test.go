@@ -78,19 +78,3 @@ resource "cycloid_team_member" "test" {
 `, org, team, org, username, email)
 }
 
-func testAccTeamMemberConfig_updated(org, team, username, email string) string {
-	return fmt.Sprintf(`
-resource "cycloid_team" "test" {
-  organization = "%s"
-  name         = "%s"
-  roles        = ["organization-admin"]
-}
-
-resource "cycloid_team_member" "test" {
-  organization = "%s"
-  team         = cycloid_team.test.canonical
-  username     = "%s"
-  email        = "%s"
-}
-`, org, team, org, username, email)
-}
