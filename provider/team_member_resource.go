@@ -72,7 +72,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -107,7 +107,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -155,7 +155,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -202,7 +202,7 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	var teamMember *models.MemberTeam
 	for _, tm := range teamMembers {
-		if ptr.Value(tm.Username) == username || ptr.Value(teamMember.Email).String() == email {
+		if tm.Username == username || ptr.Value(teamMember.Email).String() == email {
 			teamMember = tm
 		}
 	}
@@ -232,7 +232,7 @@ func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models
 		teamMemberState.Organization = types.StringNull()
 		teamMemberState.Team = types.StringNull()
 	} else {
-		teamMemberState.Username = types.StringPointerValue(teamMember.Username)
+		teamMemberState.Username = types.StringValue(teamMember.Username)
 		teamMemberState.Email = types.StringValue(ptr.Value(teamMember.Email).String())
 		teamMemberState.Organization = types.StringValue(org)
 		teamMemberState.Team = types.StringValue(team)

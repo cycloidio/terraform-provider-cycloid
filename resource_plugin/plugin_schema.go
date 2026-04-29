@@ -52,8 +52,8 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"status": schema.StringAttribute{
-				Description:         "Installation status: `pending`, `installed`, or `failed`.",
-				MarkdownDescription: "Installation status: `pending`, `installed`, or `failed`.",
+				Description:         "Installation status: `pending`, `running`, or `failed`.",
+				MarkdownDescription: "Installation status: `pending`, `running`, or `failed`.",
 				Computed:            true,
 			},
 			"pm_secret": schema.StringAttribute{

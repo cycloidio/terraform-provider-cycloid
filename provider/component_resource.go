@@ -560,7 +560,7 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		componentState.Description = types.StringValue(component.Description)
 	}
 	componentState.StackRef = types.StringPointerValue(ptr.Value(component.ServiceCatalog).Ref)
-	componentState.UseCase = types.StringPointerValue(component.UseCase)
+	componentState.UseCase = types.StringValue(component.UseCase)
 	componentState.StackVersion = types.StringNull()
 
 	var diags diag.Diagnostics

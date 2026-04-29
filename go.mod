@@ -23,7 +23,6 @@ require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -111,6 +110,5 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-// TODO: remove before merge — points to local cycloid-cli with plugin support.
-// Update to the released version once fbh-feat-plugins is merged.
-replace github.com/cycloidio/cycloid-cli => /home/stammfrei/projects/cycloid/cycloid-cli.git/branches/develop
+// TODO: replace with released version after pr-426 merges and is tagged.
+replace github.com/cycloidio/cycloid-cli => /home/stammfrei/projects/cy-legacy/cycloid-cli
