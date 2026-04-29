@@ -38,7 +38,6 @@ func TestDataStacksToListValue_NilTeam(t *testing.T) {
 	author := "alice"
 	dir := "stacks/my-stack"
 	formEnabled := true
-	quotaEnabled := false
 	ref := "org:my-stack"
 	trusted := true
 	visibility := "public"
@@ -51,7 +50,6 @@ func TestDataStacksToListValue_NilTeam(t *testing.T) {
 			Author:                &author,
 			Directory:             &dir,
 			FormEnabled:           &formEnabled,
-			QuotaEnabled:          &quotaEnabled,
 			Ref:                   &ref,
 			Trusted:               &trusted,
 			Visibility:            &visibility,

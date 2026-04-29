@@ -57,11 +57,22 @@ var (
 // LoadTestConfig loads test config from YAML with env override (CY_TEST_*).
 // Config file is searched at repo root first, then provider dir, then current dir.
 // The result (including any error) is cached after the first call.
+// Call primeTestConfig before the first LoadTestConfig to bypass YAML loading
+// (used by TestMain when bootstrapping the local stack).
 func LoadTestConfig() (*TestConfig, error) {
 	testConfigOnce.Do(func() {
 		testConfig, testConfigErr = loadTestConfigOnce()
 	})
 	return testConfig, testConfigErr
+}
+
+// primeTestConfig pre-populates the LoadTestConfig cache so that tests running
+// against the local bootstrap stack do not require a test_config.yaml.
+// Must be called before any LoadTestConfig call (i.e. from TestMain).
+func primeTestConfig(tc *TestConfig) {
+	testConfigOnce.Do(func() {
+		testConfig = tc
+	})
 }
 
 func loadTestConfigOnce() (*TestConfig, error) {
@@ -129,3 +140,4 @@ func findProviderDir() string {
 	}
 	return filepath.Join(".", "provider")
 }
+
