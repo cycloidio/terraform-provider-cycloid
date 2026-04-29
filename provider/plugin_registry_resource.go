@@ -76,14 +76,22 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Middleware
 
+	// GET /plugin_registries/{id} is not supported (405); use list + filter.
 	id := uint32(data.ID.ValueInt64())
-	registry, _, err := m.GetPluginRegistry(org, id)
+	registries, _, err := m.ListPluginRegistries(org)
 	if err != nil {
-		if isNotFoundError(err) {
-			resp.State.RemoveResource(ctx)
-			return
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugin registries in org %q", org), err.Error())
+		return
+	}
+	var registry *models.PluginRegistry
+	for _, r := range registries {
+		if r.ID != nil && uint32(*r.ID) == id {
+			registry = r
+			break
 		}
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin registry %d in org %q", id, org), err.Error())
+	}
+	if registry == nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

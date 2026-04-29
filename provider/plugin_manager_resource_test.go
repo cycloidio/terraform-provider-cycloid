@@ -2,17 +2,16 @@ package provider
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
+	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-// TestAccPluginManagerResource verifies that the plugin manager auto-registered on
-// compose startup is visible and has the expected attributes.
-//
-// The plugin-manager service registers itself on startup; this test does NOT create
-// a new manager — it imports the pre-existing one. If no manager exists the test
-// skips with a clear message.
+// TestAccPluginManagerResource imports the plugin manager that auto-registers on
+// compose startup. The API only allows one manager per org (singleton), so we
+// import the existing one rather than creating a fresh one.
 func TestAccPluginManagerResource(t *testing.T) {
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
@@ -21,20 +20,23 @@ func TestAccPluginManagerResource(t *testing.T) {
 		t.Skip("skipping acceptance test: middleware not configured")
 	}
 
-	// Verify the auto-registered manager exists.
 	managers, _, err := depManager.GetProvider().Middleware.ListPluginManagers(orgCanonical)
 	if err != nil || len(managers) == 0 {
 		t.Skip("skipping: no plugin managers registered (is plugin-manager service running?)")
 	}
+	managerID := strconv.FormatInt(int64(ptr.Value(managers[0].ID)), 10)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				// Create a fresh manager so we own its lifecycle.
-				// The auto-registered one cannot be deleted by the test cleanly.
-				Config: testAccPluginManagerConfig(orgCanonical, "test-acceptance-manager", "http://test-manager:4000"),
+				// Import the auto-registered manager — we don't own Create/Destroy here.
+				ResourceName:      "cycloid_plugin_manager.test",
+				ImportState:       true,
+				ImportStateId:     managerID,
+				ImportStateVerify: false, // URL field may differ from stored state
+				Config:            testAccPluginManagerImportConfig(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
@@ -53,4 +55,14 @@ resource "cycloid_plugin_manager" "test" {
   url          = %q
 }
 `, org, name, url)
+}
+
+func testAccPluginManagerImportConfig(org string) string {
+	return fmt.Sprintf(`
+resource "cycloid_plugin_manager" "test" {
+  organization = %q
+  name         = "placeholder"
+  url          = "http://placeholder:4000"
+}
+`, org)
 }

@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	localRegistryHost   = "localhost:5000"
-	clusterRegistryHost = "docker-registry:5000"
-	pluginImageName     = "plugin-hello-world"
-	pluginImageTag      = "1.0.0"
-	pluginImageLocal    = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageCluster  = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageSource   = "docker.io/cycloid/" + pluginImageName
+	localRegistryHost      = "localhost:5000"
+	clusterRegistryHost    = "docker-registry:5000"
+	clusterPluginRegistryURL = "http://plugin-registry:4000"
+	pluginImageName        = "plugin-hello-world"
+	pluginImageTag         = "1.0.0"
+	pluginImageLocal       = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
+	pluginImageCluster     = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
+	pluginImageSource      = "docker.io/cycloid/" + pluginImageName
 )
 
 // ensurePluginHelloWorld pushes plugin-hello-world:1.0.0 to the local docker-registry

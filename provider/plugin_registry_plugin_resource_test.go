@@ -22,7 +22,7 @@ func TestAccPluginRegistryPluginResource(t *testing.T) {
 	// Create a registry to own the plugin entries.
 	registryName := RandomCanonical("testreg")
 	registry, _, err := depManager.GetProvider().Middleware.CreatePluginRegistry(
-		orgCanonical, registryName, "http://"+clusterRegistryHost,
+		orgCanonical, registryName, clusterPluginRegistryURL,
 	)
 	if err != nil {
 		t.Fatalf("failed to create test plugin registry: %v", err)

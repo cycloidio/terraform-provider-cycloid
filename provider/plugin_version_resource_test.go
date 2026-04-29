@@ -22,7 +22,7 @@ func TestAccPluginVersionResource(t *testing.T) {
 	m := depManager.GetProvider().Middleware
 
 	// Bootstrap: registry → plugin (prerequisites the TF resource depends on).
-	registry, _, err := m.CreatePluginRegistry(orgCanonical, RandomCanonical("testreg"), "http://"+clusterRegistryHost)
+	registry, _, err := m.CreatePluginRegistry(orgCanonical, RandomCanonical("testreg"), clusterPluginRegistryURL)
 	if err != nil {
 		t.Fatalf("failed to create test registry: %v", err)
 	}

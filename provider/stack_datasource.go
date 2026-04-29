@@ -147,6 +147,7 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 				"trusted":                types.BoolValue(ptr.Value(s.Trusted)),
 				"technologies":           technologiesValues,
 				"visibility":             types.StringValue(ptr.Value(s.Visibility)),
+				"quota_enabled":          types.BoolNull(),
 			},
 		)
 		diags.Append(errDiags...)

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
@@ -12,6 +13,7 @@ import (
 )
 
 var _ resource.Resource = &pluginManagerResource{}
+var _ resource.ResourceWithImportState = &pluginManagerResource{}
 
 type pluginManagerResourceModel resource_plugin_manager.PluginManagerModel
 
@@ -63,10 +65,11 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Accept the invite immediately so the resource is in a fully declared state.
-	pm, _, err = m.UpdatePluginManager(org, uint32(ptr.Value(pm.ID)), "accepted")
+	pmID := uint32(ptr.Value(pm.ID))
+	pm, _, err = m.UpdatePluginManager(org, pmID, "accepted")
 	if err != nil {
 		resp.Diagnostics.AddError(
-			fmt.Sprintf("created plugin manager %d but failed to accept the invite in org %q", ptr.Value(pm.ID), org),
+			fmt.Sprintf("created plugin manager %d but failed to accept the invite in org %q", pmID, org),
 			err.Error(),
 		)
 		return
@@ -120,6 +123,25 @@ func (r *pluginManagerResource) Delete(ctx context.Context, req resource.DeleteR
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete plugin manager %d in org %q", id, org), err.Error())
 	}
+}
+
+// ImportState supports: terraform import cycloid_plugin_manager.x <id>
+func (r *pluginManagerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	id, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid import ID", fmt.Sprintf("expected a numeric plugin manager ID, got %q: %v", req.ID, err))
+		return
+	}
+	org := r.provider.DefaultOrganization
+	m := r.provider.Middleware
+	pm, _, err := m.GetPluginManager(org, uint32(id))
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin manager %d for import", id), err.Error())
+		return
+	}
+	var data pluginManagerResourceModel
+	pluginManagerToModel(org, pm, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func pluginManagerToModel(org string, pm *models.PluginManager, data *pluginManagerResourceModel) {

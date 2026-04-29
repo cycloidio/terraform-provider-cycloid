@@ -17,7 +17,7 @@ func TestAccPluginRegistryResource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPluginRegistryConfig(orgCanonical, registryName, "http://"+clusterRegistryHost),
+				Config: testAccPluginRegistryConfig(orgCanonical, registryName, clusterPluginRegistryURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_registry.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_plugin_registry.test", "name", registryName),
