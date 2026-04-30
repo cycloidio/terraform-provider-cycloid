@@ -12,13 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func nilIfEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 var _ resource.Resource = &teamMemberResource{}
 
 type teamMemberResourceModel resource_team_member.TeamMemberModel
@@ -228,7 +221,7 @@ func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models
 		teamMemberState.Organization = types.StringNull()
 		teamMemberState.Team = types.StringNull()
 	} else {
-		teamMemberState.Username = types.StringPointerValue(teamMember.Username)
+		teamMemberState.Username = types.StringValue(teamMember.Username)
 		teamMemberState.Email = types.StringValue(ptr.Value(teamMember.Email).String())
 		teamMemberState.Organization = types.StringValue(org)
 		teamMemberState.Team = types.StringValue(team)
@@ -238,7 +231,7 @@ func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models
 
 func findTeamMember(teamMembers []*models.MemberTeam, username, email string) *models.MemberTeam {
 	for _, teamMember := range teamMembers {
-		if username != "" && ptr.Value(teamMember.Username) == username {
+		if username != "" && teamMember.Username == username {
 			return teamMember
 		}
 		if email != "" && ptr.Value(teamMember.Email).String() == email {

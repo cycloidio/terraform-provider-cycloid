@@ -66,18 +66,16 @@ func TestAccTeamMemberResource(t *testing.T) {
 }
 
 func TestFindTeamMemberIgnoresEmptyUsername(t *testing.T) {
-	firstUsername := ""
 	firstEmail := strfmt.Email("first@example.com")
-	expectedUsername := ""
 	expectedEmail := strfmt.Email("expected@example.com")
 
 	teamMembers := []*models.MemberTeam{
 		{
-			Username: &firstUsername,
+			Username: "",
 			Email:    &firstEmail,
 		},
 		{
-			Username: &expectedUsername,
+			Username: "",
 			Email:    &expectedEmail,
 		},
 	}
@@ -93,18 +91,16 @@ func TestFindTeamMemberIgnoresEmptyUsername(t *testing.T) {
 }
 
 func TestFindTeamMemberIgnoresEmptyEmail(t *testing.T) {
-	firstUsername := "first"
 	firstEmail := strfmt.Email("")
-	expectedUsername := "expected"
 	expectedEmail := strfmt.Email("")
 
 	teamMembers := []*models.MemberTeam{
 		{
-			Username: &firstUsername,
+			Username: "first",
 			Email:    &firstEmail,
 		},
 		{
-			Username: &expectedUsername,
+			Username: "expected",
 			Email:    &expectedEmail,
 		},
 	}
@@ -114,7 +110,7 @@ func TestFindTeamMemberIgnoresEmptyEmail(t *testing.T) {
 	if teamMember == nil {
 		t.Fatal("expected team member to be found")
 	}
-	if teamMember.Username == nil || *teamMember.Username != "expected" {
+	if teamMember.Username != "expected" {
 		t.Fatalf("expected username %q, got %v", "expected", teamMember.Username)
 	}
 }
