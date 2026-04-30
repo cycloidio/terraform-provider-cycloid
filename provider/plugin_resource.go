@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
@@ -14,6 +16,7 @@ import (
 )
 
 var _ resource.Resource = &pluginResource{}
+var _ resource.ResourceWithImportState = &pluginResource{}
 
 type pluginResourceModel resource_plugin.PluginModel
 
@@ -62,13 +65,13 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	pluginID := uint32(data.PluginID.ValueInt64())
 	versionID := uint32(data.PluginVersionID.ValueInt64())
 
-	config := map[string]string{}
-	resp.Diagnostics.Append(data.Configuration.ElementsAs(ctx, &config, false)...)
-	if resp.Diagnostics.HasError() {
+	config, err := mergePluginConfiguration(ctx, data)
+	if err != nil {
+		resp.Diagnostics.AddError("invalid plugin configuration", err.Error())
 		return
 	}
 
-	_, err := m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
+	_, err = m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to install plugin version %d in org %q", versionID, org), err.Error())
 		return
@@ -142,13 +145,14 @@ func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	// configuration and configuration_sensitive are RequiresReplace and never
+	// readable back from the API as split maps — preserve their values from state.
 	pluginInstallToModel(org, install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *pluginResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
 	// All fields use RequiresReplace — Update is never called.
-	// TODO: remove RequiresReplace on plugin_version_id and configuration once plugin upgrades work.
 }
 
 func (r *pluginResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -168,12 +172,85 @@ func (r *pluginResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 }
 
+// ImportState supports: terraform import cycloid_plugin.x <registry_id>:<plugin_id>:<install_id>
+func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 3)
+	if len(parts) != 3 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("expected <registry_id>:<plugin_id>:<install_id>, got %q", req.ID),
+		)
+		return
+	}
+	registryID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid registry ID in import", err.Error())
+		return
+	}
+	pluginID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid plugin ID in import", err.Error())
+		return
+	}
+	installID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid install ID in import", err.Error())
+		return
+	}
+
+	org := r.provider.DefaultOrganization
+	m := r.provider.Middleware
+
+	install, _, err := m.GetPlugin(org, uint32(installID))
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin install %d for import", installID), err.Error())
+		return
+	}
+
+	var data pluginResourceModel
+	data.RegistryID = types.Int64Value(registryID)
+	data.PluginID = types.Int64Value(pluginID)
+	// configuration and configuration_sensitive cannot be recovered from API;
+	// they will be null in imported state — user must add them to config after import.
+	data.Configuration = types.MapNull(types.StringType)
+	data.ConfigurationSensitive = types.MapNull(types.StringType)
+	pluginInstallToModel(org, install, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// mergePluginConfiguration merges configuration and configuration_sensitive into a single map.
+// Returns an error if the same key appears in both maps.
+func mergePluginConfiguration(ctx context.Context, data pluginResourceModel) (map[string]string, error) {
+	config := map[string]string{}
+	if !data.Configuration.IsNull() && !data.Configuration.IsUnknown() {
+		var visible map[string]string
+		if diags := data.Configuration.ElementsAs(ctx, &visible, false); diags.HasError() {
+			return nil, fmt.Errorf("reading configuration: %s", diags[0].Detail())
+		}
+		for k, v := range visible {
+			config[k] = v
+		}
+	}
+	if !data.ConfigurationSensitive.IsNull() && !data.ConfigurationSensitive.IsUnknown() {
+		var sensitive map[string]string
+		if diags := data.ConfigurationSensitive.ElementsAs(ctx, &sensitive, false); diags.HasError() {
+			return nil, fmt.Errorf("reading configuration_sensitive: %s", diags[0].Detail())
+		}
+		for k, v := range sensitive {
+			if _, exists := config[k]; exists {
+				return nil, fmt.Errorf("key %q appears in both configuration and configuration_sensitive", k)
+			}
+			config[k] = v
+		}
+	}
+	return config, nil
+}
+
 func pluginInstallToModel(org string, install *models.PluginInstall, data *pluginResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.ID = types.Int64Value(int64(ptr.Value(install.ID)))
 	data.UUID = types.StringValue(install.UUID.String())
 	data.Status = types.StringPointerValue(install.Status)
-	data.PmSecret = types.StringPointerValue(install.PmSecret)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(install.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(install.UpdatedAt)))
 
@@ -181,3 +258,4 @@ func pluginInstallToModel(org string, install *models.PluginInstall, data *plugi
 		data.PluginVersionID = types.Int64Value(int64(ptr.Value(install.Version.ID)))
 	}
 }
+

@@ -129,6 +129,10 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewInventoryValuesDataSource,
 		NewTerraformOutputDataSource,
 		NewTerraformOutputsDataSource,
+		NewPluginRegistryDataSource,
+		NewPluginRegistryPluginDataSource,
+		NewPluginVersionDataSource,
+		NewPluginManagerDataSource,
 	}
 }
 

@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
@@ -12,6 +14,7 @@ import (
 )
 
 var _ resource.Resource = &pluginRegistryPluginResource{}
+var _ resource.ResourceWithImportState = &pluginRegistryPluginResource{}
 
 type pluginRegistryPluginResourceModel resource_plugin_registry_plugin.PluginRegistryPluginModel
 
@@ -150,6 +153,42 @@ func (r *pluginRegistryPluginResource) Delete(ctx context.Context, req resource.
 			err.Error(),
 		)
 	}
+}
+
+// ImportState supports: terraform import cycloid_plugin_registry_plugin.x <registry_id>:<plugin_id>
+func (r *pluginRegistryPluginResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("expected <registry_id>:<plugin_id>, got %q", req.ID),
+		)
+		return
+	}
+	registryID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid registry ID in import", err.Error())
+		return
+	}
+	pluginID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid plugin ID in import", err.Error())
+		return
+	}
+
+	org := r.provider.DefaultOrganization
+	m := r.provider.Middleware
+
+	plugin, _, err := m.GetRegistryPlugin(org, uint32(registryID), uint32(pluginID))
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin %d for import", pluginID), err.Error())
+		return
+	}
+
+	var data pluginRegistryPluginResourceModel
+	data.RegistryID = types.Int64Value(registryID)
+	pluginRegistryPluginToModel(org, plugin, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func pluginRegistryPluginToModel(org string, p *models.Plugin, data *pluginRegistryPluginResourceModel) {

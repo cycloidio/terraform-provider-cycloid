@@ -3,8 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,6 +15,7 @@ import (
 )
 
 var _ resource.Resource = &pluginRegistryResource{}
+var _ resource.ResourceWithImportState = &pluginRegistryResource{}
 
 type pluginRegistryResourceModel resource_plugin_registry.PluginRegistryModel
 
@@ -62,6 +66,28 @@ func (r *pluginRegistryResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	id := uint32(ptr.Value(registry.ID))
+
+	if data.WaitUntilConnected.ValueBool() {
+		if err := pollPluginRegistryConnected(m, org, id, 5*time.Minute); err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("plugin registry %d did not reach connected status in org %q", id, org),
+				err.Error(),
+			)
+			return
+		}
+		// Refresh after polling.
+		registries, _, listErr := m.ListPluginRegistries(org)
+		if listErr == nil {
+			for _, reg := range registries {
+				if reg.ID != nil && uint32(*reg.ID) == id {
+					registry = reg
+					break
+				}
+			}
+		}
+	}
+
 	pluginRegistryToModel(org, registry, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -84,9 +110,9 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 	var registry *models.PluginRegistry
-	for _, r := range registries {
-		if r.ID != nil && uint32(*r.ID) == id {
-			registry = r
+	for _, reg := range registries {
+		if reg.ID != nil && uint32(*reg.ID) == id {
+			registry = reg
 			break
 		}
 	}
@@ -118,6 +144,56 @@ func (r *pluginRegistryResource) Delete(ctx context.Context, req resource.Delete
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete plugin registry %d in org %q", id, org), err.Error())
 	}
+}
+
+// ImportState supports: terraform import cycloid_plugin_registry.x <id>
+func (r *pluginRegistryResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	id, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid import ID", fmt.Sprintf("expected a numeric plugin registry ID, got %q: %v", req.ID, err))
+		return
+	}
+	org := r.provider.DefaultOrganization
+	m := r.provider.Middleware
+
+	registries, _, err := m.ListPluginRegistries(org)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugin registries for import in org %q", org), err.Error())
+		return
+	}
+	var registry *models.PluginRegistry
+	for _, reg := range registries {
+		if reg.ID != nil && uint32(*reg.ID) == uint32(id) {
+			registry = reg
+			break
+		}
+	}
+	if registry == nil {
+		resp.Diagnostics.AddError("Plugin registry not found", fmt.Sprintf("no registry with ID %d in org %q", id, org))
+		return
+	}
+
+	var data pluginRegistryResourceModel
+	pluginRegistryToModel(org, registry, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// pollPluginRegistryConnected polls list+filter until the registry status == "connected".
+func pollPluginRegistryConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		registries, _, err := m.ListPluginRegistries(org)
+		if err != nil {
+			return err
+		}
+		for _, reg := range registries {
+			if reg.ID != nil && uint32(*reg.ID) == id && ptr.Value(reg.Status) == "connected" {
+				return nil
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("timeout waiting for plugin registry %d to reach connected status", id)
 }
 
 func pluginRegistryToModel(org string, r *models.PluginRegistry, data *pluginRegistryResourceModel) {

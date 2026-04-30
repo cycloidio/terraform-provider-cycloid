@@ -44,12 +44,25 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"configuration": schema.MapAttribute{
-				Description:         "Key-value configuration for the plugin (Stack Forms syntax). Triggers replacement when changed.",
-				MarkdownDescription: "Key-value configuration for the plugin (Stack Forms syntax). Triggers replacement when changed.",
-				Required:            true,
-				Sensitive:           true,
-				ElementType:         types.StringType,
-				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				Description: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
+					"Values appear in plan output. Triggers replacement when changed.",
+				MarkdownDescription: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
+					"Values appear in plan output. Triggers replacement when changed.",
+				Optional:      true,
+				ElementType:   types.StringType,
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+			},
+			"configuration_sensitive": schema.MapAttribute{
+				Description: "Sensitive key-value configuration for the plugin (Stack Forms syntax). " +
+					"Values are hidden in plan output. Triggers replacement when changed. " +
+					"Keys must not overlap with `configuration`.",
+				MarkdownDescription: "Sensitive key-value configuration for the plugin (Stack Forms syntax). " +
+					"Values are hidden in plan output. Triggers replacement when changed. " +
+					"Keys must not overlap with `configuration`.",
+				Optional:      true,
+				Sensitive:     true,
+				ElementType:   types.StringType,
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"id": schema.Int64Attribute{
 				Description:         "The numeric ID of the installed plugin.",
@@ -68,13 +81,6 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Installation status: `pending`, `running`, or `failed`.",
 				Computed:            true,
 			},
-			"pm_secret": schema.StringAttribute{
-				Description:         "The plugin manager secret for webhook generation.",
-				MarkdownDescription: "The plugin manager secret for webhook generation.",
-				Computed:            true,
-				Sensitive:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of install creation.",
 				MarkdownDescription: "Unix timestamp of install creation.",
@@ -91,15 +97,15 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type PluginModel struct {
-	Organization    types.String `tfsdk:"organization"`
-	RegistryID      types.Int64  `tfsdk:"registry_id"`
-	PluginID        types.Int64  `tfsdk:"plugin_id"`
-	PluginVersionID types.Int64  `tfsdk:"plugin_version_id"`
-	Configuration   types.Map    `tfsdk:"configuration"`
-	ID              types.Int64  `tfsdk:"id"`
-	UUID            types.String `tfsdk:"uuid"`
-	Status          types.String `tfsdk:"status"`
-	PmSecret        types.String `tfsdk:"pm_secret"`
-	CreatedAt       types.Int64  `tfsdk:"created_at"`
-	UpdatedAt       types.Int64  `tfsdk:"updated_at"`
+	Organization           types.String `tfsdk:"organization"`
+	RegistryID             types.Int64  `tfsdk:"registry_id"`
+	PluginID               types.Int64  `tfsdk:"plugin_id"`
+	PluginVersionID        types.Int64  `tfsdk:"plugin_version_id"`
+	Configuration          types.Map    `tfsdk:"configuration"`
+	ConfigurationSensitive types.Map    `tfsdk:"configuration_sensitive"`
+	ID                     types.Int64  `tfsdk:"id"`
+	UUID                   types.String `tfsdk:"uuid"`
+	Status                 types.String `tfsdk:"status"`
+	CreatedAt              types.Int64  `tfsdk:"created_at"`
+	UpdatedAt              types.Int64  `tfsdk:"updated_at"`
 }

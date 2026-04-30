@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_manager"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -73,6 +75,22 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 			err.Error(),
 		)
 		return
+	}
+
+	if data.WaitUntilConnected.ValueBool() {
+		if err := pollPluginManagerConnected(m, org, pmID, 5*time.Minute); err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("plugin manager %d did not reach connected status in org %q", pmID, org),
+				err.Error(),
+			)
+			return
+		}
+		// Refresh after polling.
+		pm, _, err = m.GetPluginManager(org, pmID)
+		if err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin manager %d after connected poll", pmID), err.Error())
+			return
+		}
 	}
 
 	pluginManagerToModel(org, pm, &data)
@@ -144,13 +162,28 @@ func (r *pluginManagerResource) ImportState(ctx context.Context, req resource.Im
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// pollPluginManagerConnected polls GetPluginManager until status == "connected".
+func pollPluginManagerConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		pm, _, err := m.GetPluginManager(org, id)
+		if err != nil {
+			return err
+		}
+		if ptr.Value(pm.Status) == "connected" {
+			return nil
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("timeout waiting for plugin manager %d to reach connected status", id)
+}
+
 func pluginManagerToModel(org string, pm *models.PluginManager, data *pluginManagerResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.ID = types.Int64Value(int64(ptr.Value(pm.ID)))
 	data.Name = types.StringPointerValue(pm.Name)
 	data.URL = types.StringValue(pm.URL.String())
 	data.Status = types.StringPointerValue(pm.Status)
-	data.InviteStatus = types.StringPointerValue(pm.InviteStatus)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(pm.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(pm.UpdatedAt)))
 }

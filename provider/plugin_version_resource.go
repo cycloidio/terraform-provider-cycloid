@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
@@ -18,6 +20,7 @@ const (
 )
 
 var _ resource.Resource = &pluginVersionResource{}
+var _ resource.ResourceWithImportState = &pluginVersionResource{}
 
 type pluginVersionResourceModel resource_plugin_version.PluginVersionModel
 
@@ -178,6 +181,46 @@ func (r *pluginVersionResource) Delete(ctx context.Context, req resource.DeleteR
 			err.Error(),
 		)
 	}
+}
+
+// ImportState supports: terraform import cycloid_plugin_version.x <registry_id>:<plugin_id>:<version_id>
+func (r *pluginVersionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 3)
+	if len(parts) != 3 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("expected <registry_id>:<plugin_id>:<version_id>, got %q", req.ID),
+		)
+		return
+	}
+	registryID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid registry ID in import", err.Error())
+		return
+	}
+	pluginID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid plugin ID in import", err.Error())
+		return
+	}
+	versionID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid version ID in import", err.Error())
+		return
+	}
+
+	org := r.provider.DefaultOrganization
+	m := r.provider.Middleware
+
+	version, _, err := m.GetPluginVersion(org, uint32(registryID), uint32(pluginID), uint32(versionID))
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin version %d for import", versionID), err.Error())
+		return
+	}
+
+	var data pluginVersionResourceModel
+	pluginVersionToModel(org, version, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func pluginVersionToModel(org string, v *models.PluginVersion, data *pluginVersionResourceModel) {

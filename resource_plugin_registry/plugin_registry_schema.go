@@ -46,6 +46,11 @@ func PluginRegistryResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Connection status of the registry: `offline` or `connected`.",
 				Computed:            true,
 			},
+			"wait_until_connected": schema.BoolAttribute{
+				Description: "If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.",
+				MarkdownDescription: "If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.",
+				Optional:    true,
+			},
 			"access": schema.BoolAttribute{
 				Description:         "Whether you have access to create plugins in this registry.",
 				MarkdownDescription: "Whether you have access to create plugins in this registry.",
@@ -68,12 +73,13 @@ func PluginRegistryResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type PluginRegistryModel struct {
-	Organization types.String `tfsdk:"organization"`
-	Name         types.String `tfsdk:"name"`
-	URL          types.String `tfsdk:"url"`
-	ID           types.Int64  `tfsdk:"id"`
-	Status       types.String `tfsdk:"status"`
-	Access       types.Bool   `tfsdk:"access"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
-	UpdatedAt    types.Int64  `tfsdk:"updated_at"`
+	Organization       types.String `tfsdk:"organization"`
+	Name               types.String `tfsdk:"name"`
+	URL                types.String `tfsdk:"url"`
+	ID                 types.Int64  `tfsdk:"id"`
+	Status             types.String `tfsdk:"status"`
+	WaitUntilConnected types.Bool   `tfsdk:"wait_until_connected"`
+	Access             types.Bool   `tfsdk:"access"`
+	CreatedAt          types.Int64  `tfsdk:"created_at"`
+	UpdatedAt          types.Int64  `tfsdk:"updated_at"`
 }

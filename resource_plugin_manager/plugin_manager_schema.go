@@ -47,11 +47,10 @@ func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Connection status of the plugin manager: `offline` or `connected`.",
 				Computed:            true,
 			},
-			"invite_status": schema.StringAttribute{
-				Description:         "Invite status: always `accepted` after resource creation.",
-				MarkdownDescription: "Invite status: always `accepted` after resource creation.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			"wait_until_connected": schema.BoolAttribute{
+				Description: "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
+				MarkdownDescription: "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
+				Optional:    true,
 			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of plugin manager creation.",
@@ -69,12 +68,12 @@ func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type PluginManagerModel struct {
-	Organization types.String `tfsdk:"organization"`
-	Name         types.String `tfsdk:"name"`
-	URL          types.String `tfsdk:"url"`
-	ID           types.Int64  `tfsdk:"id"`
-	Status       types.String `tfsdk:"status"`
-	InviteStatus types.String `tfsdk:"invite_status"`
-	CreatedAt    types.Int64  `tfsdk:"created_at"`
-	UpdatedAt    types.Int64  `tfsdk:"updated_at"`
+	Organization       types.String `tfsdk:"organization"`
+	Name               types.String `tfsdk:"name"`
+	URL                types.String `tfsdk:"url"`
+	ID                 types.Int64  `tfsdk:"id"`
+	Status             types.String `tfsdk:"status"`
+	WaitUntilConnected types.Bool   `tfsdk:"wait_until_connected"`
+	CreatedAt          types.Int64  `tfsdk:"created_at"`
+	UpdatedAt          types.Int64  `tfsdk:"updated_at"`
 }

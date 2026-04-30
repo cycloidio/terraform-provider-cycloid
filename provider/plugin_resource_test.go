@@ -100,7 +100,12 @@ resource "cycloid_plugin" "test" {
   registry_id       = %d
   plugin_id         = %d
   plugin_version_id = %d
-  configuration     = {}
+  configuration = {
+    greeting = "hello"
+  }
+  configuration_sensitive = {
+    token = "test-token"
+  }
 }
 `, org, registryID, pluginID, versionID)
 }
