@@ -1,0 +1,13 @@
+# {{ .Name }} ({{ .Type }})
+
+Look up an existing plugin version by name or artifact URL within a registry plugin. Use this
+data source to pin an install to a specific version that is managed in another workspace, or to
+reference the latest published version without owning its lifecycle.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}

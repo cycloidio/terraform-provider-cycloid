@@ -530,7 +530,9 @@ configs:
       pVy90/uiPe/6CsFk7ceoDA==
       -----END PRIVATE KEY-----
 
-  ## Docker registry auth (cycloid / cycloid123)
+  ## Docker registry auth — test fixture only.
+  ## Credentials: cycloid / cycloid123 (bcrypt hash). Scope is the local
+  ## docker-registry container on localhost:5000; not used outside this stack.
   registry_htpasswd:
     content: "cycloid:$2y$05$sNTvLFbEI0nZzjV3wAgpROU7kIM07zm1MtUH5RBEteXhLnknSrMH2\n"
 

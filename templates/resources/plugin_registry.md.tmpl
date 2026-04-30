@@ -1,0 +1,26 @@
+# {{ .Name }} ({{ .Type }})
+
+Registers a Docker registry with a Cycloid organization. The registry is the storage backend
+that hosts plugin images. Once registered, plugins inside this registry can be declared with
+[`cycloid_plugin_registry_plugin`](plugin_registry_plugin) and installed via
+[`cycloid_plugin`](plugin).
+
+Set `wait_until_connected = true` to block the apply until the registry reports `connected`
+status (up to 5 minutes). Useful in automated pipelines where subsequent steps depend on the
+registry being reachable.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by numeric ID:
+
+```shell
+terraform import cycloid_plugin_registry.example <id>
+```

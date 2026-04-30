@@ -1,0 +1,13 @@
+# {{ .Name }} ({{ .Type }})
+
+Look up an existing plugin registry by name or URL. Use this data source in module
+compositions to reference a registry that is managed elsewhere (e.g. in a platform
+team's Terraform workspace) without duplicating its declaration.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
