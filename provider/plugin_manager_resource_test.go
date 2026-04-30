@@ -32,11 +32,12 @@ func TestAccPluginManagerResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Import the auto-registered manager — we don't own Create/Destroy here.
-				ResourceName:      "cycloid_plugin_manager.test",
-				ImportState:       true,
-				ImportStateId:     managerID,
-				ImportStateVerify: false, // URL field may differ from stored state
-				Config:            testAccPluginManagerImportConfig(orgCanonical),
+				ResourceName:            "cycloid_plugin_manager.test",
+				ImportState:             true,
+				ImportStateId:           managerID,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"url", "wait_until_connected"},
+				Config:                  testAccPluginManagerImportConfig(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
