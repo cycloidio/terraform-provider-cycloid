@@ -4,9 +4,9 @@ page_title: "cycloid_stack Resource - cycloid"
 subcategory: ""
 description: |-
   The stack resource exists only to manage 'visibility' and 'team' parameters on a stack.
-
+  
   		On creation/update this will change those settings on the remote stack.
-
+  
   		On delete it will erase this resource on the state an keep the stack current state.
 ---
 
@@ -18,8 +18,7 @@ The stack resource exists only to manage 'visibility' and 'team' parameters on a
 
 			On delete it will erase this resource on the state an keep the stack current state.
 
-
-## Example usage
+## Example Usage
 
 ```terraform
 data "cycloid_stacks" "my_stacks" {

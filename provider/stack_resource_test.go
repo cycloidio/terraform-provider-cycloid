@@ -10,9 +10,7 @@ import (
 
 func TestAccStackResource(t *testing.T) {
 	t.Parallel()
-	t.Skip("TestAccStackResource will be fixed in a separate PR")
 
-	const stackName = "web-app-stack"
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
@@ -22,58 +20,53 @@ func TestAccStackResource(t *testing.T) {
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			// Manage existing stack with organization_canonical parameter
 			{
-				Config: testAccStackConfig_basic(orgCanonical, stackName),
+				Config: testAccStackConfig_basic(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_stack.test", "organization_canonical", orgCanonical),
-					resource.TestCheckResourceAttr("cycloid_stack.test", "canonical", stackName),
+					resource.TestCheckResourceAttrSet("cycloid_stack.test", "canonical"),
+					resource.TestCheckResourceAttr("cycloid_stack.test", "visibility", "local"),
 				),
 			},
-			// Update stack visibility/team
 			{
-				Config: testAccStackConfig_updated(orgCanonical, stackName),
+				Config: testAccStackConfig_updated(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_stack.test", "organization_canonical", orgCanonical),
-					resource.TestCheckResourceAttr("cycloid_stack.test", "canonical", stackName),
 					resource.TestCheckResourceAttr("cycloid_stack.test", "visibility", "shared"),
 				),
 			},
-			// Destroy testing
 			{
-				Config:  " ", // Empty config to trigger destroy
+				Config:  " ",
 				Destroy: true,
 			},
 		},
 	})
 }
 
-// Test configuration functions
-func testAccStackConfig_basic(org, stack string) string {
+func testAccStackConfig_basic(org string) string {
 	return fmt.Sprintf(`
 data "cycloid_stacks" "existing" {
-  organization_canonical = "%s"
+  organization_canonical = %q
 }
 
 resource "cycloid_stack" "test" {
-  organization_canonical = "%s"
+  organization_canonical = %q
   canonical              = data.cycloid_stacks.existing.stacks[0].canonical
   visibility             = "local"
 }
 `, org, org)
 }
 
-func testAccStackConfig_updated(org, stack string) string {
+func testAccStackConfig_updated(org string) string {
 	return fmt.Sprintf(`
 data "cycloid_stacks" "existing" {
-  organization_canonical = "%s"
+  organization_canonical = %q
 }
 
 resource "cycloid_stack" "test" {
-  organization_canonical = "%s"
+  organization_canonical = %q
   canonical              = data.cycloid_stacks.existing.stacks[0].canonical
   visibility             = "shared"
-  team                   = "admin-team"
 }
 `, org, org)
 }

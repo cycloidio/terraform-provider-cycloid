@@ -23,13 +23,47 @@ build *args:
 test-unit:
     go test ./... -v -short
 
-# Run all tests including acceptance (requires CY_API_URL, CY_API_KEY, CY_ORG)
+# Mint .env from .env.sample using cy uri interpolate (requires CY_SAAS_API_KEY).
+# Mirrors cycloid-cli's `make .env` target.
+env:
+    @rm -f .env || true
+    @CY_API_KEY=$${CY_SAAS_API_KEY?A valid API key to the cycloid org in cycloid SaaS is required. Set CY_SAAS_API_KEY.} \
+        CY_API_URL=https://http-api.cycloid.io \
+        CY_ORG=cycloid \
+        cy uri interpolate .env.sample > .env
+
+# Run all tests including acceptance (requires CY_API_URL, CY_API_KEY, CY_ORG or .env)
 test-acc:
     TF_ACC=1 go test ./... -v
 
 # Run a single acceptance test by name (e.g. just test-acc-one TestAccProjectResource)
 test-acc-one TEST:
     TF_ACC=1 go test -v -run '^{{ TEST }}$' ./provider/...
+
+# One-shot: bring up a fresh stack, mint .env, run the full acceptance suite.
+# Requires CY_SAAS_API_KEY and API_LICENCE_KEY to be set in the environment.
+test-acc-fresh: be-reset env
+    sleep 10
+    TF_ACC=1 go test ./provider/... -count=1 -timeout 30m -v
+
+# --- Local backend (mirror of cycloid-cli compose stack) ---
+# Bring up the full local stack: youdeploy-api + plugin-manager + plugin-registry
+# + docker-registry + concourse + vault + db + redis + smtp + git-server.
+# CY_API_URL defaults to http://localhost:3001 once the stack is healthy.
+be-start:
+    docker compose up -dV
+
+be-stop:
+    docker compose down -v
+
+be-reset: be-stop be-start
+
+be-pull:
+    docker compose pull
+
+# Tail logs from plugin-manager / plugin-registry (the most common debug targets)
+be-logs SERVICE="plugin-manager":
+    docker compose logs -f {{ SERVICE }}
 
 # Run unit tests (default; use test-acc for acceptance tests)
 test: test-unit

@@ -1,0 +1,23 @@
+# {{ .Name }} ({{ .Type }})
+
+Declares a plugin catalog entry inside a registry. Think of this as the named slot in the
+registry that will hold one or more versions. Users browse and install from this entry.
+
+The registry itself is managed by [`cycloid_plugin_registry`](plugin_registry); versions
+are published with [`cycloid_plugin_version`](plugin_version).
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by composite ID `<registry_id>:<plugin_id>`:
+
+```shell
+terraform import cycloid_plugin_registry_plugin.example 42:7
+```

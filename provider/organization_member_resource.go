@@ -74,6 +74,21 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	// POST /organizations/{org}/members is idempotent: when the user is already a
+	// member of the org (e.g. auto-enrolled as organization-admin because they hold
+	// a root-org admin role) the API returns the existing membership with its current
+	// role rather than the requested one. Reconcile by forcing the requested role.
+	if m.Role != nil && m.Role.Canonical != nil && *m.Role.Canonical != role {
+		m, _, err = mid.UpdateMember(orgCan, uint32(*m.ID), role)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to set requested role on existing member",
+				err.Error(),
+			)
+			return
+		}
+	}
+
 	orgMemberCYModelToData(orgCan, m, &data)
 
 	// Save data into Terraform state

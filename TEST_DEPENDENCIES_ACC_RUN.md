@@ -1,3 +1,10 @@
+> **DEPRECATED** — This document describes the old remote-env workflow.
+> The acceptance suite now runs against a local docker-compose stack with
+> automatic bootstrap. See [TESTING.md](TESTING.md) for the current workflow.
+> This file is kept for historical reference and will be removed in a future cycle.
+
+---
+
 # Acceptance test run: missing dependencies and issues
 
 Summary of a full acceptance test run (`TF_ACC=1 go test ./provider/... -v`) and what is missing or broken in the test environment / test code.

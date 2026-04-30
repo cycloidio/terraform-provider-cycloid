@@ -14,3 +14,4 @@ Playground.mk
 test_config.yaml
 .dev.tfrc
 curl.sh
+.gitnexus
