@@ -6,6 +6,7 @@ import (
 
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccPluginRegistryPluginResource(t *testing.T) {
@@ -46,6 +47,21 @@ func TestAccPluginRegistryPluginResource(t *testing.T) {
 					resource.TestCheckResourceAttr("cycloid_plugin_registry_plugin.test", "name", pluginName),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_registry_plugin.test", "id"),
 				),
+			},
+			{
+				ResourceName:      "cycloid_plugin_registry_plugin.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs := s.RootModule().Resources["cycloid_plugin_registry_plugin.test"]
+					if rs == nil {
+						return "", fmt.Errorf("cycloid_plugin_registry_plugin.test not in state")
+					}
+					return fmt.Sprintf("%s:%s",
+						rs.Primary.Attributes["registry_id"],
+						rs.Primary.Attributes["id"],
+					), nil
+				},
 			},
 			{
 				Config: testAccPluginRegistryPluginConfig(orgCanonical, registryID, updatedName),

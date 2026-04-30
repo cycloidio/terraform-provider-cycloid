@@ -8,6 +8,7 @@ import (
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // TestAccPluginResource exercises the full plugin install lifecycle:
@@ -69,6 +70,25 @@ func TestAccPluginResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("cycloid_plugin.test", "id"),
 					resource.TestCheckResourceAttrSet("cycloid_plugin.test", "status"),
 				),
+			},
+			{
+				// configuration/configuration_sensitive cannot be recovered from the API —
+				// the API returns merged config with no way to split back. Ignored on import.
+				ResourceName:            "cycloid_plugin.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"configuration", "configuration_sensitive"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs := s.RootModule().Resources["cycloid_plugin.test"]
+					if rs == nil {
+						return "", fmt.Errorf("cycloid_plugin.test not in state")
+					}
+					return fmt.Sprintf("%s:%s:%s",
+						rs.Primary.Attributes["registry_id"],
+						rs.Primary.Attributes["plugin_id"],
+						rs.Primary.Attributes["id"],
+					), nil
+				},
 			},
 		},
 	})
