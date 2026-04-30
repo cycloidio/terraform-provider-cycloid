@@ -40,6 +40,7 @@ resource "cycloid_plugin_registry" "dockerhub" {
 ### Optional
 
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
+- `wait_until_connected` (Boolean) If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.
 
 ### Read-Only
 

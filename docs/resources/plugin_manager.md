@@ -34,11 +34,11 @@ resource "cycloid_plugin_manager" "default" {
 ### Optional
 
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
+- `wait_until_connected` (Boolean) If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.
 
 ### Read-Only
 
 - `created_at` (Number) Unix timestamp of plugin manager creation.
 - `id` (Number) The numeric ID of the plugin manager.
-- `invite_status` (String) Invite status: always `accepted` after resource creation.
 - `status` (String) Connection status of the plugin manager: `offline` or `connected`.
 - `updated_at` (Number) Unix timestamp of last plugin manager update.

@@ -39,7 +39,7 @@ resource "cycloid_organization_role" "project_viewer_limited" {
 
 ### Required
 
-- `rules` (Attributes List) Authorization rules attached to this role. (see [below for nested schema](#nestedatt--rules))
+- `rules` (Attributes Set) Authorization rules attached to this role. (see [below for nested schema](#nestedatt--rules))
 
 ### Optional
 
