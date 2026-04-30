@@ -228,8 +228,9 @@ services:
     image: registry:3.0.0
     ports:
       - "${DOCKER_REGISTRY_HOST_PORT:-5000}:5000"
-    volumes:
-      - ./docker/auth:/auth
+    configs:
+      - source: registry_htpasswd
+        target: /auth/htpasswd
     environment:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: cycloid
@@ -528,6 +529,10 @@ configs:
       cPJlbRttQ1YxFH4KzMOdzeh2jKF8uNXW211Adk/VXNqlN95Ky4kSm7Lrpy92+uux
       pVy90/uiPe/6CsFk7ceoDA==
       -----END PRIVATE KEY-----
+
+  ## Docker registry auth (cycloid / cycloid123)
+  registry_htpasswd:
+    content: "cycloid:$2y$05$sNTvLFbEI0nZzjV3wAgpROU7kIM07zm1MtUH5RBEteXhLnknSrMH2\n"
 
 networks:
   cycloid: {}
