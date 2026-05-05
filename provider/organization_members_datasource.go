@@ -138,7 +138,6 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	org := getOrganizationCanonical(*d.provider, data.Organization)
 
-	// TODO(TFPRO-39): migrate to paginated middleware helper once available.
 	members, _, err := d.provider.Middleware.ListMembers(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list organization members", err.Error())
