@@ -3,11 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"regexp"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -29,8 +27,8 @@ func NewOrganizationMembersDataSource() datasource.DataSource {
 }
 
 type organizationMembersDatasourceModel struct {
-	OrganizationCanonical types.String `tfsdk:"organization_canonical"`
-	Members               types.List   `tfsdk:"members"`
+	Organization types.String `tfsdk:"organization"`
+	Members      types.List   `tfsdk:"members"`
 }
 
 type orgMemberDatasourceItem struct {
@@ -38,7 +36,7 @@ type orgMemberDatasourceItem struct {
 	Username        types.String `tfsdk:"username"`
 	Email           types.String `tfsdk:"email"`
 	FullName        types.String `tfsdk:"full_name"`
-	RoleCanonical   types.String `tfsdk:"role_canonical"`
+	Role            types.String `tfsdk:"role"`
 	InvitationState types.String `tfsdk:"invitation_state"`
 }
 
@@ -47,7 +45,7 @@ var orgMemberDatasourceItemAttrTypes = map[string]attr.Type{
 	"username":         types.StringType,
 	"email":            types.StringType,
 	"full_name":        types.StringType,
-	"role_canonical":   types.StringType,
+	"role":             types.StringType,
 	"invitation_state": types.StringType,
 }
 
@@ -60,7 +58,7 @@ func (d *organizationMembersDataSource) Schema(_ context.Context, _ datasource.S
 		Description:         "Lists all members of a Cycloid organization. Member emails are stored in Terraform state — protect your state backend accordingly.",
 		MarkdownDescription: "Lists all members of a Cycloid organization. Member emails are stored in Terraform state — protect your state backend accordingly.",
 		Attributes: map[string]schema.Attribute{
-			"organization_canonical": schema.StringAttribute{
+			"organization": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
 				Description:         "Canonical of the organization. Defaults to the provider organization setting.",
@@ -96,7 +94,7 @@ func (d *organizationMembersDataSource) Schema(_ context.Context, _ datasource.S
 							Description:         "Full name of the member.",
 							MarkdownDescription: "Full name of the member.",
 						},
-						"role_canonical": schema.StringAttribute{
+						"role": schema.StringAttribute{
 							Computed:            true,
 							Description:         "Canonical of the role assigned to the member.",
 							MarkdownDescription: "Canonical of the role assigned to the member.",
@@ -138,18 +136,10 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	org := getOrganizationCanonical(*d.provider, data.OrganizationCanonical)
+	org := getOrganizationCanonical(*d.provider, data.Organization)
 
-	var members []*models.MemberOrg
-	_, err := d.provider.Middleware.GenericRequest(middleware.Request{
-		Method:       "GET",
-		Organization: &org,
-		Route:        []string{"organizations", org, "members"},
-		Query: url.Values{
-			"page_index": []string{"1"},
-			"page_size":  []string{"1000"},
-		},
-	}, &members)
+	// TODO(TFPRO-39): migrate to paginated middleware helper once available.
+	members, _, err := d.provider.Middleware.ListMembers(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list organization members", err.Error())
 		return
@@ -161,7 +151,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	data.OrganizationCanonical = types.StringValue(org)
+	data.Organization = types.StringValue(org)
 	data.Members = listVal
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -187,9 +177,9 @@ func orgMembersToListValue(ctx context.Context, members []*models.MemberOrg) (ty
 
 		email := memberEmailForDatasource(m.Email, m.InvitationEmail, m.InvitationState)
 
-		var roleCanonical string
+		var role string
 		if m.Role != nil && m.Role.Canonical != nil {
-			roleCanonical = *m.Role.Canonical
+			role = *m.Role.Canonical
 		}
 
 		items = append(items, orgMemberDatasourceItem{
@@ -197,7 +187,7 @@ func orgMembersToListValue(ctx context.Context, members []*models.MemberOrg) (ty
 			Username:        types.StringValue(m.Username),
 			Email:           types.StringValue(email),
 			FullName:        types.StringValue(m.FullName),
-			RoleCanonical:   types.StringValue(roleCanonical),
+			Role:            types.StringValue(role),
 			InvitationState: types.StringValue(m.InvitationState),
 		})
 	}
