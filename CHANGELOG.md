@@ -2,7 +2,12 @@
 
 ## Unreleased
 
+## v0.6.0 — 2026-05-05
+
 ### Added
+- **`cycloid_organization_members` data source** — list all members of an organization.
+  Exposes `member_id`, `username`, `email`, `full_name`, `role`, and `invitation_state`
+  per member. Pending invitations are included with the invite email address.
 - Local docker-compose stack (`compose.yml`) mirroring cycloid-cli's 12-service QA stack
   (youdeploy-api, plugin-manager, plugin-registry, docker-registry, concourse, vault,
   redis, mysql, git-server, mailpit). Managed via `just be-start / be-stop / be-reset`.
