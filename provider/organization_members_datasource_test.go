@@ -44,7 +44,7 @@ func TestOrgMembersToListValue_NilPointerFields(t *testing.T) {
 	diags = listVal.ElementsAs(ctx, &items, false)
 	require.False(t, diags.HasError())
 	assert.Equal(t, int64(0), items[0].MemberId.ValueInt64())
-	assert.Equal(t, "", items[0].RoleCanonical.ValueString())
+	assert.Equal(t, "", items[0].Role.ValueString())
 	assert.Equal(t, "", items[0].Email.ValueString())
 }
 
@@ -114,7 +114,7 @@ func TestOrgMembersToListValue_AcceptedUsesEmail(t *testing.T) {
 	diags = listVal.ElementsAs(ctx, &items, false)
 	require.False(t, diags.HasError())
 	assert.Equal(t, "user@example.com", items[0].Email.ValueString())
-	assert.Equal(t, "organization-admin", items[0].RoleCanonical.ValueString())
+	assert.Equal(t, "organization-admin", items[0].Role.ValueString())
 }
 
 // Acceptance tests — require TF_ACC=1 and running stack
@@ -130,18 +130,16 @@ func TestAccOrganizationMembersDataSource(t *testing.T) {
 			{
 				Config: testAccOrganizationMembersConfig_default(),
 				Check: resource.ComposeTestCheckFunc(
-					// At least one member exists (the bootstrap admin)
 					resource.TestCheckResourceAttrSet("data.cycloid_organization_members.default", "members.0.member_id"),
 					resource.TestCheckResourceAttrSet("data.cycloid_organization_members.default", "members.0.email"),
-					// organization_canonical defaults to CY_ORG
-					resource.TestCheckResourceAttr("data.cycloid_organization_members.default", "organization_canonical", os.Getenv("CY_ORG")),
+					resource.TestCheckResourceAttr("data.cycloid_organization_members.default", "organization", os.Getenv("CY_ORG")),
 				),
 			},
 			{
 				Config: testAccOrganizationMembersConfig_explicit(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.cycloid_organization_members.explicit", "organization_canonical", orgCanonical),
-					resource.TestCheckResourceAttrSet("data.cycloid_organization_members.explicit", "members.0.role_canonical"),
+					resource.TestCheckResourceAttr("data.cycloid_organization_members.explicit", "organization", orgCanonical),
+					resource.TestCheckResourceAttrSet("data.cycloid_organization_members.explicit", "members.0.role"),
 				),
 			},
 		},
@@ -241,7 +239,7 @@ func testAccOrganizationMembersConfig_default() string {
 func testAccOrganizationMembersConfig_explicit(org string) string {
 	return fmt.Sprintf(`
 data "cycloid_organization_members" "explicit" {
-  organization_canonical = %q
+  organization = %q
 }
 `, org)
 }

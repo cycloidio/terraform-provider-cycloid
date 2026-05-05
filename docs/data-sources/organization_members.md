@@ -24,7 +24,7 @@ output "admin_emails" {
 
 ### Optional
 
-- `organization_canonical` (String) Canonical of the organization. Defaults to the provider organization setting.
+- `organization` (String) Canonical of the organization. Defaults to the provider organization setting.
 
 ### Read-Only
 
@@ -39,7 +39,7 @@ Read-Only:
 - `full_name` (String) Full name of the member.
 - `invitation_state` (String) State of the member invitation: `pending`, `accepted`, or `declined`.
 - `member_id` (Number) Unique identifier of the member.
-- `role_canonical` (String) Canonical of the role assigned to the member.
+- `role` (String) Canonical of the role assigned to the member.
 - `username` (String) Username (canonical) of the member.
 
 
