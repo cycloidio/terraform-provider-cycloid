@@ -119,6 +119,8 @@ To test the provider with Terraform, create a dev override file (see `README.md`
 - Use `make install-provider` or `go install .` for the provider binary. Note: `make install` installs codegen tools, not the provider itself.
 - All provider operations require a remote Cycloid API (`CY_API_URL`, `CY_API_KEY`, `CY_ORG` env vars). A dedicated testing environment is used for tests — do not run against production. No local services to start.
 - `staticcheck` reports pre-existing warnings (unused vars/funcs); these are not blockers.
+- `just` (command runner) is required for Makefile targets. Install via `curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin`.
+- Unit tests (`go test ./... -short`) will show `TestAccEnvironmentResource` as FAIL — this is a pre-existing bug where the test doesn't skip in non-acceptance mode. All actual unit tests pass. Use `-run 'Test[^A]|TestA[^c]'` to exclude acceptance tests cleanly, or just ignore that single failure.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
