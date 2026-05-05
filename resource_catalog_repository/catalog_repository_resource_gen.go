@@ -22,7 +22,9 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"branch": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "Branch needs to be valid git repository branch.",
+				MarkdownDescription: "Branch needs to be valid git repository branch.",
 			},
 			"canonical": schema.StringAttribute{
 				Optional: true,
@@ -89,7 +91,9 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				Computed: true,
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "The name displayed in the UI of the catalog repository.",
+				MarkdownDescription: "The name displayed in the UI of the catalog repository.",
 			},
 			"on_create_team": schema.StringAttribute{
 				Optional:            true,
@@ -124,7 +128,9 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "User canonical that owns this service catalog source. If omitted then the person\ncreating this service catalog source will be assigned as owner. When a user is the\nowner of a service catalog source they has all the permissions on it.\n",
 			},
 			"url": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				Description:         "Git URL of the catalog repository. SSH and HTTPS formats are accepted.",
+				MarkdownDescription: "Git URL of the catalog repository. SSH and HTTPS formats are accepted.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^((/|~)[^/]*)+.(\\.git)|(([\\w\\]+@[\\w\\.]+))(:(//)?)([\\w\\.@\\:/\\-~]+)(/)?"), ""),
 				},

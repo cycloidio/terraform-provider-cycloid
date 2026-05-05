@@ -1,0 +1,24 @@
+# {{ .Name }} ({{ .Type }})
+
+Publishes a versioned artifact for a plugin catalog entry. The `url` points to the Docker image
+in the registry (format: `host/image:semver`). Cycloid asynchronously pulls and validates the
+image; Terraform polls until processing succeeds or fails (up to 10 minutes, 5-second interval).
+
+A failed version taints the resource — re-run `terraform apply` to retry. Once a version
+reaches `success` status it can be installed with [`cycloid_plugin`](plugin).
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by composite ID `<registry_id>:<plugin_id>:<version_id>`:
+
+```shell
+terraform import cycloid_plugin_version.example 42:7:3
+```

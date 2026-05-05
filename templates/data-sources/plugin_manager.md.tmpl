@@ -1,0 +1,13 @@
+# {{ .Name }} ({{ .Type }})
+
+Look up an existing Plugin Manager by name within an organization. Use this data source to
+reference a manager that was registered out-of-band (e.g. by the infrastructure team) when
+you only need to install plugins, not manage the manager's lifecycle.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}

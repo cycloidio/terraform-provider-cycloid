@@ -54,6 +54,16 @@ func NameOrCanonical(name, canonical string) (string, string, error) {
 	return name, canonical, nil
 }
 
+// nilIfEmpty returns a pointer to s, or nil when s is the empty string.
+// Used to distinguish "not provided" from "" when calling middleware methods
+// that accept optional *string parameters.
+func nilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 // Coalesce will return the first non empty value, or empty if all are empty
 func Coalesce[T string | int | uint | bool](values ...T) T {
 	var noop T

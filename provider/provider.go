@@ -129,6 +129,11 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewInventoryValuesDataSource,
 		NewTerraformOutputDataSource,
 		NewTerraformOutputsDataSource,
+		NewPluginRegistryDataSource,
+		NewPluginRegistryPluginDataSource,
+		NewPluginVersionDataSource,
+		NewPluginManagerDataSource,
+		NewOrganizationMembersDataSource,
 	}
 }
 
@@ -147,6 +152,11 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewTeamResource,
 		NewTeamMemberResource,
 		NewComponentResource,
+		NewPluginRegistryResource,
+		NewPluginManagerResource,
+		NewPluginRegistryPluginResource,
+		NewPluginVersionResource,
+		NewPluginResource,
 	}
 }
 

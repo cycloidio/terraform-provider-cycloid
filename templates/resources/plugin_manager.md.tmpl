@@ -1,0 +1,27 @@
+# {{ .Name }} ({{ .Type }})
+
+Registers a Plugin Manager with an organization. The Plugin Manager is the runtime service that
+executes installed plugins inside the organization. Registering it sends an invite to the manager
+service; Cycloid automatically accepts it in the same apply step.
+
+Each organization has at most one active Plugin Manager. Destroying this resource unregisters the
+manager and stops all running plugins in the organization.
+
+Set `wait_until_connected = true` to block the apply until the manager reports `connected` status
+(up to 5 minutes). Useful when subsequent resources depend on the manager being ready.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by numeric ID:
+
+```shell
+terraform import cycloid_plugin_manager.example <id>
+```

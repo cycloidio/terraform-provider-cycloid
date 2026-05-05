@@ -142,12 +142,12 @@ func dataStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog)
 				"keywords":               keywordsValues,
 				"name":                   types.StringValue(ptr.Value(s.Name)),
 				"organization_canonical": types.StringValue(ptr.Value(s.OrganizationCanonical)),
-				"quota_enabled":          types.BoolValue(ptr.Value(s.QuotaEnabled)),
 				"ref":                    types.StringValue(ptr.Value(s.Ref)),
 				"team":                   teamValue,
 				"trusted":                types.BoolValue(ptr.Value(s.Trusted)),
 				"technologies":           technologiesValues,
 				"visibility":             types.StringValue(ptr.Value(s.Visibility)),
+				"quota_enabled":          types.BoolNull(),
 			},
 		)
 		diags.Append(errDiags...)

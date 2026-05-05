@@ -96,29 +96,33 @@ func TestAccCatalogRepositoryResource(t *testing.T) {
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	cfg := testAccGetTestConfig(t)
-	if cfg.Repositories.Catalog.Credential == "" {
-		t.Skip("repositories.catalog.credential must be set in test_config.yaml for this test")
-	}
 	repoURL := cfg.Repositories.Catalog.URL
 	repoBranch := cfg.Repositories.Catalog.Branch
 	credCanonical := cfg.Repositories.Catalog.Credential
+	if repoURL == "" {
+		t.Skip("repositories.catalog.url must be set for this test")
+	}
 	depManager := NewTestDependencyManager(t)
 	defer depManager.Cleanup(ctx, t)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "organization_canonical", orgCanonical),
+		resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "name", repoName),
+		resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "url", repoURL),
+		resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "branch", repoBranch),
+	}
+	if credCanonical != "" {
+		checks = append(checks, resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "credential_canonical", credCanonical))
+	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			// Create catalog repository with organization_canonical parameter
+			// Create catalog repository — credential omitted for public repos.
 			{
 				Config: testAccCatalogRepositoryConfig_basic(orgCanonical, repoName, repoURL, repoBranch, credCanonical),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "organization_canonical", orgCanonical),
-					resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "name", repoName),
-					resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "url", repoURL),
-					resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "branch", repoBranch),
-					resource.TestCheckResourceAttr("cycloid_catalog_repository.test", "credential_canonical", credCanonical),
-				),
+				Check:  resource.ComposeTestCheckFunc(checks...),
 			},
 			// Destroy testing
 			{
@@ -129,17 +133,21 @@ func TestAccCatalogRepositoryResource(t *testing.T) {
 	})
 }
 
-// Test configuration functions (credCanonical from test config)
+// testAccCatalogRepositoryConfig_basic generates a cycloid_catalog_repository config.
+// credential_canonical is omitted when credCanonical is empty (public repos).
 func testAccCatalogRepositoryConfig_basic(org, name, url, branch, credCanonical string) string {
+	cred := ""
+	if credCanonical != "" {
+		cred = fmt.Sprintf("  credential_canonical   = %q\n", credCanonical)
+	}
 	return fmt.Sprintf(`
 resource "cycloid_catalog_repository" "test" {
-  name                   = "%s"
-  credential_canonical   = "%s"
-  url                    = "%s"
-  branch                 = "%s"
-  organization_canonical = "%s"
-}
-`, name, credCanonical, url, branch, org)
+  name                   = %q
+  url                    = %q
+  branch                 = %q
+  organization_canonical = %q
+%s}
+`, name, url, branch, org, cred)
 }
 
 func TestConfiguredCatalogRepositoryOwner(t *testing.T) {
