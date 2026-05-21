@@ -54,6 +54,7 @@ func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "If true, register the plugin manager with Cycloid and the manager service in one step. " +
 					"If false, create a pending invite that must be accepted separately. Default true.",
 				Optional: true,
+				Computed: true,
 				Default:  booldefault.StaticBool(true),
 			},
 			"wait_until_connected": schema.BoolAttribute{

@@ -123,6 +123,20 @@ func restoreClusterPluginManager(t *testing.T, m middleware.Middleware, org stri
 		}
 	}
 
+	managers, _, err = m.ListPluginManagers(org)
+	if err == nil {
+		for _, mgr := range managers {
+			if mgr.Name != nil && *mgr.Name == clusterTestPluginManager {
+				if mgr.InviteStatus != nil {
+					switch *mgr.InviteStatus {
+					case "accepted", "invite_accepted":
+						return
+					}
+				}
+			}
+		}
+	}
+
 	_, _, err = m.CreatePluginManager(org, clusterTestPluginManager, clusterPluginManagerURL, true)
 	if err != nil {
 		t.Logf("cleanup: failed to restore compose plugin manager: %v", err)
