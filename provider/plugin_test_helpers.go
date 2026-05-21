@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	localRegistryHost      = "localhost:5000"
-	clusterRegistryHost    = "docker-registry:5000"
+	localRegistryHost        = "localhost:5000"
+	clusterRegistryHost      = "docker-registry:5000"
 	clusterPluginRegistryURL = "http://plugin-registry:4000"
+	clusterPluginManagerURL  = "http://plugin-manager:4000"
+	clusterTestPluginManager = "test-plugin-manager"
 	pluginImageName        = "plugin-hello-world"
 	pluginImageTag         = "1.0.0"
 	pluginImageLocal       = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag

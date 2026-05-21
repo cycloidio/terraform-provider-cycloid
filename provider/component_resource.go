@@ -370,7 +370,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	if component != nil {
-		_, err = m.DeleteComponent(org, project, environment, canonical)
+		_, err = m.DeleteComponent(org, project, environment, canonical, middleware.DeleteOptions{})
 		if err != nil {
 			if isComponentNotFoundError(err) {
 				resp.Diagnostics.Append(

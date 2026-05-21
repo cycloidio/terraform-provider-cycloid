@@ -1,8 +1,8 @@
 # {{ .Name }} ({{ .Type }})
 
 Registers a Plugin Manager with an organization. The Plugin Manager is the runtime service that
-executes installed plugins inside the organization. Registering it sends an invite to the manager
-service; Cycloid automatically accepts it in the same apply step.
+executes installed plugins inside the organization. Creating this resource registers the manager
+with Cycloid and the manager service in one step.
 
 Each organization has at most one active Plugin Manager. Destroying this resource unregisters the
 manager and stops all running plugins in the organization.

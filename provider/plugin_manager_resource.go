@@ -60,22 +60,13 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Middleware
 
-	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString())
+	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), true)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create plugin manager in org %q", org), err.Error())
 		return
 	}
 
-	// Accept the invite immediately so the resource is in a fully declared state.
 	pmID := uint32(ptr.Value(pm.ID))
-	pm, _, err = m.UpdatePluginManager(org, pmID, "accepted")
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("created plugin manager %d but failed to accept the invite in org %q", pmID, org),
-			err.Error(),
-		)
-		return
-	}
 
 	if data.WaitUntilConnected.ValueBool() {
 		if err := pollPluginManagerConnected(m, org, pmID, 5*time.Minute); err != nil {

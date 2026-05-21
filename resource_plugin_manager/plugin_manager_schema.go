@@ -13,9 +13,9 @@ import (
 func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Manage a plugin manager in an organization. " +
-			"Creating this resource registers the plugin manager as an invite and immediately accepts it.",
+			"Creating this resource registers the plugin manager with Cycloid and the manager service.",
 		MarkdownDescription: "Manage a plugin manager in an organization. " +
-			"Creating this resource registers the plugin manager as an invite and immediately accepts it.",
+			"Creating this resource registers the plugin manager with Cycloid and the manager service.",
 		Attributes: map[string]schema.Attribute{
 			"organization": schema.StringAttribute{
 				Description:         "The organization canonical, defaults to the provider `default_organization`.",

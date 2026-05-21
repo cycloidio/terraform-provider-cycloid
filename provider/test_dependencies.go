@@ -82,7 +82,7 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		resourceType: "project",
 		canonical:    ptr.Value(project.Canonical),
 		cleanupFunc: func() error {
-			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical))
+			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical), middleware.DeleteOptions{})
 			return err
 		},
 	})
@@ -127,7 +127,7 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		resourceType: "environment",
 		canonical:    canonical,
 		cleanupFunc: func() error {
-			_, err := dm.provider.Middleware.DeleteEnv(org, project, canonical)
+			_, err := dm.provider.Middleware.DeleteEnv(org, project, canonical, middleware.DeleteOptions{})
 			return err
 		},
 	})
