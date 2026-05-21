@@ -65,10 +65,10 @@ func TestAccPluginManagerResource(t *testing.T) {
 	})
 }
 
-// TestAccPluginManagerResource_AutoRegister exercises the full create/destroy path
-// with auto_register=true (default). The API allows one manager per org, so the
-// test clears existing registrations first and restores the compose fixture in cleanup.
-func TestAccPluginManagerResource_AutoRegister(t *testing.T) {
+// TestAccPluginManagerResource_Create exercises the full create/destroy path.
+// The API allows one manager per org (singleton), so the test clears existing
+// registrations first and restores the compose fixture in cleanup.
+func TestAccPluginManagerResource_Create(t *testing.T) {
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
 	m := depManager.GetProvider().Middleware
@@ -87,16 +87,14 @@ func TestAccPluginManagerResource_AutoRegister(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPluginManagerConfigWithAutoRegister(
+				Config: testAccPluginManagerConfig(
 					orgCanonical,
 					clusterTestPluginManager,
 					clusterPluginManagerURL,
-					true,
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "name", clusterTestPluginManager),
-					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "auto_register", "true"),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "status"),
 					testAccCheckPluginManagerInviteAccepted(orgCanonical, m),
@@ -201,18 +199,13 @@ func testAccCheckPluginManagerInviteAccepted(org string, m middleware.Middleware
 }
 
 func testAccPluginManagerConfig(org, name, url string) string {
-	return testAccPluginManagerConfigWithAutoRegister(org, name, url, true)
-}
-
-func testAccPluginManagerConfigWithAutoRegister(org, name, url string, autoRegister bool) string {
 	return fmt.Sprintf(`
 resource "cycloid_plugin_manager" "test" {
-  organization  = %q
-  name          = %q
-  url           = %q
-  auto_register = %t
+  organization = %q
+  name         = %q
+  url          = %q
 }
-`, org, name, url, autoRegister)
+`, org, name, url)
 }
 
 func testAccPluginManagerImportConfig(org, name, url string) string {

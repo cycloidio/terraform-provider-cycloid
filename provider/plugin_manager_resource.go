@@ -60,25 +60,13 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Middleware
 
-	autoRegister := data.AutoRegister.ValueBool()
-	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), autoRegister)
+	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), true)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create plugin manager in org %q", org), err.Error())
 		return
 	}
 
 	pmID := uint32(ptr.Value(pm.ID))
-	if !autoRegister {
-		// Accept the invite so the resource is in a fully declared state.
-		pm, _, err = m.UpdatePluginManager(org, pmID, "accepted")
-		if err != nil {
-			resp.Diagnostics.AddError(
-				fmt.Sprintf("created plugin manager %d but failed to accept the invite in org %q", pmID, org),
-				err.Error(),
-			)
-			return
-		}
-	}
 
 	if data.WaitUntilConnected.ValueBool() {
 		if err := pollPluginManagerConnected(m, org, pmID, 5*time.Minute); err != nil {
@@ -189,7 +177,4 @@ func pluginManagerToModel(org string, pm *models.PluginManager, data *pluginMana
 	data.Status = types.StringPointerValue(pm.Status)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(pm.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(pm.UpdatedAt)))
-	if data.AutoRegister.IsNull() || data.AutoRegister.IsUnknown() {
-		data.AutoRegister = types.BoolValue(true)
-	}
 }

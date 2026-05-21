@@ -1,9 +1,8 @@
 # {{ .Name }} ({{ .Type }})
 
 Registers a Plugin Manager with an organization. The Plugin Manager is the runtime service that
-executes installed plugins inside the organization. By default, `auto_register = true` registers
-the manager with Cycloid and the manager service in one step. Set `auto_register = false` to create
-a pending invite that must be accepted separately.
+executes installed plugins inside the organization. Creating this resource registers the manager
+with Cycloid and the manager service in one step.
 
 Each organization has at most one active Plugin Manager. Destroying this resource unregisters the
 manager and stops all running plugins in the organization.
