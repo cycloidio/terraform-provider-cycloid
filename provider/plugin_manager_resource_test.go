@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
 	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -26,7 +27,21 @@ func TestAccPluginManagerResource(t *testing.T) {
 	if err != nil || len(managers) == 0 {
 		t.Skip("skipping: no plugin managers registered (is plugin-manager service running?)")
 	}
-	managerID := strconv.FormatInt(int64(ptr.Value(managers[0].ID)), 10)
+	mgr := findAcceptedPluginManager(managers)
+	if mgr == nil {
+		restoreClusterPluginManager(t, depManager.GetProvider().Middleware, orgCanonical)
+		managers, _, err = depManager.GetProvider().Middleware.ListPluginManagers(orgCanonical)
+		if err != nil {
+			t.Fatalf("failed to re-list plugin managers after restore: %v", err)
+		}
+		mgr = findAcceptedPluginManager(managers)
+	}
+	if mgr == nil {
+		t.Skip("skipping: no accepted plugin manager in org (is plugin-manager service running?)")
+	}
+	managerID := strconv.FormatInt(int64(ptr.Value(mgr.ID)), 10)
+	managerName := ptr.Value(mgr.Name)
+	managerURL := mgr.URL.String()
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
@@ -38,8 +53,8 @@ func TestAccPluginManagerResource(t *testing.T) {
 				ImportState:             true,
 				ImportStateId:           managerID,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"url", "wait_until_connected", "auto_register"},
-				Config:                  testAccPluginManagerImportConfig(orgCanonical),
+				ImportStateVerifyIgnore: []string{"wait_until_connected"},
+				Config:                  testAccPluginManagerImportConfig(orgCanonical, managerName, managerURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
@@ -89,6 +104,19 @@ func TestAccPluginManagerResource_AutoRegister(t *testing.T) {
 			},
 		},
 	})
+}
+
+func findAcceptedPluginManager(managers []*models.PluginManager) *models.PluginManager {
+	for _, mgr := range managers {
+		if mgr.InviteStatus == nil {
+			continue
+		}
+		switch *mgr.InviteStatus {
+		case "accepted", "invite_accepted":
+			return mgr
+		}
+	}
+	return nil
 }
 
 func deleteAllPluginManagers(t *testing.T, m middleware.Middleware, org string) {
@@ -187,12 +215,12 @@ resource "cycloid_plugin_manager" "test" {
 `, org, name, url, autoRegister)
 }
 
-func testAccPluginManagerImportConfig(org string) string {
+func testAccPluginManagerImportConfig(org, name, url string) string {
 	return fmt.Sprintf(`
 resource "cycloid_plugin_manager" "test" {
   organization = %q
-  name         = "placeholder"
-  url          = "http://placeholder:4000"
+  name         = %q
+  url          = %q
 }
-`, org)
+`, org, name, url)
 }

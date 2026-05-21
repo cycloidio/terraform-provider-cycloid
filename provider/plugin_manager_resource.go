@@ -189,4 +189,7 @@ func pluginManagerToModel(org string, pm *models.PluginManager, data *pluginMana
 	data.Status = types.StringPointerValue(pm.Status)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(pm.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(pm.UpdatedAt)))
+	if data.AutoRegister.IsNull() || data.AutoRegister.IsUnknown() {
+		data.AutoRegister = types.BoolValue(true)
+	}
 }
