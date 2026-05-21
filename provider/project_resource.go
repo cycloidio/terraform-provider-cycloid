@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_project"
@@ -166,7 +167,7 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	_, err := m.DeleteProject(org, canonical)
+	_, err := m.DeleteProject(org, canonical, middleware.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
 		return

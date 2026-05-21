@@ -36,7 +36,7 @@ func TestAccPluginManagerResource(t *testing.T) {
 				ImportState:             true,
 				ImportStateId:           managerID,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"url", "wait_until_connected"},
+				ImportStateVerifyIgnore: []string{"url", "wait_until_connected", "auto_register"},
 				Config:                  testAccPluginManagerImportConfig(orgCanonical),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),

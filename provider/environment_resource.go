@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_environment"
@@ -170,7 +171,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
-	_, err := m.DeleteEnv(org, project, canonical)
+	_, err := m.DeleteEnv(org, project, canonical, middleware.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to delete environment from API while deleting resource", err.Error())
 		return
