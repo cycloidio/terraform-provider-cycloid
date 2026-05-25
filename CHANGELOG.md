@@ -2,32 +2,26 @@
 
 ## Unreleased
 
+## v0.7.0
+
 ### Added
-- Local docker-compose stack (`compose.yml`) mirroring cycloid-cli's 12-service QA stack
-  (youdeploy-api, plugin-manager, plugin-registry, docker-registry, concourse, vault,
-  redis, mysql, git-server, mailpit). Managed via `just be-start / be-stop / be-reset`.
-- Acceptance test bootstrap via `TestMain` — calls `testcfg.NewConfig` (from
-  `cycloid-cli/pkg/testcfg`) to provision admin user, API key, config repo, catalog repo,
-  test project, environment, and component automatically on `just be-start`.
-- `.env.sample` and `just env` recipe for secret resolution via `cy uri interpolate`
-  (mirrors `cycloid-cli` `make .env`).
-- `just test-acc-fresh` recipe: one-shot path from cold docker state to green test suite.
-- Acceptance tests for 5 plugin resources: `cycloid_plugin_registry`,
-  `cycloid_plugin_manager`, `cycloid_plugin_registry_plugin`, `cycloid_plugin_version`,
-  `cycloid_plugin` (full install → running → uninstall lifecycle).
-- `ensurePluginHelloWorld` helper: idempotent pull/tag/push of
-  `docker.io/cycloid/plugin-hello-world:1.0.0` to the local docker-registry.
 
-### Changed
-- `TESTING.md` rewritten: local docker-compose stack is now the primary test path.
-  Remote env override path documented as secondary.
-- `go.mod` now consumes `cycloid-cli/pkg/testcfg` (promoted from `internal/testcfg`).
-
-### Deprecated
-- `TEST_DEPENDENCIES_ACC_RUN.md` (remote-env workflow notes) — kept for reference,
-  will be removed in a future cycle.
-- `test_config.yaml` / `README_TEST_CONFIG.md` — no longer required for local stack runs.
+- **`cycloid_plugin_manager` resource** — manage plugin-manager registration and lifecycle
+  (create, import, destroy). Auto-registers the manager with the Cycloid org on create via
+  `auto_register = true`; supports `wait_until_connected` to block until the manager
+  reports a connected status.
+- **`cycloid_plugin_registry` resource** — register and manage plugin registries.
+- **`cycloid_plugin_registry_plugin` resource** — associate a plugin with a registry.
+- **`cycloid_plugin_version` resource** — manage plugin versions within a registry plugin.
+- **`cycloid_plugin` resource** — full plugin install/uninstall lifecycle (pulls image from
+  registry, deploys to plugin-manager, tracks running status).
+- **`cycloid_organization_members` data source** — list members of a Cycloid organisation
+  with optional role filtering.
 
 ### Fixed
-- `provider/stack_datasource_test.go`: removed non-existent `QuotaEnabled` field from
-  `models.ServiceCatalog` literal (pre-existing `go vet` failure).
+
+- `cycloid_plugin_manager`: `auto_register` is now always `true` and not exposed as a
+  configurable attribute (CLI-121). Previous versions required an explicit `accept` step
+  that left the manager in `invite_pending` if the CLI didn't set `auto_register`.
+- `cycloid_plugin_manager`: `status` field correctly handles both string and numeric values
+  returned by different backend versions (workaround for v6.10.8-rc backend).
