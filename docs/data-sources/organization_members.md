@@ -1,6 +1,6 @@
 # cycloid_organization_members (Data Source)
 
-List all members of a Cycloid organization. Each member entry exposes `member_id`, `username`, `email`, `full_name`, `role_canonical`, and `invitation_state`. For pending invitations, `email` contains the address the invitation was sent to.
+List all members of a Cycloid organization. Each member entry exposes `member_id`, `username`, `email`, `full_name`, `role`, and `invitation_state`. For pending invitations, `email` contains the address the invitation was sent to.
 
 > **Note:** All member email addresses are stored in Terraform state. Ensure your state backend is appropriately secured.
 
@@ -13,7 +13,7 @@ data "cycloid_organization_members" "all" {}
 output "admin_emails" {
   value = [
     for m in data.cycloid_organization_members.all.members :
-    m.email if m.role_canonical == "organization-admin"
+    m.email if m.role == "organization-admin"
   ]
 }
 ```

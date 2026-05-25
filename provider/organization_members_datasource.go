@@ -3,9 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
+	"strconv"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -39,6 +42,8 @@ type orgMemberDatasourceItem struct {
 	Role            types.String `tfsdk:"role"`
 	InvitationState types.String `tfsdk:"invitation_state"`
 }
+
+const orgMembersPageSize = 1000
 
 var orgMemberDatasourceItemAttrTypes = map[string]attr.Type{
 	"member_id":        types.Int64Type,
@@ -138,7 +143,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	org := getOrganizationCanonical(*d.provider, data.Organization)
 
-	members, _, err := d.provider.Middleware.ListMembers(org)
+	members, err := fetchAllOrganizationMembers(d.provider.Middleware, org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list organization members", err.Error())
 		return
@@ -154,6 +159,39 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	data.Members = listVal
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func fetchAllOrganizationMembers(mw middleware.Middleware, org string) ([]*models.MemberOrg, error) {
+	var all []*models.MemberOrg
+
+	for pageIndex := 1; ; pageIndex++ {
+		query := url.Values{
+			"page_index": []string{strconv.Itoa(pageIndex)},
+			"page_size":  []string{strconv.Itoa(orgMembersPageSize)},
+		}
+
+		var page []*models.MemberOrg
+		_, err := mw.GenericRequest(middleware.Request{
+			Method:       "GET",
+			Organization: &org,
+			Route:        []string{"organizations", org, "members"},
+			Query:        query,
+		}, &page)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, page...)
+		if !orgMembersHasMorePages(len(page)) {
+			break
+		}
+	}
+
+	return all, nil
+}
+
+func orgMembersHasMorePages(pageLen int) bool {
+	return pageLen >= orgMembersPageSize
 }
 
 func orgMembersToListValue(ctx context.Context, members []*models.MemberOrg) (types.List, diag.Diagnostics) {

@@ -17,6 +17,26 @@ import (
 
 // Unit tests — no TF_ACC required
 
+func TestOrgMembersHasMorePages(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		pageLen  int
+		expected bool
+	}{
+		{pageLen: 0, expected: false},
+		{pageLen: 999, expected: false},
+		{pageLen: 1000, expected: true},
+		{pageLen: 1001, expected: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("pageLen=%d", tc.pageLen), func(t *testing.T) {
+			assert.Equal(t, tc.expected, orgMembersHasMorePages(tc.pageLen))
+		})
+	}
+}
+
 func TestOrgMembersToListValue_EmptyList(t *testing.T) {
 	ctx := context.Background()
 

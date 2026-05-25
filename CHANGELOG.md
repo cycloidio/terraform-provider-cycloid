@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`cycloid_organization_members` data source**: paginate API requests (`page_size=1000`) so
+  organisations with more members than the backend default page size are listed completely.
+- **`cycloid_organization_members` data source**: fix docs and example — nested member attribute
+  is `role`, not `role_canonical`.
+
 ## v0.6.1
 
 ### Fixed
