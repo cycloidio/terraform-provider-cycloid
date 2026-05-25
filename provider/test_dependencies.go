@@ -117,9 +117,19 @@ func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testi
 
 // CreateTestEnvironment creates a test environment inside a project using middleware and returns the full environment model.
 func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
-	env, _, err := dm.provider.Middleware.CreateEnv(org, project, name, name, "")
+	const defaultEnvType = "production" // TODO(meta-gov-env): remove once backend infers type from canonical
+
+	env, _, err := dm.provider.Middleware.CreateOrgEnv(org, &models.NewEnvironment{
+		Canonical: name,
+		Name:      ptr.Ptr(name),
+		Type:      ptr.Ptr(defaultEnvType),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test environment: %w", err)
+	}
+
+	if _, err := dm.provider.Middleware.LinkEnvToProject(org, project, name); err != nil {
+		return nil, fmt.Errorf("failed to link test environment to project: %w", err)
 	}
 
 	canonical := *env.Canonical
@@ -127,7 +137,10 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		resourceType: "environment",
 		canonical:    canonical,
 		cleanupFunc: func() error {
-			_, err := dm.provider.Middleware.DeleteEnv(org, project, canonical, middleware.DeleteOptions{})
+			if _, err := dm.provider.Middleware.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{}); err != nil {
+				return err
+			}
+			_, err := dm.provider.Middleware.DeleteOrgEnv(org, canonical)
 			return err
 		},
 	})
@@ -144,7 +157,7 @@ func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *t
 		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
-	envs, _, err := dm.provider.Middleware.ListProjectsEnv(org, project)
+	envs, _, err := dm.provider.Middleware.ListProjectEnvs(org, project)
 	if err != nil {
 		t.Logf("Warning: failed to list environments, will attempt to create: %v", err)
 	}
@@ -152,7 +165,8 @@ func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *t
 	for _, e := range envs {
 		if ptr.Value(e.Canonical) == name {
 			t.Logf("Test environment already exists: %s in project %s", name, project)
-			return e, nil
+			env, _, err := dm.provider.Middleware.GetOrgEnv(org, name)
+			return env, err
 		}
 	}
 

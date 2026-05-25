@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	stderrors "errors"
+	"net/http"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
 	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
@@ -15,6 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
+
+const defaultEnvType = "production" // TODO(meta-gov-env): remove once backend infers type from canonical
 
 var _ resource.Resource = (*environmentResource)(nil)
 
@@ -66,7 +70,6 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 
-	// Check that the project exists
 	projects, _, err := m.ListProjects(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
@@ -76,28 +79,30 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	if i := slices.IndexFunc(projects, func(p *models.Project) bool {
 		return ptr.Value(p.Canonical) == project
 	}); i == -1 {
-		// Project doesn't exist, so empty state
-		// Environment doesn't exist, so empty state
 		resp.Diagnostics.Append(environmentToValue(ctx, org, project, &models.Environment{}, &data)...)
 		return
 	}
 
-	environments, _, err := m.ListProjectsEnv(org, project)
+	projectEnvs, _, err := m.ListProjectEnvs(org, project)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch environment from API while reading state", err.Error())
 		return
 	}
 
-	if i := slices.IndexFunc(environments, func(e *models.Environment) bool {
+	if i := slices.IndexFunc(projectEnvs, func(e *models.ProjectEnvironment) bool {
 		return ptr.Value(e.Canonical) == canonical
 	}); i == -1 {
-		// Environment doesn't exist, so empty state
 		resp.Diagnostics.Append(environmentToValue(ctx, org, project, &models.Environment{}, &data)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	} else {
-		resp.Diagnostics.Append(environmentToValue(ctx, org, project, environments[i], &data)...)
+		environment, _, err := m.GetOrgEnv(org, canonical)
+		if err != nil {
+			resp.Diagnostics.AddError("failed to fetch org environment from API while reading state", err.Error())
+			return
+		}
+		resp.Diagnostics.Append(environmentToValue(ctx, org, project, environment, &data)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -146,7 +151,7 @@ func (p *environmentResource) Update(ctx context.Context, req resource.UpdateReq
 	project := data.Project.ValueString()
 	color := data.Color.ValueString()
 	if color == "" {
-		color = icons.RandomIcon()
+		color = icons.RandomColor()
 	}
 
 	data, d := p.createOrUpdateEnvironment(ctx, org, name, canonical, project, color, true)
@@ -171,9 +176,9 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
-	_, err := m.DeleteEnv(org, project, canonical, middleware.DeleteOptions{})
+	_, err := m.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{})
 	if err != nil {
-		resp.Diagnostics.AddError("failed to delete environment from API while deleting resource", err.Error())
+		resp.Diagnostics.AddError("failed to unlink environment from project while deleting resource", err.Error())
 		return
 	}
 
@@ -185,6 +190,13 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+func environmentColor(environment *models.Environment) *string {
+	if environment == nil || environment.EnvironmentType == nil {
+		return nil
+	}
+	return environment.EnvironmentType.Color
+}
+
 func environmentToValue(_ context.Context, org, project string, environment *models.Environment, data *environmentResourceModel) diag.Diagnostics {
 	if environment == nil {
 		return diag.Diagnostics{diag.NewErrorDiagnostic("environment is nil for convertion", "This should not happend, please contact the plugin maintainer.")}
@@ -192,9 +204,16 @@ func environmentToValue(_ context.Context, org, project string, environment *mod
 	data.Canonical = types.StringPointerValue(environment.Canonical)
 	data.Name = types.StringValue(environment.Name)
 	data.Organization = types.StringValue(org)
-	data.Color = types.StringPointerValue(environment.Color)
+	data.Color = types.StringPointerValue(environmentColor(environment))
 	data.Project = types.StringValue(project)
 	return nil
+}
+
+func envTypeFromCurrent(environment *models.Environment) string {
+	if environment != nil && environment.EnvironmentType != nil && environment.EnvironmentType.Canonical != nil {
+		return *environment.EnvironmentType.Canonical
+	}
+	return defaultEnvType
 }
 
 func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org, name, canonical, project, color string, isUpdate bool) (environmentResourceModel, diag.Diagnostics) {
@@ -208,33 +227,52 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org
 		return data, diags
 	}
 
-	environments, _, err := p.provider.Middleware.ListProjectsEnv(org, project)
-	if err != nil {
-		diags.AddError("failed to fetch environments from API while updating resource", err.Error())
-		return data, diags
-	}
-
-	var environment *models.Environment
-	if i := slices.IndexFunc(environments, func(p *models.Environment) bool {
-		return ptr.Value(p.Canonical) == canonical
-	}); i == -1 {
-		if isUpdate {
-			tflog.Info(ctx, "did not found current environment, assuming it had been deleted outside the provider, re-creating...", nil)
+	m := p.provider.Middleware
+	current, _, err := m.GetOrgEnv(org, canonical)
+	if err == nil {
+		updateBody := &models.UpdateEnvironment{
+			Name: ptr.Ptr(name),
+			Type: ptr.Ptr(envTypeFromCurrent(current)),
 		}
-
-		environment, _, err = p.provider.Middleware.CreateEnv(org, project, canonical, name, color)
-		if err != nil {
-			diags.AddError("failed to create environment from API", err.Error())
-			return data, diags
-		}
-	} else {
-		environment, _, err = p.provider.Middleware.UpdateEnv(org, project, canonical, name, color)
+		current, _, err = m.UpdateOrgEnv(org, canonical, updateBody)
 		if err != nil {
 			diags.AddError("failed to update environment from API", err.Error())
 			return data, diags
 		}
+	} else {
+		var apiErr *middleware.APIResponseError
+		if !stderrors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+			diags.AddError("failed to fetch environment from API while updating resource", err.Error())
+			return data, diags
+		}
+		if isUpdate {
+			tflog.Info(ctx, "did not find current environment, assuming it had been deleted outside the provider, re-creating...", nil)
+		}
+
+		createBody := &models.NewEnvironment{
+			Canonical: canonical,
+			Name:      ptr.Ptr(name),
+			Type:      ptr.Ptr(defaultEnvType),
+		}
+		current, _, err = m.CreateOrgEnv(org, createBody)
+		if err != nil {
+			diags.AddError("failed to create environment from API", err.Error())
+			return data, diags
+		}
 	}
 
+	if _, err = m.LinkEnvToProject(org, project, canonical); err != nil {
+		diags.AddError("failed to link environment to project from API", err.Error())
+		return data, diags
+	}
+
+	environment, _, err := m.GetOrgEnv(org, canonical)
+	if err != nil {
+		diags.AddError("failed to fetch environment from API after create/update", err.Error())
+		return data, diags
+	}
+
+	_ = color // color is deprecated on environments; kept in schema for backward compatibility
 	diags.Append(environmentToValue(ctx, org, project, environment, &data)...)
 	return data, diags
 }
