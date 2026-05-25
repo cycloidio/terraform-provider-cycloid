@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.6.2
+
 ### Fixed
 
 - **`cycloid_organization_members` data source**: paginate API requests (`page_size=1000`) so
