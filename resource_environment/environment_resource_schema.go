@@ -86,8 +86,8 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Canonicals of the [`cycloid_cloud_account`](./cloud_account.md) entries to link to this environment. PATCH semantics: omitting the attribute leaves existing links untouched, an empty list `[]` unlinks all, a non-empty list replaces the set.",
 			},
 			"variables": schema.ListNestedAttribute{
-				Optional: true,
-				Description: "Environment variables surfaced under `.environment.variables` during interpolation. PATCH semantics: omit to leave variables untouched, pass `[]` to wipe, pass a non-empty list to replace.",
+				Optional:            true,
+				Description:         "Environment variables surfaced under `.environment.variables` during interpolation. PATCH semantics: omit to leave variables untouched, pass `[]` to wipe, pass a non-empty list to replace.",
 				MarkdownDescription: "Environment variables surfaced under `.environment.variables` during interpolation. PATCH semantics: omit to leave variables untouched, pass `[]` to wipe, pass a non-empty list to replace.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -111,10 +111,10 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 								stringvalidator.OneOf("string", "boolean", "integer", "float", "array", "map"),
 							},
 						},
-						"value": schema.DynamicAttribute{
+						"value": schema.StringAttribute{
 							Required:            true,
-							Description:         "The variable value. Its shape must match `type`.",
-							MarkdownDescription: "The variable value. Its shape must match `type`.",
+							Description:         "The variable value as a string. For non-string types, encode the value as its string representation (e.g. `\"true\"` for boolean, `\"42\"` for integer).",
+							MarkdownDescription: "The variable value as a string. For non-string types, encode the value as its string representation (e.g. `\"true\"` for boolean, `\"42\"` for integer).",
 						},
 						"description": schema.StringAttribute{
 							Optional:            true,
@@ -149,11 +149,11 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type EnvironmentVariableModel struct {
-	Key         types.String  `tfsdk:"key"`
-	Type        types.String  `tfsdk:"type"`
-	Value       types.Dynamic `tfsdk:"value"`
-	Description types.String  `tfsdk:"description"`
-	Sensitive   types.Bool    `tfsdk:"sensitive"`
+	Key         types.String `tfsdk:"key"`
+	Type        types.String `tfsdk:"type"`
+	Value       types.String `tfsdk:"value"`
+	Description types.String `tfsdk:"description"`
+	Sensitive   types.Bool   `tfsdk:"sensitive"`
 }
 
 type EnvironmentModel struct {

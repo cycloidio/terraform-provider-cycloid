@@ -57,7 +57,7 @@ func EnvironmentDataSourceSchema(ctx context.Context) schema.Schema {
 					Attributes: map[string]schema.Attribute{
 						"key":         schema.StringAttribute{Computed: true},
 						"type":        schema.StringAttribute{Computed: true},
-						"value":       schema.DynamicAttribute{Computed: true, Sensitive: true},
+						"value":       schema.StringAttribute{Computed: true, Sensitive: true},
 						"description": schema.StringAttribute{Computed: true},
 						"sensitive":   schema.BoolAttribute{Computed: true},
 					},

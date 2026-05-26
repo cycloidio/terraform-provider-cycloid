@@ -30,6 +30,9 @@ func EnvironmentTypeResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Display name of the environment type. Either `name` or `canonical` must be set.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
 				Validators: []validator.String{
 					stringvalidator.AtLeastOneOf(
 						path.MatchRoot("name"),
@@ -57,6 +60,9 @@ func EnvironmentTypeResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Color used to render this environment type in the UI. Free-form string up to 64 chars (hex codes such as `#27ae60` or named colors are accepted).",
 				MarkdownDescription: "Color used to render this environment type in the UI. Free-form string up to 64 chars (hex codes such as `#27ae60` or named colors are accepted).",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(64),
 				},

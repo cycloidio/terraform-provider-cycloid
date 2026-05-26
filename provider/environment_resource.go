@@ -2,9 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"slices"
 	stderrors "errors"
+	"fmt"
 	"net/http"
 
 	"github.com/cycloidio/cycloid-cli/client/models"
@@ -70,42 +69,38 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 
-	projects, _, err := m.ListProjects(org)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
-		return
-	}
-
-	if i := slices.IndexFunc(projects, func(p *models.Project) bool {
-		return ptr.Value(p.Canonical) == project
-	}); i == -1 {
-		resp.Diagnostics.Append(environmentToValue(ctx, org, project, &models.Environment{}, &data)...)
-		return
-	}
-
 	projectEnvs, _, err := m.ListProjectEnvs(org, project)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch environment from API while reading state", err.Error())
 		return
 	}
 
-	if i := slices.IndexFunc(projectEnvs, func(e *models.ProjectEnvironment) bool {
-		return ptr.Value(e.Canonical) == canonical
-	}); i == -1 {
+	found := false
+	for _, e := range projectEnvs {
+		if ptr.Value(e.Canonical) == canonical {
+			found = true
+			break
+		}
+	}
+
+	if !found {
 		resp.Diagnostics.Append(environmentToValue(ctx, org, project, &models.Environment{}, &data)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-	} else {
-		environment, _, err := m.GetOrgEnv(org, canonical)
-		if err != nil {
-			resp.Diagnostics.AddError("failed to fetch org environment from API while reading state", err.Error())
-			return
-		}
-		resp.Diagnostics.Append(environmentToValue(ctx, org, project, environment, &data)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	environment, _, err := m.GetOrgEnv(org, canonical)
+	if err != nil {
+		resp.Diagnostics.AddError("failed to fetch org environment from API while reading state", err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(environmentToValue(ctx, org, project, environment, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -119,16 +114,7 @@ func (p *environmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	name := data.Name.ValueString()
-	canonical := data.Canonical.ValueString()
-	org := getOrganizationCanonical(*p.provider, data.Organization)
-	project := data.Project.ValueString()
-	color := data.Color.ValueString()
-	if color == "" {
-		color = icons.RandomColor()
-	}
-
-	data, d := p.createOrUpdateEnvironment(ctx, org, name, canonical, project, color, false)
+	data, d := p.createOrUpdateEnvironment(ctx, data, false)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -145,16 +131,7 @@ func (p *environmentResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	name := data.Name.ValueString()
-	canonical := data.Canonical.ValueString()
-	org := getOrganizationCanonical(*p.provider, data.Organization)
-	project := data.Project.ValueString()
-	color := data.Color.ValueString()
-	if color == "" {
-		color = icons.RandomColor()
-	}
-
-	data, d := p.createOrUpdateEnvironment(ctx, org, name, canonical, project, color, true)
+	data, d := p.createOrUpdateEnvironment(ctx, data, true)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,16 +174,48 @@ func environmentColor(environment *models.Environment) *string {
 	return environment.EnvironmentType.Color
 }
 
-func environmentToValue(_ context.Context, org, project string, environment *models.Environment, data *environmentResourceModel) diag.Diagnostics {
+func environmentToValue(ctx context.Context, org, project string, environment *models.Environment, data *environmentResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	if environment == nil {
-		return diag.Diagnostics{diag.NewErrorDiagnostic("environment is nil for convertion", "This should not happend, please contact the plugin maintainer.")}
+		diags.AddError("environment is nil for conversion", "This should not happen, please contact the plugin maintainer.")
+		return diags
 	}
+
 	data.Canonical = types.StringPointerValue(environment.Canonical)
 	data.Name = types.StringValue(environment.Name)
 	data.Organization = types.StringValue(org)
 	data.Color = types.StringPointerValue(environmentColor(environment))
 	data.Project = types.StringValue(project)
-	return nil
+	data.Description = types.StringValue(environment.Description)
+	data.ID = ptrUint32ToInt64(environment.ID)
+	data.CreatedAt = ptrUint64ToInt64(environment.CreatedAt)
+	data.UpdatedAt = ptrUint64ToInt64(environment.UpdatedAt)
+
+	if environment.EnvironmentType != nil {
+		data.Type = types.StringPointerValue(environment.EnvironmentType.Canonical)
+	} else {
+		data.Type = types.StringNull()
+	}
+
+	if environment.Owner != nil && environment.Owner.Username != nil {
+		data.Owner = types.StringPointerValue(environment.Owner.Username)
+	} else {
+		data.Owner = types.StringValue("")
+	}
+
+	// CloudAccountCanonicals and Variables are PATCH-semantic Optional-only attributes.
+	// They are NOT updated from the API in Read — state is preserved from prior plan/state.
+	// They ARE set after Create/Update in createOrUpdateEnvironment.
+
+	return diags
+}
+
+func envTypeFromData(data environmentResourceModel) string {
+	if !data.Type.IsNull() && !data.Type.IsUnknown() && data.Type.ValueString() != "" {
+		return data.Type.ValueString()
+	}
+	return defaultEnvType
 }
 
 func envTypeFromCurrent(environment *models.Environment) string {
@@ -216,23 +225,73 @@ func envTypeFromCurrent(environment *models.Environment) string {
 	return defaultEnvType
 }
 
-func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org, name, canonical, project, color string, isUpdate bool) (environmentResourceModel, diag.Diagnostics) {
+func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, incoming environmentResourceModel, isUpdate bool) (environmentResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var data environmentResourceModel
-	var err error
 
+	org := getOrganizationCanonical(*p.provider, incoming.Organization)
+	name := incoming.Name.ValueString()
+	canonical := incoming.Canonical.ValueString()
+	project := incoming.Project.ValueString()
+	color := incoming.Color.ValueString()
+	if color == "" {
+		color = icons.RandomColor()
+	}
+
+	var err error
 	name, canonical, err = NameOrCanonical(name, canonical)
 	if err != nil {
 		diags.AddError("failed to infer canonical", err.Error())
 		return data, diags
 	}
 
+	description := incoming.Description.ValueString()
+	owner := incoming.Owner.ValueString()
+	envType := envTypeFromData(incoming)
+
+	var cloudAccountCanonicals []string
+	if !incoming.CloudAccountCanonicals.IsNull() && !incoming.CloudAccountCanonicals.IsUnknown() {
+		diags.Append(incoming.CloudAccountCanonicals.ElementsAs(ctx, &cloudAccountCanonicals, false)...)
+		if diags.HasError() {
+			return data, diags
+		}
+	}
+
+	var apiVars []*models.EnvironmentVariableItem
+	if !incoming.Variables.IsNull() && !incoming.Variables.IsUnknown() {
+		var varModels []resource_environment.EnvironmentVariableModel
+		diags.Append(incoming.Variables.ElementsAs(ctx, &varModels, false)...)
+		if diags.HasError() {
+			return data, diags
+		}
+		apiVars = make([]*models.EnvironmentVariableItem, len(varModels))
+		for i, vm := range varModels {
+			key := vm.Key.ValueString()
+			typ := vm.Type.ValueString()
+			apiVars[i] = &models.EnvironmentVariableItem{
+				Key:         &key,
+				Type:        &typ,
+				Value:       stringToAny(vm.Value, typ),
+				Description: vm.Description.ValueString(),
+				Sensitive:   vm.Sensitive.ValueBoolPointer(),
+			}
+		}
+	}
+
 	m := p.provider.Middleware
 	current, _, err := m.GetOrgEnv(org, canonical)
 	if err == nil {
 		updateBody := &models.UpdateEnvironment{
-			Name: ptr.Ptr(name),
-			Type: ptr.Ptr(envTypeFromCurrent(current)),
+			Name:                   ptr.Ptr(name),
+			Type:                   ptr.Ptr(envTypeFromCurrent(current)),
+			Description:            description,
+			Owner:                  owner,
+			CloudAccountCanonicals: cloudAccountCanonicals,
+			Variables:              apiVars,
+		}
+		// honour the plan's type if explicitly configured
+		if !incoming.Type.IsNull() && !incoming.Type.IsUnknown() {
+			updateBody.Type = ptr.Ptr(envType)
 		}
 		current, _, err = m.UpdateOrgEnv(org, canonical, updateBody)
 		if err != nil {
@@ -250,9 +309,13 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org
 		}
 
 		createBody := &models.NewEnvironment{
-			Canonical: canonical,
-			Name:      ptr.Ptr(name),
-			Type:      ptr.Ptr(defaultEnvType),
+			Canonical:              canonical,
+			Name:                   ptr.Ptr(name),
+			Type:                   ptr.Ptr(envType),
+			Description:            description,
+			Owner:                  owner,
+			CloudAccountCanonicals: cloudAccountCanonicals,
+			Variables:              apiVars,
 		}
 		current, _, err = m.CreateOrgEnv(org, createBody)
 		if err != nil {
@@ -273,6 +336,13 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, org
 	}
 
 	_ = color // color is deprecated on environments; kept in schema for backward compatibility
+	_ = current
+
 	diags.Append(environmentToValue(ctx, org, project, environment, &data)...)
+
+	// Preserve PATCH-semantic fields from the plan — these are Optional-only (not Computed).
+	data.CloudAccountCanonicals = incoming.CloudAccountCanonicals
+	data.Variables = incoming.Variables
+
 	return data, diags
 }
