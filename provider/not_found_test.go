@@ -36,6 +36,16 @@ func TestIsNotFoundError(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "*APIResponseError 404",
+			err:      &cycloidmiddleware.APIResponseError{StatusCode: http.StatusNotFound, Status: "404 Not Found"},
+			expected: true,
+		},
+		{
+			name:     "*APIResponseError 500",
+			err:      &cycloidmiddleware.APIResponseError{StatusCode: http.StatusInternalServerError, Status: "500 Internal Server Error"},
+			expected: false,
+		},
+		{
 			name:     "non not found error",
 			err:      errors.New("A 500 error was returned on \"getConfigRepository\" call"),
 			expected: false,

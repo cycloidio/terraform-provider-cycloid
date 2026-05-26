@@ -12,7 +12,10 @@ func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-
+	var apiErr *cycloidmiddleware.APIResponseError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusNotFound
+	}
 	errMessage := strings.ToLower(err.Error())
 	return strings.Contains(errMessage, " not found") ||
 		strings.Contains(errMessage, "notfound") ||
