@@ -134,6 +134,12 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewPluginVersionDataSource,
 		NewPluginManagerDataSource,
 		NewOrganizationMembersDataSource,
+		NewEnvironmentTypeDataSource,
+		NewEnvironmentTypesDataSource,
+		NewCloudAccountDataSource,
+		NewCloudAccountsDataSource,
+		NewEnvironmentDataSource,
+		NewEnvironmentsDataSource,
 	}
 }
 
@@ -157,6 +163,9 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewPluginRegistryPluginResource,
 		NewPluginVersionResource,
 		NewPluginResource,
+		NewEnvironmentTypeResource,
+		NewCloudAccountResource,
+		NewEnvironmentLinkResource,
 	}
 }
 
