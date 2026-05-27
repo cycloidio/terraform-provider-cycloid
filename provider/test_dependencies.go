@@ -117,12 +117,9 @@ func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testi
 
 // CreateTestEnvironment creates a test environment inside a project using middleware and returns the full environment model.
 func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
-	const defaultEnvType = "production" // TODO(meta-gov-env): remove once backend infers type from canonical
-
 	env, _, err := dm.provider.Middleware.CreateOrgEnv(org, &models.NewEnvironment{
 		Canonical: name,
 		Name:      ptr.Ptr(name),
-		Type:      ptr.Ptr(defaultEnvType),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test environment: %w", err)

@@ -17,8 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-const defaultEnvType = "production" // TODO(meta-gov-env): remove once backend infers type from canonical
-
 var _ resource.Resource = (*environmentResource)(nil)
 
 func NewEnvironmentResource() resource.Resource {
@@ -212,17 +210,17 @@ func environmentToValue(ctx context.Context, org, project string, environment *m
 }
 
 func envTypeFromData(data environmentResourceModel) string {
-	if !data.Type.IsNull() && !data.Type.IsUnknown() && data.Type.ValueString() != "" {
+	if !data.Type.IsNull() && !data.Type.IsUnknown() {
 		return data.Type.ValueString()
 	}
-	return defaultEnvType
+	return ""
 }
 
 func envTypeFromCurrent(environment *models.Environment) string {
 	if environment != nil && environment.EnvironmentType != nil && environment.EnvironmentType.Canonical != nil {
 		return *environment.EnvironmentType.Canonical
 	}
-	return defaultEnvType
+	return ""
 }
 
 func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, incoming environmentResourceModel, isUpdate bool) (environmentResourceModel, diag.Diagnostics) {
@@ -283,14 +281,15 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 	if err == nil {
 		updateBody := &models.UpdateEnvironment{
 			Name:                   ptr.Ptr(name),
-			Type:                   ptr.Ptr(envTypeFromCurrent(current)),
 			Description:            description,
 			Owner:                  owner,
 			CloudAccountCanonicals: cloudAccountCanonicals,
 			Variables:              apiVars,
 		}
-		// honour the plan's type if explicitly configured
-		if !incoming.Type.IsNull() && !incoming.Type.IsUnknown() {
+		if t := envTypeFromCurrent(current); t != "" {
+			updateBody.Type = ptr.Ptr(t)
+		}
+		if !incoming.Type.IsNull() && !incoming.Type.IsUnknown() && envType != "" {
 			updateBody.Type = ptr.Ptr(envType)
 		}
 		current, _, err = m.UpdateOrgEnv(org, canonical, updateBody)
@@ -311,11 +310,13 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 		createBody := &models.NewEnvironment{
 			Canonical:              canonical,
 			Name:                   ptr.Ptr(name),
-			Type:                   ptr.Ptr(envType),
 			Description:            description,
 			Owner:                  owner,
 			CloudAccountCanonicals: cloudAccountCanonicals,
 			Variables:              apiVars,
+		}
+		if envType != "" {
+			createBody.Type = ptr.Ptr(envType)
 		}
 		current, _, err = m.CreateOrgEnv(org, createBody)
 		if err != nil {
