@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/cycloidio/cycloid-cli v1.0.98-0.20260526144644-52cb55bb8d77
+	github.com/cycloidio/cycloid-cli v1.0.98-0.20260527114514-4123e3e65067
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.16.0
@@ -109,5 +109,3 @@ require (
 	google.golang.org/grpc v1.79.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/cycloidio/cycloid-cli => ../cycloid-cli
