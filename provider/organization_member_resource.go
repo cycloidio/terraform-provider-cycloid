@@ -204,6 +204,10 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 
 	_, err := mid.DeleteMember(orgCan, uint32(memberID))
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Unable delete member",
 			err.Error(),
