@@ -524,6 +524,13 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	m := r.provider.Middleware
 	_, err := m.DeleteOrganization(orgState.Canonical.ValueString())
 	if err != nil {
+		if isNotFoundError(err) {
+			// Backend auto-deletes the org when its last member is removed. If
+			// the org is already gone by the time Terraform reaches this delete,
+			// treat it as a clean removal rather than an error.
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("failed to delete org "+orgState.Canonical.ValueString(), err.Error())
 		return
 	}
