@@ -131,6 +131,10 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Check if the credential exists first
 	credentials, _, err := m.ListCredentials(organization, data.Type.ValueString())
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("failed to read credentials, cannot list credentials from API", err.Error())
 		return
 	}
