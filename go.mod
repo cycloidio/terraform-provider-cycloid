@@ -2,6 +2,12 @@ module github.com/cycloidio/terraform-provider-cycloid
 
 go 1.25.0
 
+// DRAFT (synced PR cycloidio/cycloid-cli#452): builds against a local cycloid-cli
+// checkout on branch feat/beta-oidc-group-mappings, which adds the OIDC Middleware
+// methods these resources consume. Un-draft checklist: once that PR merges, drop this
+// replace and `go get github.com/cycloidio/cycloid-cli@<merged-sha> && go mod tidy`.
+replace github.com/cycloidio/cycloid-cli => ../cycloid-cli
+
 require (
 	dario.cat/mergo v1.0.2
 	github.com/cycloidio/cycloid-cli v1.0.98-0.20260527114514-4123e3e65067
