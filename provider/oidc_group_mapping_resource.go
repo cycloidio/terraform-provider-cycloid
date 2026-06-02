@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
@@ -22,22 +21,6 @@ type oidcGroupMappingResource struct {
 }
 
 type oidcGroupMappingResourceModel resource_oidc_group_mapping.OidcGroupMappingModel
-
-type oidcGroupMappingTeam struct {
-	ID        uint32 `json:"id"`
-	Canonical string `json:"canonical"`
-}
-
-type oidcGroupMapping struct {
-	ID        uint32               `json:"id"`
-	GroupName string               `json:"group_name"`
-	Team      oidcGroupMappingTeam `json:"team"`
-}
-
-type newOIDCGroupMapping struct {
-	GroupName     string `json:"group_name"`
-	TeamCanonical string `json:"team_canonical"`
-}
 
 func (r *oidcGroupMappingResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_oidc_group_mapping"
@@ -76,7 +59,7 @@ func (r *oidcGroupMappingResource) Create(ctx context.Context, req resource.Crea
 	groupName := data.GroupName.ValueString()
 	teamCanonical := data.TeamCanonical.ValueString()
 
-	mapping, err := r.createMapping(org, groupName, teamCanonical)
+	mapping, _, err := r.provider.Middleware.CreateOIDCGroupMapping(org, groupName, teamCanonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create OIDC group mapping for group %q in org %q", groupName, org), err.Error())
 		return
@@ -97,7 +80,7 @@ func (r *oidcGroupMappingResource) Read(ctx context.Context, req resource.ReadRe
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	id := uint32(data.ID.ValueInt64())
 
-	mappings, err := r.listMappings(org)
+	mappings, _, err := r.provider.Middleware.ListOIDCGroupMappings(org)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -107,10 +90,10 @@ func (r *oidcGroupMappingResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	var found *oidcGroupMapping
-	for i := range mappings {
-		if mappings[i].ID == id {
-			found = &mappings[i]
+	var found *cycloidmiddleware.OIDCGroupMapping
+	for _, m := range mappings {
+		if m.ID == id {
+			found = m
 			break
 		}
 	}
@@ -139,7 +122,7 @@ func (r *oidcGroupMappingResource) Delete(ctx context.Context, req resource.Dele
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	id := uint32(data.ID.ValueInt64())
 
-	err := r.deleteMapping(org, id)
+	_, err := r.provider.Middleware.DeleteOIDCGroupMapping(org, id)
 	if err != nil {
 		if isNotFoundError(err) {
 			return
@@ -148,50 +131,13 @@ func (r *oidcGroupMappingResource) Delete(ctx context.Context, req resource.Dele
 	}
 }
 
-func oidcGroupMappingToData(org string, mapping *oidcGroupMapping, data *oidcGroupMappingResourceModel) {
+func oidcGroupMappingToData(org string, mapping *cycloidmiddleware.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.GroupName = types.StringValue(mapping.GroupName)
-	data.TeamCanonical = types.StringValue(mapping.Team.Canonical)
 	data.ID = types.Int64Value(int64(mapping.ID))
-}
-
-func (r *oidcGroupMappingResource) createMapping(org, groupName, teamCanonical string) (*oidcGroupMapping, error) {
-	body := &newOIDCGroupMapping{
-		GroupName:     groupName,
-		TeamCanonical: teamCanonical,
+	// Team is a pointer in the API response; guard against a mapping whose team
+	// was deleted server-side to avoid a provider panic.
+	if mapping.Team != nil {
+		data.TeamCanonical = types.StringValue(mapping.Team.Canonical)
 	}
-
-	result := &oidcGroupMapping{}
-	_, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
-		Method:       http.MethodPost,
-		Organization: &org,
-		Route:        []string{"organizations", org, "oidc-group-mappings"},
-		Body:         body,
-	}, result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (r *oidcGroupMappingResource) listMappings(org string) ([]oidcGroupMapping, error) {
-	var result []oidcGroupMapping
-	_, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
-		Method:       http.MethodGet,
-		Organization: &org,
-		Route:        []string{"organizations", org, "oidc-group-mappings"},
-	}, &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (r *oidcGroupMappingResource) deleteMapping(org string, id uint32) error {
-	_, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
-		Method:       http.MethodDelete,
-		Organization: &org,
-		Route:        []string{"organizations", org, "oidc-group-mappings", fmt.Sprintf("%d", id)},
-	}, nil)
-	return err
 }
