@@ -168,6 +168,7 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewEnvironmentLinkResource,
 		NewOIDCGroupMappingResource,
 		NewOIDCOrganizationSettingsResource,
+		NewOIDCIntegrationResource,
 	}
 }
 
