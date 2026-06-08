@@ -105,6 +105,7 @@ func orgMemberCYModelToData(org string, m *models.MemberOrg, data *organizationM
 
 	data.OrganizationCanonical = types.StringValue(org)
 	data.MemberId = types.Int64Value(int64(*m.ID))
+	data.MemberCanonical = types.StringValue(m.Username)
 	data.Email = types.StringValue(string(email))
 	data.RoleCanonical = types.StringValue(*m.Role.Canonical)
 
