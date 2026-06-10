@@ -3,27 +3,86 @@
 page_title: "cycloid_environment Resource - cycloid"
 subcategory: ""
 description: |-
-  This resource manage Cycloid environments. Environments are part of a project, see cycloid_project resource. Docs https://docs.cycloid.io/reference/core-concepts/.
+  This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required project attribute; use cycloid_environment_link ./environment_link.md to attach the same environment to additional projects. Docs https://docs.cycloid.io/reference/core-concepts/.
 ---
 
 # cycloid_environment (Resource)
 
-This resource manage Cycloid environments. Environments are part of a project, see `cycloid_project` resource. [Docs](https://docs.cycloid.io/reference/core-concepts/).
+This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use [`cycloid_environment_link`](./environment_link.md) to attach the same environment to additional projects. [Docs](https://docs.cycloid.io/reference/core-concepts/).
 
 ## Example Usage
 
 ```terraform
 resource "cycloid_project" "my_project" {
-  name = "My project"
-  # canonical = "my-project" # if you omit the canonical parameter, the backend will make it from the name.
+  name        = "My project"
   description = "Some nice description for my users"
   owner       = "some-team"
 }
 
+resource "cycloid_environment_type" "prod" {
+  name  = "Production"
+  color = "#27ae60"
+}
+
+resource "cycloid_credential" "aws_main" {
+  name = "AWS main"
+  type = "aws"
+  body = {
+    access_key = var.aws_access_key
+    secret_key = var.aws_secret_key
+  }
+}
+
+resource "cycloid_cloud_account" "aws_main" {
+  name                 = "AWS main"
+  cloud_provider       = "aws"
+  credential_canonical = cycloid_credential.aws_main.canonical
+}
+
+# Minimal environment — only the project link is mandatory.
+resource "cycloid_environment" "dev" {
+  project = cycloid_project.my_project.canonical
+  name    = "Dev"
+}
+
+# Environment with the full meta-gov-env feature set.
+resource "cycloid_environment" "prod" {
+  project     = cycloid_project.my_project.canonical
+  name        = "Production"
+  type        = cycloid_environment_type.prod.canonical
+  owner       = "frederic"
+  description = "Customer-facing production environment"
+
+  cloud_account_canonicals = [
+    cycloid_cloud_account.aws_main.canonical,
+  ]
+
+  variables = [
+    {
+      key   = "region"
+      type  = "string"
+      value = "eu-west-1"
+    },
+    {
+      key   = "max_pods"
+      type  = "integer"
+      value = 110
+    },
+    {
+      key       = "api_token"
+      type      = "string"
+      value     = var.api_token
+      sensitive = true
+    },
+  ]
+}
+
+# Bulk creation pattern stays supported.
 resource "cycloid_environment" "standard_environments" {
-  for_each = toset(["Dev", "Prod", "Staging"])
-  name     = each.value
-  project  = cycloid_project.my_project.canonical
+  for_each = toset(["staging", "preprod"])
+  canonical = each.value
+  name      = each.value
+  project   = cycloid_project.my_project.canonical
 }
 ```
 
@@ -32,15 +91,36 @@ resource "cycloid_environment" "standard_environments" {
 
 ### Required
 
-- `project` (String) The project canonical where this environent resides
+- `project` (String) Project canonical that this resource will link the environment to at creation. The environment itself remains an organization-scoped entity; deleting this resource only unlinks it from this project. Use [`cycloid_environment_link`](./environment_link.md) for additional projects.
 
 ### Optional
 
-- `canonical` (String) Canonical of the environment, serve as the unique identifier, either name or canonical must be filled to create a environment
-- `color` (String) The color for the icon displayed in the UI.
-- `name` (String) Display name of the environment, for the UI, either name or canonical must be filled to create a environment
-- `organization` (String) The organization where to create the environment, default to the `default_organization` of the provider
+- `canonical` (String) Stable identifier of the environment. Either `name` or `canonical` must be set.
+- `cloud_account_canonicals` (List of String) Canonicals of the [`cycloid_cloud_account`](./cloud_account.md) entries to link to this environment. PATCH semantics: omitting the attribute leaves existing links untouched, an empty list `[]` unlinks all, a non-empty list replaces the set.
+- `color` (String, Deprecated) **Deprecated.** Color now lives on the linked [`cycloid_environment_type`](./environment_type.md) and is exposed read-only via `type`. Setting this attribute has no effect.
+- `description` (String) Free-form description of the environment.
+- `name` (String) Display name of the environment, for the UI. Either `name` or `canonical` must be set.
+- `organization` (String) The organization where to create the environment. Defaults to the provider's `default_organization`.
+- `owner` (String) Username of the organization member that owns this environment. The owner has full permissions on the environment. Defaults to the API key owner at creation.
+- `type` (String) Canonical of the [`cycloid_environment_type`](./environment_type.md) to associate with this environment (e.g. `production`, `staging`). Defaults to `production` until the backend infers the type from the environment canonical.
+- `variables` (Attributes List) Environment variables surfaced under `.environment.variables` during interpolation. PATCH semantics: omit to leave variables untouched, pass `[]` to wipe, pass a non-empty list to replace. (see [below for nested schema](#nestedatt--variables))
 
 ### Read-Only
 
-- `id` (Number) The ID of the environment
+- `created_at` (Number) Unix timestamp at which the environment was created.
+- `id` (Number) Internal numeric ID of the environment assigned by the Cycloid API.
+- `updated_at` (Number) Unix timestamp at which the environment was last updated.
+
+<a id="nestedatt--variables"></a>
+### Nested Schema for `variables`
+
+Required:
+
+- `key` (String) Variable identifier referenced as `($ .environment.variables.<key> $)`. Must contain at least one alphanumeric character and no dots.
+- `type` (String) Declared shape of the value. One of: `string`, `boolean`, `integer`, `float`, `array`, `map`.
+- `value` (String) The variable value as a string. For non-string types, encode the value as its string representation (e.g. `"true"` for boolean, `"42"` for integer).
+
+Optional:
+
+- `description` (String) Free-form description shown in the UI.
+- `sensitive` (Boolean) When true, the UI masks the value. The API still returns the value in plaintext, so prefer [`cycloid_credential`](./credential.md) for true secrets.
