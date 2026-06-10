@@ -12,6 +12,7 @@ When working with acceptance tests that require dependencies (e.g., environment 
 - **Dual Mode Support**: System should work for both unit tests (without middleware) and acceptance tests (with middleware)
 
 **Example Usage:**
+
 ```go
 depManager := NewTestDependencyManager(t)
 defer depManager.Cleanup(ctx, t)
@@ -20,6 +21,7 @@ projectCanonical, err := depManager.EnsureTestProject(ctx, t, projectName, "Test
 ```
 
 **Key Principles:**
+
 - Provisioning should be idempotent - don't fail if entity already exists
 - Cleanup should never fail the test - log warnings and continue
 - Handle missing middleware gracefully for unit tests
@@ -63,6 +65,7 @@ When working with the cycloid-cli models, keep in mind:
 **Model pointer initialization**: Always initialize API response model pointers with `&models.T{}` before passing to `GenericRequest`. A nil pointer causes `json: Unmarshal(nil *models.T)` at runtime even on HTTP 200 responses.
 
 **Example:**
+
 ```go
 // Bad: panic(litter.Sdump("Incorrect type", valueType))
 
@@ -88,8 +91,21 @@ By convention, when referring to the name of an entity in a terraform attribute,
 The only exception is when the resource is about the said entity, we refer then to it canonical attribute by the name `canonical`.
 
 **Example:**
-- For the `team_resource` we refer to its organization canonical as `organization` 
+
+- For the `team_resource` we refer to its organization canonical as `organization`
 - But the canonical of the team itself is named `canonical`
+
+## Docs regeneration
+
+After adding or changing a resource or datasource schema, regenerate the docs with:
+
+```sh
+~/go/bin/tfplugindocs generate --examples-dir examples/ --provider-dir . --provider-name cycloid ./..
+```
+
+(Or `just docs` if `tfplugindocs` is in your PATH — install it with `just install`.)
+
+Docs are generated, not hand-written. Never edit `docs/` by hand; always re-run the generator before release.
 
 ## Cursor Cloud specific instructions
 
@@ -123,6 +139,7 @@ To test the provider with Terraform, create a dev override file (see `README.md`
 - Unit tests (`go test ./... -short`) will show `TestAccEnvironmentResource` as FAIL — this is a pre-existing bug where the test doesn't skip in non-acceptance mode. All actual unit tests pass. Use `-run 'Test[^A]|TestA[^c]'` to exclude acceptance tests cleanly, or just ignore that single failure.
 
 <!-- gitnexus:start -->
+
 # GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **terraform-provider-cycloid** (3316 symbols, 6205 relationships, 142 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
