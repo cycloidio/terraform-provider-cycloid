@@ -26,6 +26,11 @@ func OrganizationMemberResourceSchema(ctx context.Context) schema.Schema {
 					),
 				},
 			},
+			"member_canonical": schema.StringAttribute{
+				Computed:            true,
+				Description:         "The canonical (username) of the member.",
+				MarkdownDescription: "The canonical (username) of the member.",
+			},
 			"member_id": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
@@ -57,6 +62,7 @@ func OrganizationMemberResourceSchema(ctx context.Context) schema.Schema {
 
 type OrganizationMemberModel struct {
 	Email                 types.String `tfsdk:"email"`
+	MemberCanonical       types.String `tfsdk:"member_canonical"`
 	MemberId              types.Int64  `tfsdk:"member_id"`
 	OrganizationCanonical types.String `tfsdk:"organization_canonical"`
 	RoleCanonical         types.String `tfsdk:"role_canonical"`

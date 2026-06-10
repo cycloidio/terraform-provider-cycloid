@@ -66,4 +66,8 @@ terraform {
 - `member_id` (Number) A member id
 - `organization_canonical` (String) A canonical of an organization.
 
+### Read-Only
+
+- `member_canonical` (String) The canonical (username) of the member.
+
 

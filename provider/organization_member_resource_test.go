@@ -5,8 +5,59 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cycloidio/cycloid-cli/client/models"
+	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// Unit tests — no TF_ACC required
+
+func TestOrgMemberCYModelToData_AcceptedMember(t *testing.T) {
+	id := uint32(42)
+	role := "organization-admin"
+	email := strfmt.Email("user@example.com")
+	m := &models.MemberOrg{
+		ID:              &id,
+		Email:           email,
+		InvitationState: "accepted",
+		Role:            &models.Role{Canonical: &role},
+		Username:        "john-doe",
+	}
+	var data organizationMemberResourceModel
+
+	diags := orgMemberCYModelToData("my-org", m, &data)
+
+	require.False(t, diags.HasError())
+	assert.Equal(t, "john-doe", data.MemberCanonical.ValueString())
+	assert.Equal(t, "user@example.com", data.Email.ValueString())
+	assert.Equal(t, int64(42), data.MemberId.ValueInt64())
+	assert.Equal(t, "organization-admin", data.RoleCanonical.ValueString())
+}
+
+// Pending invitations have no Username yet — member_canonical is empty until the invite is accepted.
+func TestOrgMemberCYModelToData_PendingInvite(t *testing.T) {
+	id := uint32(7)
+	role := "default-no-permissions"
+	inviteEmail := strfmt.Email("invite@example.com")
+	m := &models.MemberOrg{
+		ID:              &id,
+		InvitationEmail: inviteEmail,
+		InvitationState: "pending",
+		Role:            &models.Role{Canonical: &role},
+		Username:        "",
+	}
+	var data organizationMemberResourceModel
+
+	diags := orgMemberCYModelToData("my-org", m, &data)
+
+	require.False(t, diags.HasError())
+	assert.Equal(t, "", data.MemberCanonical.ValueString())
+	assert.Equal(t, types.StringValue(""), data.MemberCanonical)
+	assert.Equal(t, "invite@example.com", data.Email.ValueString())
+}
 
 func TestAccOrganizationMemberResource(t *testing.T) {
 	t.Parallel()
@@ -29,6 +80,8 @@ func TestAccOrganizationMemberResource(t *testing.T) {
 					resource.TestCheckResourceAttr("cycloid_organization_member.test", "organization_canonical", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_organization_member.test", "email", memberEmail),
 					resource.TestCheckResourceAttr("cycloid_organization_member.test", "role_canonical", roleCanonical),
+					// Pending invitations have no username yet; member_canonical is empty until accepted.
+					resource.TestCheckResourceAttr("cycloid_organization_member.test", "member_canonical", ""),
 				),
 			},
 			// Destroy testing
