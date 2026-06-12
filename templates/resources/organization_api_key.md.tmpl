@@ -1,0 +1,27 @@
+# {{ .Name }} ({{ .Type }})
+
+Manages an **Organization API key** in Cycloid.
+
+An API key is a JWT token scoped to an organization. It grants programmatic access to the Cycloid API without using a personal user account — useful for CI/CD pipelines, automation, and DIGIT-style integrations.
+
+> **Sensitive value:** The `token` attribute contains the full JWT and is only available immediately after creation. It is stored in the Terraform state as a sensitive value. Reference it at apply time (for example via a `sensitive` output) — subsequent reads return an empty token from the API, and Terraform preserves the value already in state.
+
+> **Immutable rules:** The `rules` block is immutable after creation. Any change to `rules` forces the API key to be destroyed and recreated, generating a new token.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown }}
+
+## Import
+
+API keys can be imported using their canonical:
+
+```shell
+terraform import cycloid_organization_api_key.example my-api-key-canonical
+```
+
+> **Note:** After import, the `token` attribute will be empty in state (the API does not expose the token after creation). The resource functions correctly for all other operations, but the token value will not be available.

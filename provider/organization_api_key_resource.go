@@ -196,7 +196,11 @@ func apiKeyCYModelToData(ctx context.Context, org string, apiKey *models.APIKey,
 	data.Name = types.StringPointerValue(apiKey.Name)
 	data.Description = types.StringValue(apiKey.Description)
 	data.LastSeven = types.StringPointerValue(apiKey.LastSeven)
-	data.ID = types.Int64Value(int64(*apiKey.ID))
+	if apiKey.ID != nil {
+		data.ID = types.Int64Value(int64(*apiKey.ID))
+	} else {
+		data.ID = types.Int64Null()
+	}
 
 	if apiKey.Owner != nil && apiKey.Owner.Username != nil {
 		data.Owner = types.StringPointerValue(apiKey.Owner.Username)
