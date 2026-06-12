@@ -249,7 +249,14 @@ func mergePluginConfiguration(ctx context.Context, data pluginResourceModel) (ma
 func pluginInstallToModel(org string, install *models.PluginInstall, data *pluginResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.ID = types.Int64Value(int64(ptr.Value(install.ID)))
-	data.UUID = types.StringValue(install.UUID.String())
+	// uuid is Required in the swagger contract but the GET/refresh response may
+	// omit it (it is populated on the create response only). A nil *strfmt.UUID
+	// would panic on .String() — preserve whatever is already in state instead of
+	// crashing or overwriting it with an empty value (same rationale as the
+	// configuration preservation at the Read call site).
+	if install.UUID != nil {
+		data.UUID = types.StringValue(install.UUID.String())
+	}
 	data.Status = types.StringPointerValue(install.Status)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(install.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(install.UpdatedAt)))
@@ -258,4 +265,3 @@ func pluginInstallToModel(org string, install *models.PluginInstall, data *plugi
 		data.PluginVersionID = types.Int64Value(int64(ptr.Value(install.Version.ID)))
 	}
 }
-
