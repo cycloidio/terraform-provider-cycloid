@@ -63,4 +63,4 @@ Required:
 Optional:
 
 - `effect` (String) Rule effect. Only `allow` is supported.
-- `resources` (List of String) Resources where this action applies.
+- `resources` (List of String) Resources where this action applies. Omit or set to `[]` to make the rule apply globally; omitting it on update clears any previously scoped resources.
