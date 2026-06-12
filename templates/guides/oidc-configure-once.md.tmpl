@@ -13,14 +13,14 @@ the per-organization reconciliation settings, the teams/roles, and the
 group→team mappings **once** in a reusable module, then fan the same declaration
 out across every organization in your tree.
 
-It is written for a platform team managing a hierarchy such as
-**Root → DGS → IS (information systems)**, where each IS is its own Cycloid
-organization that should share the same OIDC wiring.
+It is written for a platform team managing a hierarchy of organizations — a
+**parent organization with one child organization per information system (IS)** —
+where every organization should share the same OIDC wiring.
 
 ~> **Resource availability.** The `cycloid_oidc_integration`,
 `cycloid_oidc_organization_settings` and `cycloid_oidc_group_mapping` resources
-ship with the PROD-303 OIDC release. Make sure your provider version exposes
-them before applying this guide.
+ship with the OIDC release of the provider. Make sure your provider version
+exposes them before applying this guide.
 
 ## The building blocks
 
@@ -170,39 +170,39 @@ locals {
 
   # The org tree. Add an IS by adding one entry here.
   information_systems = {
-    "dgs-root" = {
-      organization = "dgs-root"
+    "org-root" = {
+      organization = "org-root"
       default_role = "organization-admin"
       session_ttl  = 7200 # 2h
       mappings = {
-        "DGS_PLATFORM_ADMIN" = ["admins"]
+        "PLATFORM_ADMIN" = ["admins"]
       }
     }
-    "is-cosmos" = {
-      organization = "cosmos"
+    "is-alpha" = {
+      organization = "is-alpha"
       default_role = "default-project-viewer"
-      session_ttl  = 7200 # COSMOS: 2h
+      session_ttl  = 7200 # shorter session for this IS: 2h
       mappings = {
-        "COSMOS_OPERATOR" = ["operators", "leads"]
-        "COSMOS_VIEWER"   = ["viewers"]
+        "ALPHA_OPERATOR" = ["operators", "leads"]
+        "ALPHA_VIEWER"   = ["viewers"]
       }
     }
-    "is-digit" = {
-      organization = "digit"
+    "is-beta" = {
+      organization = "is-beta"
       default_role = "default-project-viewer"
       session_ttl  = null # default (7 days)
       mappings = {
-        "DIGIT_OPERATOR" = ["operators"]
-        "DIGIT_ADMIN"    = ["admins"]
+        "BETA_OPERATOR" = ["operators"]
+        "BETA_ADMIN"    = ["admins"]
       }
     }
-    "is-arhs" = {
-      organization = "arhs"
+    "is-gamma" = {
+      organization = "is-gamma"
       default_role = "default-project-viewer"
       session_ttl  = null
       mappings = {
-        "ARHS_OPERATOR" = ["operators"]
-        "ARHS_READONLY" = ["viewers"]
+        "GAMMA_OPERATOR" = ["operators"]
+        "GAMMA_READONLY" = ["viewers"]
       }
     }
   }
@@ -222,8 +222,8 @@ module "oidc" {
 }
 ```
 
-One declaration, applied uniformly to COSMOS, DIGIT, ARHS and the DGS root. The
-complexity of "N organizations × M mappings" collapses into one editable
+One declaration, applied uniformly to every information system and the root org.
+The complexity of "N organizations × M mappings" collapses into one editable
 `information_systems` map.
 
 ## Day-2 operations
@@ -236,7 +236,7 @@ with its organization canonical, default role and mappings, then
 list under that IS's `mappings`:
 
 ```terraform
-"DIGIT_OPERATOR" = ["operators", "release-managers"] # added release-managers
+"BETA_OPERATOR" = ["operators", "release-managers"] # added release-managers
 ```
 
 `apply` creates exactly one new `cycloid_oidc_group_mapping`.
@@ -245,7 +245,7 @@ list under that IS's `mappings`:
 discrete resource keyed by `(group, team)`, removing the key destroys only those
 mappings — no other group is touched.
 
-**Dial the session TTL.** Change `session_ttl` for the IS (e.g. COSMOS to `7200`
+**Dial the session TTL.** Change `session_ttl` for the IS (e.g. to `7200`
 for 2h, or back to `null` for the 7-day default). Only that org's
 `cycloid_oidc_integration` is updated.
 
