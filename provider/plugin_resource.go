@@ -135,19 +135,30 @@ func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, res
 	m := r.provider.Middleware
 
 	id := uint32(data.ID.ValueInt64())
-	install, _, err := m.GetPlugin(org, id)
+
+	// m.GetPlugin deserializes models.Plugin JSON into *models.PluginInstall, mapping
+	// Plugin.ID (registry plugin ID) → PluginInstall.ID. Use ListPlugins instead and
+	// locate the install by its actual ID so we get the correctly-typed PluginInstall.
+	plugins, _, err := m.ListPlugins(org)
 	if err != nil {
-		if isNotFoundError(err) {
-			resp.State.RemoveResource(ctx)
-			return
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins in org %q", org), err.Error())
+		return
+	}
+	var install *models.Plugin
+	for _, p := range plugins {
+		if p.Install != nil && ptr.Value(p.Install.ID) == id {
+			install = p
+			break
 		}
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin install %d in org %q", id, org), err.Error())
+	}
+	if install == nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
 	// configuration and configuration_sensitive are RequiresReplace and never
 	// readable back from the API as split maps — preserve their values from state.
-	pluginInstallToModel(org, install, &data)
+	pluginInstallToModel(org, install.Install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -241,9 +252,22 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	org := r.provider.DefaultOrganization
 	m := r.provider.Middleware
 
-	install, _, err := m.GetPlugin(org, uint32(installID))
+	// m.GetPlugin deserializes models.Plugin into *models.PluginInstall (wrong type).
+	// Use ListPlugins and locate by install ID for a correctly-typed result.
+	plugins, _, err := m.ListPlugins(org)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin install %d for import", installID), err.Error())
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins in org %q for import", org), err.Error())
+		return
+	}
+	var importPlugin *models.Plugin
+	for _, p := range plugins {
+		if p.Install != nil && ptr.Value(p.Install.ID) == uint32(installID) {
+			importPlugin = p
+			break
+		}
+	}
+	if importPlugin == nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("plugin install %d not found in org %q", installID, org), "")
 		return
 	}
 
@@ -254,7 +278,7 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	// they will be null in imported state — user must add them to config after import.
 	data.Configuration = types.MapNull(types.StringType)
 	data.ConfigurationSensitive = types.MapNull(types.StringType)
-	pluginInstallToModel(org, install, &data)
+	pluginInstallToModel(org, importPlugin.Install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -289,13 +313,10 @@ func mergePluginConfiguration(ctx context.Context, data pluginResourceModel) (ma
 func pluginInstallToModel(org string, install *models.PluginInstall, data *pluginResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.ID = types.Int64Value(int64(ptr.Value(install.ID)))
-	// uuid is Required in the swagger contract but the GET/refresh response may
-	// omit it (it is populated on the create response only). A nil *strfmt.UUID
-	// would panic on .String() — preserve whatever is already in state instead of
-	// crashing or overwriting it with an empty value (same rationale as the
-	// configuration preservation at the Read call site).
 	if install.UUID != nil {
 		data.UUID = types.StringValue(install.UUID.String())
+	} else {
+		data.UUID = types.StringValue("")
 	}
 	data.Status = types.StringPointerValue(install.Status)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(install.CreatedAt)))
