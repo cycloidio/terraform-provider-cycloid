@@ -151,8 +151,48 @@ func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *pluginResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
-	// All fields use RequiresReplace — Update is never called.
+func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan pluginResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// id is computed from state; read it separately so we don't lose it.
+	var state pluginResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	org := getOrganizationCanonical(*r.provider, plan.Organization)
+	m := r.provider.Middleware
+
+	id := uint32(state.ID.ValueInt64())
+	versionID := uint32(plan.PluginVersionID.ValueInt64())
+
+	config, err := mergePluginConfiguration(ctx, plan)
+	if err != nil {
+		resp.Diagnostics.AddError("invalid plugin configuration", err.Error())
+		return
+	}
+
+	_, _, err = m.UpdatePlugin(org, id, versionID, config)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to update plugin install %d in org %q", id, org), err.Error())
+		return
+	}
+
+	install, err := pollPluginInstall(m, org, uint32(plan.RegistryID.ValueInt64()), uint32(plan.PluginID.ValueInt64()), versionID, 5*time.Minute)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("plugin update did not reach running status in org %q", org), err.Error())
+		return
+	}
+
+	plan.RegistryID = types.Int64Value(plan.RegistryID.ValueInt64())
+	plan.PluginID = types.Int64Value(plan.PluginID.ValueInt64())
+	pluginInstallToModel(org, install, &plan)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *pluginResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

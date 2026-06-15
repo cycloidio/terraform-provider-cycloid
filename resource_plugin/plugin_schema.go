@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,9 +13,9 @@ import (
 func PluginResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Install a plugin in an organization. " +
-			"All fields trigger a replacement on change because plugin upgrades are not supported via the API yet.",
+			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
 		MarkdownDescription: "Install a plugin in an organization. " +
-			"All fields trigger a replacement on change because plugin upgrades are not supported via the API yet.",
+			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
 		Attributes: map[string]schema.Attribute{
 			"organization": schema.StringAttribute{
 				Description:         "The organization canonical, defaults to the provider `default_organization`.",
@@ -38,31 +37,28 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"plugin_version_id": schema.Int64Attribute{
-				Description:         "The ID of the plugin version to install. Triggers replacement when changed.",
-				MarkdownDescription: "The ID of the plugin version to install. Triggers replacement when changed.",
+				Description:         "The ID of the plugin version to install. Can be updated in-place.",
+				MarkdownDescription: "The ID of the plugin version to install. Can be updated in-place.",
 				Required:            true,
-				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"configuration": schema.MapAttribute{
 				Description: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
-					"Values appear in plan output. Triggers replacement when changed.",
+					"Values appear in plan output. Can be updated in-place.",
 				MarkdownDescription: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
-					"Values appear in plan output. Triggers replacement when changed.",
-				Optional:      true,
-				ElementType:   types.StringType,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+					"Values appear in plan output. Can be updated in-place.",
+				Optional:    true,
+				ElementType: types.StringType,
 			},
 			"configuration_sensitive": schema.MapAttribute{
 				Description: "Sensitive key-value configuration for the plugin (Stack Forms syntax). " +
-					"Values are hidden in plan output. Triggers replacement when changed. " +
+					"Values are hidden in plan output. Can be updated in-place. " +
 					"Keys must not overlap with `configuration`.",
 				MarkdownDescription: "Sensitive key-value configuration for the plugin (Stack Forms syntax). " +
-					"Values are hidden in plan output. Triggers replacement when changed. " +
+					"Values are hidden in plan output. Can be updated in-place. " +
 					"Keys must not overlap with `configuration`.",
-				Optional:      true,
-				Sensitive:     true,
-				ElementType:   types.StringType,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				Optional:    true,
+				Sensitive:   true,
+				ElementType: types.StringType,
 			},
 			"id": schema.Int64Attribute{
 				Description:         "The numeric ID of the installed plugin.",
