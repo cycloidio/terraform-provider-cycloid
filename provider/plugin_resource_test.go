@@ -71,6 +71,14 @@ func TestAccPluginResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("cycloid_plugin.test", "status"),
 				),
 			},
+			// ENG-189 regression: changing configuration must succeed with in-place
+			// update (no 409 "Plugin already exists" from a destroy+create cycle).
+			{
+				Config: testAccPluginConfig_updated(orgCanonical, int(registryID), int(pluginID), int(versionID)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("cycloid_plugin.test", "status", "running"),
+				),
+			},
 			{
 				// configuration/configuration_sensitive cannot be recovered from the API —
 				// the API returns merged config with no way to split back. Ignored on import.
@@ -125,6 +133,25 @@ resource "cycloid_plugin" "test" {
   }
   configuration_sensitive = {
     token = "test-token"
+  }
+}
+`, org, registryID, pluginID, versionID)
+}
+
+// testAccPluginConfig_updated changes the configuration value to exercise the
+// in-place Update path (ENG-189 regression guard).
+func testAccPluginConfig_updated(org string, registryID, pluginID, versionID int) string {
+	return fmt.Sprintf(`
+resource "cycloid_plugin" "test" {
+  organization      = %q
+  registry_id       = %d
+  plugin_id         = %d
+  plugin_version_id = %d
+  configuration = {
+    greeting = "world"
+  }
+  configuration_sensitive = {
+    token = "updated-token"
   }
 }
 `, org, registryID, pluginID, versionID)
