@@ -67,7 +67,7 @@ This option is only applied during initial catalog repository creation, not for 
 - `owner` (String) User canonical that owns this service catalog source. If omitted then the person
 creating this service catalog source will be assigned as owner. When a user is the
 owner of a service catalog source they has all the permissions on it.
-- `refresh_on_create` (Boolean) When `true`, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.
+- `refresh_on_create` (Boolean) When `true` (default), immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Set to `false` to skip the immediate refresh and rely on the background cron instead.
 
 ### Read-Only
 
