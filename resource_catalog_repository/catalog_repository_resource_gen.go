@@ -5,6 +5,9 @@ package resource_catalog_repository
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -12,8 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"regexp"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -111,6 +112,12 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The visibility setting allows to specify which visibility will be applied to stacks in this catalog repository.\nThis option is only applied during initial catalog repository creation, not for subsequent updates.\n",
 				MarkdownDescription: "The visibility setting allows to specify which visibility will be applied to stacks in this catalog repository.\nThis option is only applied during initial catalog repository creation, not for subsequent updates.\n",
 			},
+			"refresh_on_create": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "When true, triggers a synchronous version re-index (GET .../versions/refresh) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
+				MarkdownDescription: "When `true`, triggers a synchronous version re-index (`GET .../versions/refresh`) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
+			},
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -149,6 +156,7 @@ type CatalogRepositoryModel struct {
 	OnCreateVisibility    types.String `tfsdk:"on_create_visibility"`
 	OrganizationCanonical types.String `tfsdk:"organization_canonical"`
 	Owner                 types.String `tfsdk:"owner"`
+	RefreshOnCreate       types.Bool   `tfsdk:"refresh_on_create"`
 	Url                   types.String `tfsdk:"url"`
 }
 
