@@ -6,18 +6,20 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
+	"github.com/cycloidio/cycloid-cli/client/models"
+	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 )
 
 var _ resource.Resource = (*catalogRepositoryResource)(nil)
@@ -55,6 +57,13 @@ func (r *catalogRepositoryResource) Schema(ctx context.Context, req resource.Sch
 		Description:         "The visibility setting allows to specify which visibility will be applied to stacks in this catalog repository.\nThis option is only applied during initial catalog repository creation, not for subsequent updates.\n",
 		MarkdownDescription: "The visibility setting allows to specify which visibility will be applied to stacks in this catalog repository.\nThis option is only applied during initial catalog repository creation, not for subsequent updates.\n",
 		Default:             stringdefault.StaticString(""),
+	}
+	resp.Schema.Attributes["refresh_on_create"] = schema.BoolAttribute{
+		Optional:            true,
+		Computed:            true,
+		Default:             booldefault.StaticBool(false),
+		Description:         "When true, triggers a synchronous version re-index (GET .../versions/refresh) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
+		MarkdownDescription: "When `true`, triggers a synchronous version re-index (`GET .../versions/refresh`) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
 	}
 }
 
@@ -115,6 +124,16 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	resp.Diagnostics.Append(catalogRepositoryCYModelToData(orgCan, cr, &data)...)
+
+	if data.RefreshOnCreate.ValueBool() {
+		if err := r.refreshCatalogRepositoryVersions(orgCan, data.Canonical.ValueString()); err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to refresh catalog repository versions",
+				err.Error(),
+			)
+			return
+		}
+	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -202,6 +221,16 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	resp.Diagnostics.Append(catalogRepositoryCYModelToData(orgCan, cr, &data)...)
+
+	if data.RefreshOnCreate.ValueBool() {
+		if err := r.refreshCatalogRepositoryVersions(orgCan, can); err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to refresh catalog repository versions",
+				err.Error(),
+			)
+			return
+		}
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -364,6 +393,21 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 		return nil, err
 	}
 	return result, nil
+}
+
+// refreshCatalogRepositoryVersions triggers an immediate re-index of all branches and tags
+// for the given catalog repository via GET .../versions/refresh. This resolves the
+// eventual-consistency race where a freshly created catalog repository has no version rows yet
+// (the background cron that populates them runs every ~10 minutes by default).
+func (r *catalogRepositoryResource) refreshCatalogRepositoryVersions(org, catalogRepo string) error {
+	mid := r.provider.Middleware
+	var result []*cycloidmiddleware.StackVersion
+	_, err := mid.GenericRequest(cycloidmiddleware.Request{
+		Method:       "GET",
+		Organization: &org,
+		Route:        []string{"organizations", org, "service_catalog_sources", catalogRepo, "versions", "refresh"},
+	}, &result)
+	return err
 }
 
 func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (basetypes.ListValue, diag.Diagnostics) {
