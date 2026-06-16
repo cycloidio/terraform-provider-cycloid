@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -144,12 +145,12 @@ func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins in org %q", org), err.Error())
 		return
 	}
+	idx := slices.IndexFunc(plugins, func(p *models.Plugin) bool {
+		return p.Install != nil && ptr.Value(p.Install.ID) == id
+	})
 	var install *models.Plugin
-	for _, p := range plugins {
-		if p.Install != nil && ptr.Value(p.Install.ID) == id {
-			install = p
-			break
-		}
+	if idx >= 0 {
+		install = plugins[idx]
 	}
 	if install == nil {
 		resp.State.RemoveResource(ctx)
@@ -315,9 +316,9 @@ func pluginInstallToModel(org string, install *models.PluginInstall, data *plugi
 	data.ID = types.Int64Value(int64(ptr.Value(install.ID)))
 	if install.UUID != nil {
 		data.UUID = types.StringValue(install.UUID.String())
-	} else {
-		data.UUID = types.StringValue("")
 	}
+	// nil UUID: preserve existing state value (API omits uuid in List response;
+	// overwriting with "" would cause persistent drift — mirrors ENG-183 / PR #109).
 	data.Status = types.StringPointerValue(install.Status)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(install.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(install.UpdatedAt)))
