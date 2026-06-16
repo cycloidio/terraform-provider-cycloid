@@ -90,8 +90,8 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	if stack.Team == nil {
-		data.Team = types.StringNull()
+	if stack.Team == nil || ptr.Value(stack.Team.Canonical) == "" {
+		data.Team = types.StringValue("")
 	} else {
 		data.Team = types.StringValue(ptr.Value(stack.Team.Canonical))
 	}
@@ -169,7 +169,7 @@ func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, da
 	}
 
 	if updatedStack.Team == nil || ptr.Value(updatedStack.Team.Canonical) == "" {
-		data.Team = types.StringNull()
+		data.Team = types.StringValue("")
 	} else {
 		data.Team = types.StringValue(ptr.Value(updatedStack.Team.Canonical))
 	}
