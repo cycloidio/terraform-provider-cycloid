@@ -114,9 +114,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"refresh_on_create": schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				Description:         "When true, triggers a synchronous version re-index (GET .../versions/refresh) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
-				MarkdownDescription: "When `true`, triggers a synchronous version re-index (`GET .../versions/refresh`) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
+				Description:         "When true, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
+				MarkdownDescription: "When `true`, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
 			},
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,

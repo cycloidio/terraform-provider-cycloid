@@ -62,8 +62,8 @@ func (r *catalogRepositoryResource) Schema(ctx context.Context, req resource.Sch
 		Optional:            true,
 		Computed:            true,
 		Default:             booldefault.StaticBool(false),
-		Description:         "When true, triggers a synchronous version re-index (GET .../versions/refresh) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
-		MarkdownDescription: "When `true`, triggers a synchronous version re-index (`GET .../versions/refresh`) immediately after create or update. This makes all branches and tags resolvable without waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned immediately after the catalog repository is created.",
+		Description:         "When true, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
+		MarkdownDescription: "When `true`, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
 	}
 }
 
@@ -401,6 +401,9 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 // (the background cron that populates them runs every ~10 minutes by default).
 func (r *catalogRepositoryResource) refreshCatalogRepositoryVersions(org, catalogRepo string) error {
 	mid := r.provider.Middleware
+	// TODO(TFPRO-47): swap to mid.RefreshCatalogRepositoryVersions(org, catalogRepo) once CLI-128 merges
+	// and go.mod is bumped to a version that includes the method. Until then, the inline GenericRequest
+	// is functionally equivalent and tested.
 	var result []*cycloidmiddleware.StackVersion
 	_, err := mid.GenericRequest(cycloidmiddleware.Request{
 		Method:       "GET",
