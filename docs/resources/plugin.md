@@ -156,13 +156,13 @@ resource "cycloid_plugin" "hello" {
 ### Required
 
 - `plugin_id` (Number) The ID of the plugin within the registry.
-- `plugin_version_id` (Number) The ID of the plugin version to install. Triggers replacement when changed.
+- `plugin_version_id` (Number) The ID of the plugin version to install. Can be updated in-place.
 - `registry_id` (Number) The ID of the plugin registry containing the plugin to install.
 
 ### Optional
 
-- `configuration` (Map of String) Visible key-value configuration for the plugin (Stack Forms syntax). Values appear in plan output. Triggers replacement when changed.
-- `configuration_sensitive` (Map of String, Sensitive) Sensitive key-value configuration for the plugin (Stack Forms syntax). Values are hidden in plan output. Triggers replacement when changed. Keys must not overlap with `configuration`.
+- `configuration` (Map of String) Visible key-value configuration for the plugin (Stack Forms syntax). Values appear in plan output. Can be updated in-place.
+- `configuration_sensitive` (Map of String, Sensitive) Sensitive key-value configuration for the plugin (Stack Forms syntax). Values are hidden in plan output. Can be updated in-place. Keys must not overlap with `configuration`.
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
 
 ### Read-Only
