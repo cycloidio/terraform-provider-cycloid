@@ -61,9 +61,9 @@ func (r *catalogRepositoryResource) Schema(ctx context.Context, req resource.Sch
 	resp.Schema.Attributes["refresh_on_create"] = schema.BoolAttribute{
 		Optional:            true,
 		Computed:            true,
-		Default:             booldefault.StaticBool(false),
-		Description:         "When true, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
-		MarkdownDescription: "When `true`, immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Useful when a stack component on a non-default branch must be provisioned right after the catalog repository is created.",
+		Default:             booldefault.StaticBool(true),
+		Description:         "When true (default), immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Set to false to skip the immediate refresh and rely on the background cron instead.",
+		MarkdownDescription: "When `true` (default), immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Set to `false` to skip the immediate refresh and rely on the background cron instead.",
 	}
 }
 
@@ -396,20 +396,15 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 }
 
 // refreshCatalogRepositoryVersions triggers an immediate re-index of all branches and tags
-// for the given catalog repository via GET .../versions/refresh. This resolves the
-// eventual-consistency race where a freshly created catalog repository has no version rows yet
-// (the background cron that populates them runs every ~10 minutes by default).
+// for the given catalog repository. This resolves the eventual-consistency race where a freshly
+// created catalog repository has no version rows yet (the background cron that populates them
+// runs every ~10 minutes by default).
+//
+// go.mod pins cycloid-cli to the CLI-128 dev branch (v1.0.98-0.20260616211616-16fd506d0f1f)
+// pending CLI-128 release; bump to the released version once CLI-128 merges and is tagged.
 func (r *catalogRepositoryResource) refreshCatalogRepositoryVersions(org, catalogRepo string) error {
 	mid := r.provider.Middleware
-	// TODO(TFPRO-47): swap to mid.RefreshCatalogRepositoryVersions(org, catalogRepo) once CLI-128 merges
-	// and go.mod is bumped to a version that includes the method. Until then, the inline GenericRequest
-	// is functionally equivalent and tested.
-	var result []*cycloidmiddleware.StackVersion
-	_, err := mid.GenericRequest(cycloidmiddleware.Request{
-		Method:       "GET",
-		Organization: &org,
-		Route:        []string{"organizations", org, "service_catalog_sources", catalogRepo, "versions", "refresh"},
-	}, &result)
+	_, _, err := mid.RefreshCatalogRepositoryVersions(org, catalogRepo)
 	return err
 }
 

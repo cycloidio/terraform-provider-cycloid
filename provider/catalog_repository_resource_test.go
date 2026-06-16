@@ -240,7 +240,7 @@ func TestCatalogRepositorySchema_RefreshOnCreateAttribute(t *testing.T) {
 	require.True(t, ok, "refresh_on_create must be a BoolAttribute")
 	assert.True(t, boolAttr.IsOptional(), "refresh_on_create must be Optional")
 	assert.True(t, boolAttr.IsComputed(), "refresh_on_create must be Computed (required by framework when Default is set)")
-	assert.NotNil(t, boolAttr.Default, "refresh_on_create must have a static Default of false (not Computed-only — TFPRO-42 fix)")
+	assert.NotNil(t, boolAttr.Default, "refresh_on_create must have a static Default (not Computed-only — TFPRO-42 fix)")
 	assert.NotEmpty(t, boolAttr.Description, "refresh_on_create must have a description")
 }
 
