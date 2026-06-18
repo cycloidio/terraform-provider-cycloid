@@ -156,7 +156,7 @@ resource "cycloid_plugin" "hello" {
 ### Required
 
 - `plugin_id` (Number) The ID of the plugin within the registry.
-- `plugin_version_id` (Number) The ID of the plugin version to install. Can be updated in-place.
+- `plugin_version_id` (Number) The ID of the plugin version to install. Changing this triggers replacement.
 - `registry_id` (Number) The ID of the plugin registry containing the plugin to install.
 
 ### Optional
