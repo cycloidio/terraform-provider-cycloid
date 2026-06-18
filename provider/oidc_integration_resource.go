@@ -183,6 +183,9 @@ func oidcIntegrationConfig(data *oidcIntegrationResourceModel) map[string]interf
 	if !data.AllowInsecureDiscovery.IsNull() && !data.AllowInsecureDiscovery.IsUnknown() {
 		cfg["oidc_allow_insecure_discovery"] = data.AllowInsecureDiscovery.ValueBool()
 	}
+	if !data.AdoptManualMembers.IsNull() && !data.AdoptManualMembers.IsUnknown() {
+		cfg["oidc_adopt_manual_members"] = data.AdoptManualMembers.ValueBool()
+	}
 
 	// Secrets: only send when the plan carries a non-empty string. An absent or
 	// empty value preserves the stored secret/cert on the server.
@@ -255,6 +258,11 @@ func oidcIntegrationToData(org string, i *cycloidmiddleware.OIDCIntegration, dat
 		data.AllowInsecureDiscovery = types.BoolValue(*i.OidcAllowInsecureDiscovery)
 	} else {
 		data.AllowInsecureDiscovery = types.BoolNull()
+	}
+	if i.OidcAdoptManualMembers != nil {
+		data.AdoptManualMembers = types.BoolValue(*i.OidcAdoptManualMembers)
+	} else {
+		data.AdoptManualMembers = types.BoolNull()
 	}
 
 	// Presence flags — server reports whether a secret/cert is stored.

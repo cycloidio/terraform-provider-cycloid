@@ -104,6 +104,11 @@ func OidcIntegrationResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "When true, the OIDC discovery document may be fetched over HTTP (insecure). Use only in non-production environments.",
 				Optional:            true,
 			},
+			"adopt_manual_members": schema.BoolAttribute{
+				Description:         "When true, existing manually-invited members who log in via this OIDC integration are adopted — their membership source is flipped to 'oidc' so group mapping manages them going forward.",
+				MarkdownDescription: "When true, existing manually-invited members who log in via this OIDC integration are adopted — their membership source is flipped to `oidc` so group mapping manages them going forward.",
+				Optional:            true,
+			},
 
 			// --- write-only secrets ---
 			"client_secret": schema.StringAttribute{
@@ -149,6 +154,7 @@ type OidcIntegrationModel struct {
 	UseCaCert              types.Bool   `tfsdk:"use_ca_cert"`
 	SkipTLSVerify          types.Bool   `tfsdk:"skip_tls_verify"`
 	AllowInsecureDiscovery types.Bool   `tfsdk:"allow_insecure_discovery"`
+	AdoptManualMembers     types.Bool   `tfsdk:"adopt_manual_members"`
 	ClientSecret           types.String `tfsdk:"client_secret"`
 	CaCert                 types.String `tfsdk:"ca_cert"`
 	HasSecret              types.Bool   `tfsdk:"has_secret"`
