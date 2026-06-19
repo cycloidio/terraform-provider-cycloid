@@ -254,6 +254,7 @@ func TestRefreshCatalogRepositoryVersions_HitsCorrectEndpoint(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet && r.URL.Path == "/organizations/test-org/service_catalog_sources/test-catalog/versions/refresh" {
 			atomic.AddInt32(&refreshCalls, 1)
+			assert.Equal(t, "true", r.URL.Query().Get("sync_presence"), "sync_presence query param must be true")
 			_, _ = fmt.Fprint(w, `{"data":[{"id":1,"commit_hash":"abc1234","name":"main","type":"branch"}]}`)
 			return
 		}

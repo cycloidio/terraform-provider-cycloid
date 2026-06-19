@@ -127,11 +127,11 @@ func (r *catalogRepositoryResource) Create(ctx context.Context, req resource.Cre
 
 	if data.RefreshOnCreate.ValueBool() {
 		if err := r.refreshCatalogRepositoryVersions(orgCan, data.Canonical.ValueString()); err != nil {
-			resp.Diagnostics.AddError(
+			resp.Diagnostics.AddWarning(
 				"Unable to refresh catalog repository versions",
-				err.Error(),
+				"The catalog repository was created successfully, but the immediate version refresh failed. "+
+					"Branch versions will be populated by the background cron (~10 min). Error: "+err.Error(),
 			)
-			return
 		}
 	}
 
@@ -224,11 +224,11 @@ func (r *catalogRepositoryResource) Update(ctx context.Context, req resource.Upd
 
 	if data.RefreshOnCreate.ValueBool() {
 		if err := r.refreshCatalogRepositoryVersions(orgCan, can); err != nil {
-			resp.Diagnostics.AddError(
+			resp.Diagnostics.AddWarning(
 				"Unable to refresh catalog repository versions",
-				err.Error(),
+				"The catalog repository was updated successfully, but the immediate version refresh failed. "+
+					"Branch versions will be populated by the background cron (~10 min). Error: "+err.Error(),
 			)
-			return
 		}
 	}
 
@@ -399,9 +399,6 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 // for the given catalog repository. This resolves the eventual-consistency race where a freshly
 // created catalog repository has no version rows yet (the background cron that populates them
 // runs every ~10 minutes by default).
-//
-// go.mod pins cycloid-cli to the CLI-128 dev branch (v1.0.98-0.20260616211616-16fd506d0f1f)
-// pending CLI-128 release; bump to the released version once CLI-128 merges and is tagged.
 func (r *catalogRepositoryResource) refreshCatalogRepositoryVersions(org, catalogRepo string) error {
 	mid := r.provider.Middleware
 	_, _, err := mid.RefreshCatalogRepositoryVersions(org, catalogRepo)
