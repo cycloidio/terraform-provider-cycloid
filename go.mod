@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/cycloidio/cycloid-cli v1.0.98-0.20260619104205-0a2750e1d560
+	github.com/cycloidio/cycloid-cli v1.0.98-0.20260619120355-9ad3f304ad0d
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.16.0
