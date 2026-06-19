@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
@@ -11,6 +13,7 @@ import (
 )
 
 var _ resource.Resource = (*oidcGroupMappingResource)(nil)
+var _ resource.ResourceWithImportState = (*oidcGroupMappingResource)(nil)
 
 func NewOIDCGroupMappingResource() resource.Resource {
 	return &oidcGroupMappingResource{}
@@ -131,6 +134,30 @@ func (r *oidcGroupMappingResource) Delete(ctx context.Context, req resource.Dele
 	}
 }
 
+// ImportState supports: terraform import cycloid_oidc_group_mapping.x <org>:<mapping_id>
+func (r *oidcGroupMappingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("expected <organization>:<mapping_id>, got %q", req.ID),
+		)
+		return
+	}
+
+	org := parts[0]
+	id, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid mapping ID in import", err.Error())
+		return
+	}
+
+	var data oidcGroupMappingResourceModel
+	data.Organization = types.StringValue(org)
+	data.ID = types.Int64Value(id)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
 func oidcGroupMappingToData(org string, mapping *cycloidmiddleware.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.GroupName = types.StringValue(mapping.GroupName)
@@ -139,5 +166,7 @@ func oidcGroupMappingToData(org string, mapping *cycloidmiddleware.OIDCGroupMapp
 	// was deleted server-side to avoid a provider panic.
 	if mapping.Team != nil {
 		data.TeamCanonical = types.StringValue(mapping.Team.Canonical)
+	} else {
+		data.TeamCanonical = types.StringNull()
 	}
 }

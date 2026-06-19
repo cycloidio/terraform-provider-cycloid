@@ -11,6 +11,7 @@ import (
 )
 
 var _ resource.Resource = (*oidcIntegrationResource)(nil)
+var _ resource.ResourceWithImportState = (*oidcIntegrationResource)(nil)
 
 // NewOIDCIntegrationResource is the constructor registered in provider.go.
 func NewOIDCIntegrationResource() resource.Resource {
@@ -136,6 +137,13 @@ func (r *oidcIntegrationResource) Delete(ctx context.Context, req resource.Delet
 		}
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to disable OIDC integration in org %q", org), err.Error())
 	}
+}
+
+// ImportState supports: terraform import cycloid_oidc_integration.x <organization>
+func (r *oidcIntegrationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	var data oidcIntegrationResourceModel
+	data.Organization = types.StringValue(req.ID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // oidcIntegrationConfig builds the map[string]interface{} body for
