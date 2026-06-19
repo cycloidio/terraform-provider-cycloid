@@ -11,6 +11,7 @@ import (
 )
 
 var _ resource.Resource = (*oidcOrganizationSettingsResource)(nil)
+var _ resource.ResourceWithImportState = (*oidcOrganizationSettingsResource)(nil)
 
 func NewOIDCOrganizationSettingsResource() resource.Resource {
 	return &oidcOrganizationSettingsResource{}
@@ -110,8 +111,34 @@ func (r *oidcOrganizationSettingsResource) Update(ctx context.Context, req resou
 }
 
 func (r *oidcOrganizationSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// The Cycloid API exposes no delete for per-organization OIDC settings;
-	// removing the resource only drops it from Terraform state.
+	var data oidcOrganizationSettingsResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	org := getOrganizationCanonical(*r.provider, data.Organization)
+
+	// The API has no delete endpoint. Reset to safe defaults so that
+	// oidc_managed=true + eject is not left active after terraform destroy.
+	_, _, err := r.provider.Middleware.UpdateOIDCOrganizationSettings(org, cycloidmiddleware.UpdateOIDCOrganizationSettings{
+		OIDCManaged:       false,
+		OIDCNoMatchPolicy: "keep_membership",
+	})
+	if err != nil && !isNotFoundError(err) {
+		resp.Diagnostics.AddWarning(
+			"Unable to reset OIDC organization settings",
+			"The resource was removed from Terraform state, but the server-side settings could not be reset to safe defaults. Error: "+err.Error(),
+		)
+	}
+}
+
+// ImportState supports: terraform import cycloid_oidc_organization_settings.x <organization>
+func (r *oidcOrganizationSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	var data oidcOrganizationSettingsResourceModel
+	data.Organization = types.StringValue(req.ID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func oidcOrganizationSettingsBody(data *oidcOrganizationSettingsResourceModel) cycloidmiddleware.UpdateOIDCOrganizationSettings {

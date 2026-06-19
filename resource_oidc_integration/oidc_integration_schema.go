@@ -88,26 +88,31 @@ func OidcIntegrationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "When true, the client authenticates to the token endpoint using a JWT signed with the client secret (private_key_jwt).",
 				MarkdownDescription: "When true, the client authenticates to the token endpoint using a JWT signed with the client secret (private_key_jwt).",
 				Optional:            true,
+				Computed:            true,
 			},
 			"use_ca_cert": schema.BoolAttribute{
 				Description:         "When true, the custom CA certificate (see `ca_cert`) is used to verify the identity provider's TLS certificate.",
 				MarkdownDescription: "When true, the custom CA certificate (see `ca_cert`) is used to verify the identity provider's TLS certificate.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"skip_tls_verify": schema.BoolAttribute{
 				Description:         "When true, TLS certificate verification is skipped for the identity provider endpoints. Use only in non-production environments.",
 				MarkdownDescription: "When true, TLS certificate verification is skipped for the identity provider endpoints. Use only in non-production environments.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"allow_insecure_discovery": schema.BoolAttribute{
 				Description:         "When true, the OIDC discovery document may be fetched over HTTP (insecure). Use only in non-production environments.",
 				MarkdownDescription: "When true, the OIDC discovery document may be fetched over HTTP (insecure). Use only in non-production environments.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"adopt_manual_members": schema.BoolAttribute{
 				Description:         "When true, existing manually-invited members who log in via this OIDC integration are adopted — their membership source is flipped to 'oidc' so group mapping manages them going forward.",
 				MarkdownDescription: "When true, existing manually-invited members who log in via this OIDC integration are adopted — their membership source is flipped to `oidc` so group mapping manages them going forward.",
 				Optional:            true,
+				Computed:            true,
 			},
 
 			// --- write-only secrets ---
