@@ -167,10 +167,10 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Optional:            true,
 					},
 					"plan": schema.StringAttribute{
-						Description:         "The type of plan of this subscription, can be either `free_tier` or `platform_teams`, default to `platform_teams`",
-						MarkdownDescription: "The type of plan of this subscription, can be either `free_tier` or `platform_teams`, default to `platform_teams`",
+						Description:         "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`, default to `platform_teams`. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
+						MarkdownDescription: "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`, default to `platform_teams`. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("free_tier", "platform_teams"),
+							stringvalidator.OneOf("free_trial", "end_users", "platform_teams"),
 						},
 						Optional: true,
 						Computed: true,
