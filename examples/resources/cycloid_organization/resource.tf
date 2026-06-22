@@ -23,7 +23,7 @@ resource "cycloid_organization" "some_organization" {
   parent_organization = cycloid_organization.org_with_licence.canonical
   subscription = {
     expires_at_rfc3339 = time_offset.one_year.rfc3339
-    plan               = "platform_team"
+    plan               = "platform_teams"
     members_count      = 5
   }
 }

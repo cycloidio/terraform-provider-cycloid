@@ -286,10 +286,19 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	// Only propagate the server-side subscription into state when the user is
+	// already managing it (prior state is non-null). If prior state.Subscription
+	// is null (user never set it), keep it null so that every plan/apply does not
+	// show a spurious "subscription will be added" diff (TFPRO-49).
+	subscriptionForState := org.Subscription
+	if orgState.Subscription.IsNull() {
+		subscriptionForState = nil
+	}
+
 	resp.Diagnostics.Append(
 		organizationCYModelToData(
 			ctx, &orgState, &licenceState, &subscriptionState,
-			*org, orgState.ParentOrganization.ValueStringPointer(), licence, org.Subscription,
+			*org, orgState.ParentOrganization.ValueStringPointer(), licence, subscriptionForState,
 		)...,
 	)
 	if resp.Diagnostics.HasError() {

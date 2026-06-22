@@ -48,7 +48,7 @@ resource "cycloid_organization" "some_organization" {
   parent_organization = cycloid_organization.org_with_licence.canonical
   subscription = {
     expires_at_rfc3339 = time_offset.one_year.rfc3339
-    plan               = "platform_team"
+    plan               = "platform_teams"
     members_count      = 5
   }
 }
@@ -93,11 +93,14 @@ Read-Only:
 <a id="nestedatt--subscription"></a>
 ### Nested Schema for `subscription`
 
+Required:
+
+- `plan` (String) The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`. Required when the `subscription` block is set. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.
+
 Optional:
 
 - `expires_at_rfc3339` (String) Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.
 - `members_count` (Number) number of allowed members for this plan, default to 5.
-- `plan` (String) The type of plan of this subscription, can be either `free_tier` or `platform_teams`, default to `platform_teams`
 
 Read-Only:
 
