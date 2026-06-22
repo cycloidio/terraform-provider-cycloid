@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -38,6 +43,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "The id of the organization.",
 				MarkdownDescription: "The id of the organization.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Optional:            true,
@@ -69,6 +77,9 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Data related to concourse",
 				MarkdownDescription: "Data related to concourse",
 				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"team_name": schema.StringAttribute{
 						Description:         "The name of the concourse team linked to this organization.",
@@ -91,11 +102,17 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "`true` if the organization is the root organization of the Cycloid console.",
 				MarkdownDescription: "`true` if the organization is the root organization of the Cycloid console.",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"has_children": schema.BoolAttribute{
 				Computed:            true,
 				Description:         "`true` if the organization has child organizations.",
 				MarkdownDescription: "`true` if the organization has child organizations.",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"licence": schema.SingleNestedAttribute{
 				Optional:            true,
@@ -107,16 +124,25 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						path.MatchRoot("subscription"),
 					),
 				},
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"expires_at_unix_timestamp": schema.Int64Attribute{
 						Description:         "Unix timestamp (precise at the milliseconds) where this licence expires.",
 						MarkdownDescription: "Unix timestamp (precise at the milliseconds) where this licence expires.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"expires_at_rfc3339": schema.StringAttribute{
 						Description:         "Unix timestamp (precise at the milliseconds) in rfc3339 format where this licence expires.",
 						MarkdownDescription: "Unix timestamp (precise at the milliseconds) in rfc3339 format where where this licence expires.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"key": schema.StringAttribute{
 						Description:         "The licence key in JWT format. Required if `apply_licence` attribute is set.",
@@ -131,22 +157,30 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Description:         "number of allowed members for this licence, default to 5.",
 						MarkdownDescription: "number of allowed members for this licence, default to 5.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"current_members": schema.Int64Attribute{
 						Description:         "number of current members for this licence.",
 						MarkdownDescription: "number of current members for this licence.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"is_on_prem": schema.BoolAttribute{
 						Description:         "`true` if this licence is made for on-premise deployment",
 						MarkdownDescription: "`true` if this licence is made for on-premise deployment",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
 			"subscription": schema.SingleNestedAttribute{
 				Optional:            true,
-				Computed:            true,
 				Description:         "Attributes related to the org subscription, docs here: https://docs.cycloid.io/reference/organizations/concepts/licencing.",
 				MarkdownDescription: "Attributes related to the org subscription, [docs here](https://docs.cycloid.io/reference/organizations/concepts/licencing).",
 				Validators: []validator.Object{
@@ -159,32 +193,43 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 						Description:         "Unix timestamp (precise at the milliseconds) where this subscription expires.",
 						MarkdownDescription: "Unix timestamp (precise at the milliseconds) where this subscription expires.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"expires_at_rfc3339": schema.StringAttribute{
 						Description:         "Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.",
 						MarkdownDescription: "Unix timestamp (precise at the milliseconds) in rfc3339 format where this subscription expires.",
 						Computed:            true,
 						Optional:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"plan": schema.StringAttribute{
-						Description:         "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`, default to `platform_teams`. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
-						MarkdownDescription: "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`, default to `platform_teams`. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
+						Description:         "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`. Required when the `subscription` block is set. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
+						MarkdownDescription: "The type of plan of this subscription, one of `free_trial`, `end_users` or `platform_teams`. Required when the `subscription` block is set. Note: for `free_trial` the expiration date and members count are enforced by the server and cannot be set here.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("free_trial", "end_users", "platform_teams"),
 						},
-						Optional: true,
-						Computed: true,
+						Required: true,
 					},
 					"members_count": schema.Int64Attribute{
 						Description:         "number of allowed members for this plan, default to 5.",
 						MarkdownDescription: "number of allowed members for this plan, default to 5.",
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"current_members": schema.Int64Attribute{
 						Description:         "number of current members for this plan.",
 						MarkdownDescription: "number of current members for this plan.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
