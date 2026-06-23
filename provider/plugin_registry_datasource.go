@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_registry"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_registry"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ datasource.DataSource = &pluginRegistryDataSource{}
-var _ datasource.DataSourceWithConfigValidators = &pluginRegistryDataSource{}
+var (
+	_ datasource.DataSource                     = &pluginRegistryDataSource{}
+	_ datasource.DataSourceWithConfigValidators = &pluginRegistryDataSource{}
+)
 
 type pluginRegistryDatasourceModel = datasource_plugin_registry.PluginRegistryModel
 

@@ -78,9 +78,9 @@ func AnyToAttributeTypeAndValue(ctx context.Context, data any) (attr.Type, attr.
 		return types.Float64Type, types.Float64Value(v.Float()), nil
 
 	case reflect.Array, reflect.Slice:
-		var length = v.Len()
-		var ts = make([]attr.Type, length)
-		var vs = make([]attr.Value, length)
+		length := v.Len()
+		ts := make([]attr.Type, length)
+		vs := make([]attr.Value, length)
 		for i := range length {
 			t, v, d := AnyToAttributeTypeAndValue(ctx, v.Index(i).Interface())
 			diags.Append(d...)
@@ -241,7 +241,7 @@ func AttrValueToAny(ctx context.Context, value attr.Value) (any, diag.Diagnostic
 	case types.Bool:
 		output = typedValue.ValueBool()
 	case types.Object:
-		var object = make(map[string]any)
+		object := make(map[string]any)
 
 		for key, attrValue := range typedValue.Attributes() {
 			val, diags := AttrValueToAny(ctx, attrValue)

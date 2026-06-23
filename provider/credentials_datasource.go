@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/sanity-io/litter"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
 )
 
 var _ datasource.DataSource = &credentialsDataSource{}
@@ -102,7 +103,7 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	var credentials []*CredentialSimple
-	_, err := s.provider.Middleware.GenericRequest(middleware.Request{
+	_, err := s.provider.Middleware.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &organization,
 		Route:        []string{"organizations", organization, "credentials"},

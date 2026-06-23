@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_type"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_type"
 )
 
 var _ datasource.DataSource = &environmentTypeDataSource{}

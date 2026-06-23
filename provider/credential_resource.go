@@ -8,14 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_credential"
 )
 
 var _ resource.Resource = (*credentialResource)(nil)
@@ -141,7 +142,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	// We initialize the value with the canonical, it needs to be written
 	// In state even if the cred doesn't exists.
-	var credential = &models.Credential{
+	credential := &models.Credential{
 		Canonical: &canonical,
 	}
 
@@ -473,7 +474,7 @@ func (r *credentialResource) createCredential(org, name, credentialType string, 
 	}
 
 	var result *models.Credential
-	resp, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
+	resp, err := r.provider.Middleware.GenericRequest(apiclient.Request{
 		Method:       "POST",
 		Organization: &org,
 		Route:        []string{"organizations", org, "credentials"},
@@ -499,7 +500,7 @@ func (r *credentialResource) updateCredential(org, name, credentialType string, 
 	}
 
 	var result *models.Credential
-	resp, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
+	resp, err := r.provider.Middleware.GenericRequest(apiclient.Request{
 		Method:       "PUT",
 		Organization: &org,
 		Route:        []string{"organizations", org, "credentials", canonical},

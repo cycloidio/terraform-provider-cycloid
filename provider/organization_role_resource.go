@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_role"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_role"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &organizationRoleResource{}
 
-type organizationRoleResourceModel resource_organization_role.OrganizationRoleModel
-type organizationRoleRuleResourceModel resource_organization_role.OrganizationRoleRuleModel
+type (
+	organizationRoleResourceModel     resource_organization_role.OrganizationRoleModel
+	organizationRoleRuleResourceModel resource_organization_role.OrganizationRoleRuleModel
+)
 
 func NewOrganizationRoleResource() resource.Resource {
 	return &organizationRoleResource{}

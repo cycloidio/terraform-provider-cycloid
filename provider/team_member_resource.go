@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_team_member"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_team_member"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &teamMemberResource{}

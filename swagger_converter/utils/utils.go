@@ -140,9 +140,9 @@ func SwaggerMergeAllOf(m map[string]interface{}, path []string) error {
 			return errors.Errorf("no allOf key was found in key '%s'", key)
 		}
 
-		var mergedProperties = values
+		mergedProperties := values
 		for _, properties := range allOf {
-			var mappedProperties = properties.(map[string]interface{})
+			mappedProperties := properties.(map[string]interface{})
 			if ref, ok := mappedProperties["$ref"].(string); ok {
 				fmt.Printf("found ref '%s', merging properties\n", ref)
 				expandedRef, err := SwaggerExpandRefProperties(m, ref)

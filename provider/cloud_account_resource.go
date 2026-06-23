@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_cloud_account"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_cloud_account"
 )
 
-var _ resource.Resource = (*cloudAccountResource)(nil)
-var _ resource.ResourceWithImportState = (*cloudAccountResource)(nil)
+var (
+	_ resource.Resource                = (*cloudAccountResource)(nil)
+	_ resource.ResourceWithImportState = (*cloudAccountResource)(nil)
+)
 
 func NewCloudAccountResource() resource.Resource {
 	return &cloudAccountResource{}

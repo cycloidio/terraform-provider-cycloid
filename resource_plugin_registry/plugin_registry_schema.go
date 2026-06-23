@@ -47,9 +47,9 @@ func PluginRegistryResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 			},
 			"wait_until_connected": schema.BoolAttribute{
-				Description: "If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.",
+				Description:         "If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.",
 				MarkdownDescription: "If true, block until the registry status is `connected` or a 5-minute timeout expires. Default false.",
-				Optional:    true,
+				Optional:            true,
 			},
 			"access": schema.BoolAttribute{
 				Description:         "Whether you have access to create plugins in this registry.",

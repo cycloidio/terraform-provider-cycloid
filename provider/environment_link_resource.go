@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_environment_link"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_environment_link"
 )
 
-var _ resource.Resource = (*environmentLinkResource)(nil)
-var _ resource.ResourceWithImportState = (*environmentLinkResource)(nil)
+var (
+	_ resource.Resource                = (*environmentLinkResource)(nil)
+	_ resource.ResourceWithImportState = (*environmentLinkResource)(nil)
+)
 
 func NewEnvironmentLinkResource() resource.Resource {
 	return &environmentLinkResource{}
@@ -122,7 +125,7 @@ func (r *environmentLinkResource) Delete(ctx context.Context, req resource.Delet
 	project := data.Project.ValueString()
 	env := data.Environment.ValueString()
 
-	_, err := r.provider.Middleware.UnlinkEnvFromProject(org, project, env, middleware.DeleteOptions{})
+	_, err := r.provider.Middleware.UnlinkEnvFromProject(org, project, env, apiclient.DeleteOptions{})
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddError("failed to unlink environment from project", err.Error())
 	}

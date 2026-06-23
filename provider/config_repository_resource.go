@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_config_repository"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_config_repository"
 )
 
 var _ resource.Resource = (*configRepositoryResource)(nil)

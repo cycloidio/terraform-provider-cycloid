@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -13,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
 )
 
 var _ datasource.DataSource = &credentialDataSource{}
@@ -81,7 +82,7 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	var organization = getOrganizationCanonical(*s.provider, data.Organization)
+	organization := getOrganizationCanonical(*s.provider, data.Organization)
 
 	if s.provider.Middleware == nil {
 		return

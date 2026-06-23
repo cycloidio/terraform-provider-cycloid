@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_version"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_version"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 const (
@@ -19,8 +20,10 @@ const (
 	pluginVersionPollTimeout  = 10 * time.Minute
 )
 
-var _ resource.Resource = &pluginVersionResource{}
-var _ resource.ResourceWithImportState = &pluginVersionResource{}
+var (
+	_ resource.Resource                = &pluginVersionResource{}
+	_ resource.ResourceWithImportState = &pluginVersionResource{}
+)
 
 type pluginVersionResourceModel resource_plugin_version.PluginVersionModel
 

@@ -4,14 +4,15 @@ import (
 	"context"
 	"os"
 
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/cmd/common"
+	"github.com/cycloidio/terraform-provider-cycloid/provider_cycloid"
 )
 
 var _ provider.Provider = (*CycloidProvider)(nil)
@@ -29,7 +30,7 @@ type CycloidProvider struct {
 	DefaultOrganization string
 	Insecure            bool
 	APIClient           *common.APIClient
-	Middleware          middleware.Middleware
+	Middleware          apiclient.Middleware
 }
 
 func (p *CycloidProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -112,7 +113,7 @@ func (p *CycloidProvider) Configure(ctx context.Context, req provider.ConfigureR
 		common.WithToken(p.APIKey),
 		common.WithInsecure(p.Insecure),
 	)
-	p.Middleware = middleware.NewMiddleware(p.APIClient)
+	p.Middleware = apiclient.NewMiddleware(p.APIClient)
 
 	p.Test = types.StringValue("test")
 

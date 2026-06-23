@@ -21,7 +21,7 @@ const (
 type TestConfig struct {
 	ConfigRepository string               `mapstructure:"config_repository"`
 	Repositories     TestConfigRepos      `mapstructure:"repositories"`
-	Component       *TestConfigComponent `mapstructure:"component"`
+	Component        *TestConfigComponent `mapstructure:"component"`
 }
 
 // TestConfigComponent holds stack_canonical, use_case, stack_version, and input_variables for component acceptance tests.
@@ -29,10 +29,10 @@ type TestConfig struct {
 // stack_ref is built at test time as <org>:<stack_canonical>.
 // InputVariables is serialized as JSON in the resource and passed through jsondecode() in Terraform.
 type TestConfigComponent struct {
-	StackCanonical   string                                  `mapstructure:"stack_canonical"`
-	UseCase          string                                  `mapstructure:"use_case"`
-	StackVersion     string                                  `mapstructure:"stack_version"`
-	InputVariables   map[string]map[string]map[string]any    `mapstructure:"input_variables"`
+	StackCanonical string                               `mapstructure:"stack_canonical"`
+	UseCase        string                               `mapstructure:"use_case"`
+	StackVersion   string                               `mapstructure:"stack_version"`
+	InputVariables map[string]map[string]map[string]any `mapstructure:"input_variables"`
 }
 
 // TestConfigRepos holds default repo URLs/branches and credential for repository tests.
@@ -140,4 +140,3 @@ func findProviderDir() string {
 	}
 	return filepath.Join(".", "provider")
 }
-

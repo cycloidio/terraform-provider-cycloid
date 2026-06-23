@@ -6,15 +6,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry_plugin"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry_plugin"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginRegistryPluginResource{}
-var _ resource.ResourceWithImportState = &pluginRegistryPluginResource{}
+var (
+	_ resource.Resource                = &pluginRegistryPluginResource{}
+	_ resource.ResourceWithImportState = &pluginRegistryPluginResource{}
+)
 
 type pluginRegistryPluginResourceModel resource_plugin_registry_plugin.PluginRegistryPluginModel
 

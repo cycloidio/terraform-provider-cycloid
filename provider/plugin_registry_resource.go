@@ -6,16 +6,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginRegistryResource{}
-var _ resource.ResourceWithImportState = &pluginRegistryResource{}
+var (
+	_ resource.Resource                = &pluginRegistryResource{}
+	_ resource.ResourceWithImportState = &pluginRegistryResource{}
+)
 
 type pluginRegistryResourceModel resource_plugin_registry.PluginRegistryModel
 
@@ -179,7 +182,7 @@ func (r *pluginRegistryResource) ImportState(ctx context.Context, req resource.I
 }
 
 // pollPluginRegistryConnected polls list+filter until the registry status == "connected".
-func pollPluginRegistryConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+func pollPluginRegistryConnected(m apiclient.Middleware, org string, id uint32, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		registries, _, err := m.ListPluginRegistries(org)

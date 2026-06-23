@@ -6,14 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
 )
 
-var _ resource.Resource = (*oidcGroupMappingResource)(nil)
-var _ resource.ResourceWithImportState = (*oidcGroupMappingResource)(nil)
+var (
+	_ resource.Resource                = (*oidcGroupMappingResource)(nil)
+	_ resource.ResourceWithImportState = (*oidcGroupMappingResource)(nil)
+)
 
 func NewOIDCGroupMappingResource() resource.Resource {
 	return &oidcGroupMappingResource{}
@@ -93,7 +96,7 @@ func (r *oidcGroupMappingResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	var found *cycloidmiddleware.OIDCGroupMapping
+	var found *apiclient.OIDCGroupMapping
 	for _, m := range mappings {
 		if m.ID == id {
 			found = m
@@ -158,7 +161,7 @@ func (r *oidcGroupMappingResource) ImportState(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func oidcGroupMappingToData(org string, mapping *cycloidmiddleware.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
+func oidcGroupMappingToData(org string, mapping *apiclient.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.GroupName = types.StringValue(mapping.GroupName)
 	data.ID = types.Int64Value(int64(mapping.ID))

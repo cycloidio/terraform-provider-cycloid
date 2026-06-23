@@ -14,11 +14,11 @@ const (
 	clusterPluginRegistryURL = "http://plugin-registry:4000"
 	clusterPluginManagerURL  = "http://plugin-manager:4000"
 	clusterTestPluginManager = "test-plugin-manager"
-	pluginImageName        = "plugin-hello-world"
-	pluginImageTag         = "1.0.0"
-	pluginImageLocal       = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageCluster     = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageSource      = "docker.io/cycloid/" + pluginImageName
+	pluginImageName          = "plugin-hello-world"
+	pluginImageTag           = "1.0.0"
+	pluginImageLocal         = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
+	pluginImageCluster       = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
+	pluginImageSource        = "docker.io/cycloid/" + pluginImageName
 )
 
 // ensurePluginHelloWorld pushes plugin-hello-world:1.0.0 to the local docker-registry

@@ -6,16 +6,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_manager"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_manager"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginManagerResource{}
-var _ resource.ResourceWithImportState = &pluginManagerResource{}
+var (
+	_ resource.Resource                = &pluginManagerResource{}
+	_ resource.ResourceWithImportState = &pluginManagerResource{}
+)
 
 type pluginManagerResourceModel resource_plugin_manager.PluginManagerModel
 
@@ -154,7 +157,7 @@ func (r *pluginManagerResource) ImportState(ctx context.Context, req resource.Im
 }
 
 // pollPluginManagerConnected polls GetPluginManager until status == "connected".
-func pollPluginManagerConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+func pollPluginManagerConnected(m apiclient.Middleware, org string, id uint32, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		pm, _, err := m.GetPluginManager(org, id)

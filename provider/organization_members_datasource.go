@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -17,6 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
 )
 
 var _ datasource.DataSource = &organizationMembersDataSource{}
@@ -161,7 +162,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func fetchAllOrganizationMembers(mw middleware.Middleware, org string) ([]*models.MemberOrg, error) {
+func fetchAllOrganizationMembers(mw apiclient.Middleware, org string) ([]*models.MemberOrg, error) {
 	var all []*models.MemberOrg
 
 	for pageIndex := 1; ; pageIndex++ {
@@ -171,7 +172,7 @@ func fetchAllOrganizationMembers(mw middleware.Middleware, org string) ([]*model
 		}
 
 		var page []*models.MemberOrg
-		_, err := mw.GenericRequest(middleware.Request{
+		_, err := mw.GenericRequest(apiclient.Request{
 			Method:       "GET",
 			Organization: &org,
 			Route:        []string{"organizations", org, "members"},
