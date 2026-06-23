@@ -6,12 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/cmd/common"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 // TestDependencyManager handles creating and managing test dependencies using Cycloid middleware
@@ -42,7 +43,7 @@ func NewTestDependencyManager(t *testing.T) *TestDependencyManager {
 			common.WithToken(provider.APIKey),
 			common.WithInsecure(provider.Insecure),
 		)
-		provider.Middleware = middleware.NewMiddleware(provider.APIClient)
+		provider.Middleware = apiclient.NewMiddleware(provider.APIClient)
 	}
 
 	org := testAccGetOrganizationCanonical()
@@ -82,7 +83,7 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		resourceType: "project",
 		canonical:    ptr.Value(project.Canonical),
 		cleanupFunc: func() error {
-			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical), middleware.DeleteOptions{})
+			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical), apiclient.DeleteOptions{})
 			return err
 		},
 	})
@@ -134,7 +135,7 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		resourceType: "environment",
 		canonical:    canonical,
 		cleanupFunc: func() error {
-			if _, err := dm.provider.Middleware.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{}); err != nil {
+			if _, err := dm.provider.Middleware.UnlinkEnvFromProject(org, project, canonical, apiclient.DeleteOptions{}); err != nil {
 				return err
 			}
 			_, err := dm.provider.Middleware.DeleteOrgEnv(org, canonical)

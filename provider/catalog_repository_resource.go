@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 )
 
@@ -359,7 +359,7 @@ func (r *catalogRepositoryResource) createCatalogRepository(org, name, url, bran
 		body.TeamCanonical = teamCanonical
 	}
 	var result *models.ServiceCatalogSource
-	_, err := mid.GenericRequest(cycloidmiddleware.Request{
+	_, err := mid.GenericRequest(apiclient.Request{
 		Method:       "POST",
 		Organization: &org,
 		Route:        []string{"organizations", org, "service_catalog_sources"},
@@ -383,7 +383,7 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 		body.Owner = owner
 	}
 	var result *models.ServiceCatalogSource
-	_, err := mid.GenericRequest(cycloidmiddleware.Request{
+	_, err := mid.GenericRequest(apiclient.Request{
 		Method:       "PUT",
 		Organization: &org,
 		Route:        []string{"organizations", org, "service_catalog_sources", catalogRepo},
@@ -431,6 +431,7 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 			AttrTypes: map[string]attr.Type{
 				"canonical": types.StringType,
 				"ref":       types.StringType,
-			}},
+			},
+		},
 	}, stackElements)
 }

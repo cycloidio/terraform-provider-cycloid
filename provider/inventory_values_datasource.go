@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/terraform-provider-cycloid/datasource_inventory_values"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
 var _ datasource.DataSource = &inventoryValuesDataSource{}
@@ -72,13 +73,13 @@ func (i *inventoryValuesDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 	}
 
-	lhsFilters := make([]middleware.LHSFilter, len(filters))
+	lhsFilters := make([]apiclient.LHSFilter, len(filters))
 	for j, f := range filters {
-		lhsFilters[j] = middleware.LHSFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
+		lhsFilters[j] = apiclient.LHSFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
 	}
 
 	var inventoryValues []map[string]any
-	_, err := i.provider.Middleware.GenericRequest(middleware.Request{
+	_, err := i.provider.Middleware.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &organization,
 		Route:        []string{"organizations", organization, "inventory"},

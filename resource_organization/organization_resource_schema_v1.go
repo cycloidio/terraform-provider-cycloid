@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -21,17 +20,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var (
-	orgDescription = strings.Join([]string{
-		"A Cycloid organization is the top-most entity level in Cycloid.",
-		"Almost all resources in Cycloid are scoped by organizations.",
-		"",
-		"Organizations can be nested, meaning a org can have child and parent organizations.",
-		"Lookup the [Cycloid documentation](https://docs.cycloid.io/reference/organizations) for more information on organizations.",
-		"",
-		"Warning: an API key created in an organization can only manage its children.",
-	}, "\n")
-)
+var orgDescription = strings.Join([]string{
+	"A Cycloid organization is the top-most entity level in Cycloid.",
+	"Almost all resources in Cycloid are scoped by organizations.",
+	"",
+	"Organizations can be nested, meaning a org can have child and parent organizations.",
+	"Lookup the [Cycloid documentation](https://docs.cycloid.io/reference/organizations) for more information on organizations.",
+	"",
+	"Warning: an API key created in an organization can only manage its children.",
+}, "\n")
 
 func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
@@ -239,11 +236,6 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				Validators: []validator.Bool{
-					boolvalidator.ConflictsWith(
-						path.MatchRoot("soft_destroy"),
-					),
-				},
 			},
 			"soft_destroy": schema.BoolAttribute{
 				Description:         "Whether to perform a soft destroy operation. When set to true, removes the organization from Terraform state but keeps it in Cycloid. This allows manual management of the organization through the UI or API after Terraform stops managing it.",
@@ -251,11 +243,6 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				Validators: []validator.Bool{
-					boolvalidator.ConflictsWith(
-						path.MatchRoot("allow_destroy"),
-					),
-				},
 			},
 		},
 	}

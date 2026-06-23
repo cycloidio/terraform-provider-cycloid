@@ -8,16 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginResource{}
-var _ resource.ResourceWithImportState = &pluginResource{}
+var (
+	_ resource.Resource                = &pluginResource{}
+	_ resource.ResourceWithImportState = &pluginResource{}
+)
 
 type pluginResourceModel resource_plugin.PluginModel
 
@@ -95,7 +98,7 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 // pollPluginInstall polls ListPlugins until the install for the given registry+plugin
 // appears with status "running", then returns the PluginInstall. Returns an error on
 // timeout or when the install status is "failed".
-func pollPluginInstall(m middleware.Middleware, org string, registryID, pluginID, versionID uint32, timeout time.Duration) (*models.PluginInstall, error) {
+func pollPluginInstall(m apiclient.Middleware, org string, registryID, pluginID, versionID uint32, timeout time.Duration) (*models.PluginInstall, error) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		plugins, _, err := m.ListPlugins(org)

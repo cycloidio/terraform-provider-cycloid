@@ -5,14 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cycloidio/terraform-provider-cycloid/swagger_converter/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+
+	"github.com/cycloidio/terraform-provider-cycloid/swagger_converter/utils"
 )
 
-var (
-	ciDir = ".ci"
-)
+var ciDir = ".ci"
 
 // Fetch the swagger from the config's Url, default: 'https://docs.cycloid.io/api/swagger.yaml'
 // Write to .ci/swagger.yml
@@ -22,7 +21,7 @@ func (c Converter) Fetch() error {
 		return nil
 	}
 
-	if err := os.MkdirAll(ciDir, 0660); err != nil {
+	if err := os.MkdirAll(ciDir, 0o660); err != nil {
 		return errors.Wrap(err, "failed to create .ci directory")
 	}
 
@@ -56,7 +55,7 @@ func (c Converter) Convert() error {
 	// some of our models are recursive, and it's not supported by tfplugingen-openapi
 	// this issue is not likely to be fixed anytime soon
 	// see: https://github.com/hashicorp/terraform-plugin-codegen-openapi/issues/132
-	var keysToDelete = [][]string{
+	keysToDelete := [][]string{
 		{"components", "schemas", "MemberOrg", "properties", "invited_by"},
 		{"components", "schemas", "MemberTeam", "properties", "invited_by"},
 	}
@@ -70,7 +69,7 @@ func (c Converter) Convert() error {
 	}
 
 	// We must rename some key to avoid typing issues in generated code
-	var keysToUpdate = []struct {
+	keysToUpdate := []struct {
 		Path   []string
 		NewKey string
 	}{

@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_terraform_output"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_terraform_output"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
 )
 
 var _ datasource.DataSource = &terraformOutputDataSource{}
@@ -76,13 +77,13 @@ func (t *terraformOutputDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 	}
 
-	lhsFilters := make([]middleware.LHSFilter, len(filters))
+	lhsFilters := make([]apiclient.LHSFilter, len(filters))
 	for j, f := range filters {
-		lhsFilters[j] = middleware.LHSFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
+		lhsFilters[j] = apiclient.LHSFilter{Attribute: f.Attribute, Condition: f.Condition, Value: f.Value}
 	}
 
 	var terraformOutputs []datasource_terraform_output.TerraformOutput
-	_, err := t.provider.Middleware.GenericRequest(middleware.Request{
+	_, err := t.provider.Middleware.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &organization,
 		Route:        []string{"organizations", organization, "inventory", "outputs"},

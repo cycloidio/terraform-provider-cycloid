@@ -4,12 +4,12 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
 )
 
 func ProjectResourceSchema(ctx context.Context) schema.Schema {

@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_environment"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_environment"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = (*environmentResource)(nil)
@@ -151,7 +152,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
-	_, err := m.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{})
+	_, err := m.UnlinkEnvFromProject(org, project, canonical, apiclient.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to unlink environment from project while deleting resource", err.Error())
 		return
@@ -298,7 +299,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 			return data, diags
 		}
 	} else {
-		var apiErr *middleware.APIResponseError
+		var apiErr *apiclient.APIResponseError
 		if !stderrors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
 			diags.AddError("failed to fetch environment from API while updating resource", err.Error())
 			return data, diags
@@ -316,7 +317,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 			Variables:              apiVars,
 		}
 		if envType != "" {
-			createBody.Type = ptr.Ptr(envType)
+			createBody.Type = envType
 		}
 		current, _, err = m.CreateOrgEnv(org, createBody)
 		if err != nil {

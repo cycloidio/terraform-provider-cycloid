@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_account"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_account"
 )
 
 var _ datasource.DataSource = &cloudAccountDataSource{}

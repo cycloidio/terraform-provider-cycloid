@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
 )
 
 var _ resource.Resource = (*externalBackendResource)(nil)
@@ -195,9 +196,10 @@ func ebCYModelToData(ctx context.Context, diag diag.Diagnostics, org string, eb 
 
 		attrTypes := data.SwiftStorage.AttributeTypes(ctx)
 		attrValues := map[string]attr.Value{
-			"container": types.StringPointerValue(swiftStorage.Container),
-			"object":    types.StringValue(swiftStorage.Object),
-			"region":    types.StringPointerValue(swiftStorage.Region),
+			"container":       types.StringPointerValue(swiftStorage.Container),
+			"object":          types.StringValue(swiftStorage.Object),
+			"region":          types.StringPointerValue(swiftStorage.Region),
+			"skip_verify_ssl": types.BoolValue(swiftStorage.SkipVerifySsl),
 		}
 		swiftStorageEB, diags := resource_external_backend.NewSwiftStorageValue(attrTypes, attrValues)
 		if diags.HasError() {

@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"strings"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
 )
 
 func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	var apiErr *cycloidmiddleware.APIResponseError
+	var apiErr *apiclient.APIResponseError
 	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == http.StatusNotFound
 	}
@@ -30,7 +30,7 @@ func isCredentialInUseError(err error) bool {
 	if err == nil {
 		return false
 	}
-	var apiErr *cycloidmiddleware.APIResponseError
+	var apiErr *apiclient.APIResponseError
 	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == http.StatusConflict
 	}

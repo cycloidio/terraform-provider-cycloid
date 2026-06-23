@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_integration"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_integration"
 )
 
-var _ resource.Resource = (*oidcIntegrationResource)(nil)
-var _ resource.ResourceWithImportState = (*oidcIntegrationResource)(nil)
+var (
+	_ resource.Resource                = (*oidcIntegrationResource)(nil)
+	_ resource.ResourceWithImportState = (*oidcIntegrationResource)(nil)
+)
 
 // NewOIDCIntegrationResource is the constructor registered in provider.go.
 func NewOIDCIntegrationResource() resource.Resource {
@@ -216,7 +219,7 @@ func oidcIntegrationConfig(data *oidcIntegrationResourceModel) map[string]interf
 // never returns those values; overwriting them with an empty string would cause
 // perpetual drift on every subsequent plan. Callers must preserve the prior
 // state values for those two fields.
-func oidcIntegrationToData(org string, i *cycloidmiddleware.OIDCIntegration, data *oidcIntegrationResourceModel) {
+func oidcIntegrationToData(org string, i *apiclient.OIDCIntegration, data *oidcIntegrationResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.Enabled = types.BoolValue(i.Enabled)
 

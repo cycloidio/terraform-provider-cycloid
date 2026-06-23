@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,6 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &organizationResource{}
@@ -31,9 +32,11 @@ type organizationResource struct {
 	provider *CycloidProvider
 }
 
-type organizationResourceModel resource_organization.OrganizationModel
-type licenceResourceModel resource_organization.LicenceModel
-type subscriptionResourceModel resource_organization.SubscriptionModel
+type (
+	organizationResourceModel resource_organization.OrganizationModel
+	licenceResourceModel      resource_organization.LicenceModel
+	subscriptionResourceModel resource_organization.SubscriptionModel
+)
 
 func (r *organizationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_organization"
@@ -147,7 +150,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	licence := &models.Licence{}
-	_, err = m.GenericRequest(middleware.Request{
+	_, err = m.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &canonical,
 		Route:        []string{"organizations", canonical, "licence"},
@@ -276,7 +279,7 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	licence := &models.Licence{}
-	_, err = m.GenericRequest(middleware.Request{
+	_, err = m.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &canonical,
 		Route:        []string{"organizations", canonical, "licence"},
@@ -414,7 +417,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	_, err = m.GenericRequest(middleware.Request{
+	_, err = m.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &canonical,
 		Route:        []string{"organizations", canonical, "licence"},
@@ -444,13 +447,13 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 
-		var body = map[string]any{
+		body := map[string]any{
 			"expires_at":    t.UTC().Format(time.RFC3339),
 			"members_count": subscriptionState.MembersCount.ValueInt64(),
 			"overwrite":     true,
 		}
 		subscriptionResp := &models.Subscription{}
-		r, err := m.GenericRequest(middleware.Request{
+		r, err := m.GenericRequest(apiclient.Request{
 			Method:       "PUT",
 			Organization: org.Canonical,
 			Route:        []string{"organizations", canonical, "subscriptions"},

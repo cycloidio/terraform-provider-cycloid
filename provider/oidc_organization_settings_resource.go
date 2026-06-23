@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_organization_settings"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	apiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_organization_settings"
 )
 
-var _ resource.Resource = (*oidcOrganizationSettingsResource)(nil)
-var _ resource.ResourceWithImportState = (*oidcOrganizationSettingsResource)(nil)
+var (
+	_ resource.Resource                = (*oidcOrganizationSettingsResource)(nil)
+	_ resource.ResourceWithImportState = (*oidcOrganizationSettingsResource)(nil)
+)
 
 func NewOIDCOrganizationSettingsResource() resource.Resource {
 	return &oidcOrganizationSettingsResource{}
@@ -122,7 +125,7 @@ func (r *oidcOrganizationSettingsResource) Delete(ctx context.Context, req resou
 
 	// The API has no delete endpoint. Reset to safe defaults so that
 	// oidc_managed=true + eject is not left active after terraform destroy.
-	_, _, err := r.provider.Middleware.UpdateOIDCOrganizationSettings(org, cycloidmiddleware.UpdateOIDCOrganizationSettings{
+	_, _, err := r.provider.Middleware.UpdateOIDCOrganizationSettings(org, apiclient.UpdateOIDCOrganizationSettings{
 		OIDCManaged:       false,
 		OIDCNoMatchPolicy: "keep_membership",
 	})
@@ -141,15 +144,15 @@ func (r *oidcOrganizationSettingsResource) ImportState(ctx context.Context, req 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func oidcOrganizationSettingsBody(data *oidcOrganizationSettingsResourceModel) cycloidmiddleware.UpdateOIDCOrganizationSettings {
-	return cycloidmiddleware.UpdateOIDCOrganizationSettings{
+func oidcOrganizationSettingsBody(data *oidcOrganizationSettingsResourceModel) apiclient.UpdateOIDCOrganizationSettings {
+	return apiclient.UpdateOIDCOrganizationSettings{
 		DefaultRoleCanonical: data.DefaultRoleCanonical.ValueString(),
 		OIDCManaged:          data.OidcManaged.ValueBool(),
 		OIDCNoMatchPolicy:    data.OidcNoMatchPolicy.ValueString(),
 	}
 }
 
-func oidcOrganizationSettingsToData(org string, settings *cycloidmiddleware.OIDCOrganizationSettings, data *oidcOrganizationSettingsResourceModel) {
+func oidcOrganizationSettingsToData(org string, settings *apiclient.OIDCOrganizationSettings, data *oidcOrganizationSettingsResourceModel) {
 	data.Organization = types.StringValue(org)
 	if settings.DefaultRoleCanonical == "" {
 		data.DefaultRoleCanonical = types.StringNull()

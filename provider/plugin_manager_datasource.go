@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_manager"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_manager"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ datasource.DataSource = &pluginManagerDataSource{}
