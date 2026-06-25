@@ -2,11 +2,15 @@ package provider
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
+	"net/http"
 	"testing"
 
+	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // TestAccEnvironmentResource provisions the project via dependencies (EnsureTestProject) and only
@@ -33,6 +37,27 @@ func TestAccEnvironmentResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
 		PreCheck:                 func() { testAccPreCheck(t) },
+		// Destroying the resource must delete the org-level environment, not just
+		// unlink it from the project, otherwise the environment lingers and blocks
+		// its environment type from being deleted (ENGBE-279).
+		CheckDestroy: func(s *terraform.State) error {
+			m := depManager.GetProvider().Middleware
+			for _, rs := range s.RootModule().Resources {
+				if rs.Type != "cycloid_environment" {
+					continue
+				}
+				canonical := rs.Primary.Attributes["canonical"]
+				_, _, err := m.GetOrgEnv(orgCanonical, canonical)
+				if err == nil {
+					return fmt.Errorf("environment %q still exists after destroy", canonical)
+				}
+				var apiErr *middleware.APIResponseError
+				if !stderrors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+					return fmt.Errorf("unexpected error checking environment %q after destroy: %w", canonical, err)
+				}
+			}
+			return nil
+		},
 		Steps: []resource.TestStep{
 			// Create environment with existing project dependency
 			{

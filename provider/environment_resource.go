@@ -151,9 +151,18 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
 
+	// The cycloid_environment resource owns the org-level environment, so deleting it
+	// must remove the environment itself, not only unlink it from the project. The
+	// unlink has to come first: the org-level delete is rejected while the environment
+	// is still attached to a project.
 	_, err := m.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to unlink environment from project while deleting resource", err.Error())
+		return
+	}
+
+	if _, err := m.DeleteOrgEnv(org, canonical); err != nil {
+		resp.Diagnostics.AddError("failed to delete environment while deleting resource", err.Error())
 		return
 	}
 
