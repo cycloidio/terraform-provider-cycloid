@@ -58,9 +58,15 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				Description:         "The canonical of an organization, fill either this or name at creation.",
 				MarkdownDescription: "The canonical of an organization, fill either this or name at creation.",
+				PlanModifiers: []planmodifier.String{
+					// canonical is the org's immutable identity. When it is inferred
+					// from name (not set in config), keep the prior value instead of
+					// re-planning it as "(known after apply)" on unrelated edits.
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
 				},
 			},
 			"parent_organization": schema.StringAttribute{
@@ -70,7 +76,7 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The canonical of the parent organization if you want this org to be a child organization.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
 				},
 			},
 			"concourse": schema.SingleNestedAttribute{

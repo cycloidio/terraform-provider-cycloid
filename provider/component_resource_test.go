@@ -381,29 +381,29 @@ func TestAccComponentResource(t *testing.T) {
 			},
 			// Update component
 			{
-				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, "staging", stackVersion, componentInputVars(cfg)),
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName+"-updated"),
 					resource.TestCheckResourceAttr("cycloid_component.test", "description", componentDesc+" updated"),
-					resource.TestCheckResourceAttr("cycloid_component.test", "use_case", "staging"),
+					resource.TestCheckResourceAttr("cycloid_component.test", "use_case", useCase),
 				),
 			},
 			// Set allow_destroy=false so that destroy is rejected
 			{
-				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, "staging"),
+				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "allow_destroy", "false"),
 				),
 			},
 			// Assert that destroy must fail when allow_destroy=false
 			{
-				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, "staging"),
+				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase),
 				Destroy:     true,
 				ExpectError: regexp.MustCompile(`Component deletion not allowed`),
 			},
 			// Re-enable destroy so post-test cleanup can delete the component
 			{
-				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, "staging", stackVersion, componentInputVars(cfg)),
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", componentDesc+" updated", stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "allow_destroy", "true"),
 				),
