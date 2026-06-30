@@ -568,6 +568,18 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 		return diags
 	}
 
+	// stack_version and input_variables are Optional+Computed, so when the user
+	// leaves them unset the create/update plan marks them "known after apply".
+	// The API never echoes stack_version and returns no input variables for a
+	// component with no user input, so collapse any leftover unknown to null —
+	// otherwise the framework rejects the result as "invalid result object".
+	if componentState.StackVersion.IsUnknown() {
+		componentState.StackVersion = types.StringNull()
+	}
+	if componentState.InputVariables.IsUnknown() {
+		componentState.InputVariables = types.DynamicNull()
+	}
+
 	return nil
 }
 

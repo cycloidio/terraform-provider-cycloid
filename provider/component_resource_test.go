@@ -299,7 +299,10 @@ func TestComponentToModelSetsInputVariables(t *testing.T) {
 }
 
 // defaultComponentInputVarsJSON is used when test config component.input_variables is empty.
-const defaultComponentInputVarsJSON = `{"application":{"config":{"replicas":2,"cpu_limit":"500m"}}}`
+// Keys must match the bootstrapped stack's stackforms (stack-e2e-stackforms exposes a
+// "types" section / "tests" group); variables that don't exist in the stack are dropped
+// on read for allow_variable_update=true components, causing a perpetual non-empty plan.
+const defaultComponentInputVarsJSON = `{"types":{"tests":{"string":"stringValue"}}}`
 
 func componentInputVars(cfg *TestConfig) string {
 	if cfg != nil && cfg.Component != nil && cfg.Component.InputVariables != nil && len(cfg.Component.InputVariables) > 0 {
@@ -362,8 +365,7 @@ func TestAccComponentResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create component with full control - tests CreateAndConfigureComponent middleware
 			{
-				Config:             testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, componentDesc, stackRef, useCase, stackVersion, componentInputVars(cfg)),
-				ExpectNonEmptyPlan: true, // API may return input_variables/canonical in a different shape than config after create
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, componentDesc, stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_component.test", "project", projectCanonical),
@@ -390,14 +392,14 @@ func TestAccComponentResource(t *testing.T) {
 			},
 			// Set allow_destroy=false so that destroy is rejected
 			{
-				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase),
+				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "allow_destroy", "false"),
 				),
 			},
 			// Assert that destroy must fail when allow_destroy=false
 			{
-				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase),
+				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName+"-updated", stackRef, useCase, false),
 				Destroy:     true,
 				ExpectError: regexp.MustCompile(`Component deletion not allowed`),
 			},
@@ -510,8 +512,7 @@ func TestAccComponentResource_DriftDetection(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config:             testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component", stackRef, useCase, stackVersion, componentInputVars(cfg)),
-				ExpectNonEmptyPlan: true, // API may return input_variables/canonical in a different shape after create
+				Config: testAccComponentConfig_fullControl(orgCanonical, projectCanonical, envCanonical, componentName, "Drift test component", stackRef, useCase, stackVersion, componentInputVars(cfg)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName),
@@ -634,7 +635,7 @@ func TestAccComponentResource_WithPreventDestroy(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase),
+				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_component.test", "organization", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_component.test", "name", componentName),
@@ -642,9 +643,16 @@ func TestAccComponentResource_WithPreventDestroy(t *testing.T) {
 				),
 			},
 			{
-				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase),
+				Config:      testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, false),
 				Destroy:     true,
 				ExpectError: regexp.MustCompile(`Component deletion not allowed`),
+			},
+			{
+				// Flip allow_destroy=true so the resource becomes deletable and the
+				// framework's post-test destroy can clean up (mirrors the real
+				// "unprotect, then destroy" flow).
+				Config: testAccComponentConfig_protectedComponent(orgCanonical, projectCanonical, envCanonical, componentName, stackRef, useCase, true),
+				Check:  resource.TestCheckResourceAttr("cycloid_component.test", "allow_destroy", "true"),
 			},
 		},
 	})
@@ -732,7 +740,7 @@ resource "cycloid_component" "test" {
 `, org, project, env, name, stackRef, useCase, stackVersion, inputVarsJSON)
 }
 
-func testAccComponentConfig_protectedComponent(org, project, env, name, stackRef, useCase string) string {
+func testAccComponentConfig_protectedComponent(org, project, env, name, stackRef, useCase string, allowDestroy bool) string {
 	return fmt.Sprintf(`
 resource "cycloid_component" "test" {
   organization        = "%s"
@@ -742,9 +750,9 @@ resource "cycloid_component" "test" {
   stack_ref         = "%s"
   use_case          = "%s"
 
-  allow_destroy       = false
+  allow_destroy       = %t
 }
-`, org, project, env, name, stackRef, useCase)
+`, org, project, env, name, stackRef, useCase, allowDestroy)
 }
 
 func TestIsComponentNotFoundError(t *testing.T) {
