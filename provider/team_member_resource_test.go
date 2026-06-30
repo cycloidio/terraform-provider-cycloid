@@ -84,6 +84,7 @@ func TestFindTeamMemberIgnoresEmptyUsername(t *testing.T) {
 
 	if teamMember == nil {
 		t.Fatal("expected team member to be found")
+		return
 	}
 	if teamMember.Email == nil || teamMember.Email.String() != "expected@example.com" {
 		t.Fatalf("expected email %q, got %v", "expected@example.com", teamMember.Email)
@@ -109,6 +110,7 @@ func TestFindTeamMemberIgnoresEmptyEmail(t *testing.T) {
 
 	if teamMember == nil {
 		t.Fatal("expected team member to be found")
+		return
 	}
 	if teamMember.Username != "expected" {
 		t.Fatalf("expected username %q, got %v", "expected", teamMember.Username)

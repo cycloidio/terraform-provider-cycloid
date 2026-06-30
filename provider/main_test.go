@@ -5,9 +5,20 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cycloidio/cycloid-cli/pkg/testcfg"
 	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
+)
+
+// testcfg.NewConfig lists catalog versions right after an async refresh, so on a
+// fresh backend (CI wipes volumes) the version isn't there yet. NewConfig is
+// idempotent, so retry it — the scan finishes between attempts. Upstream fix:
+// cycloid-cli testcfg should await the version pull.
+const (
+	bootstrapMaxAttempts    = 8
+	bootstrapRetryDelay     = 10 * time.Second
+	bootstrapCatalogRaceErr = "failed to find latest catalog repo version after refresh"
 )
 
 // sharedCfg holds the bootstrapped test configuration for the whole test binary.
@@ -27,19 +38,39 @@ func TestMain(m *testing.M) {
 	}
 
 	// Disable .api_key write so we don't scribble into this repo's working tree.
-	os.Setenv("CY_TEST_WRITE_API_KEY_FILE", "0")
+	if err := os.Setenv("CY_TEST_WRITE_API_KEY_FILE", "0"); err != nil {
+		log.Fatalf("failed to set CY_TEST_WRITE_API_KEY_FILE: %v", err)
+	}
 
-	cfg, err := testcfg.NewConfig("tfprovider")
-	if err != nil {
-		log.Fatalf("testcfg bootstrap failed: %v", err)
+	var cfg *testcfg.Config
+	var err error
+	for attempt := 1; attempt <= bootstrapMaxAttempts; attempt++ {
+		cfg, err = testcfg.NewConfig("tfprovider")
+		if err == nil {
+			break
+		}
+		// Only retry the known async catalog-scan race; fail fast on anything
+		// else (bad licence, unreachable backend, etc.) instead of looping.
+		if !strings.Contains(err.Error(), bootstrapCatalogRaceErr) || attempt == bootstrapMaxAttempts {
+			log.Fatalf("testcfg bootstrap failed (attempt %d/%d): %v", attempt, bootstrapMaxAttempts, err)
+		}
+		log.Printf("testcfg bootstrap attempt %d/%d hit the async catalog-scan race; retrying in %s",
+			attempt, bootstrapMaxAttempts, bootstrapRetryDelay)
+		time.Sleep(bootstrapRetryDelay)
 	}
 	sharedCfg = cfg
 
 	// Populate env vars so testAccPreCheck, provider.Configure, and
 	// NewTestDependencyManager all continue to work without modification.
-	os.Setenv("CY_API_KEY", cfg.APIKey)
-	os.Setenv("CY_API_URL", cfg.APIUrl)
-	os.Setenv("CY_ORG", cfg.Org)
+	for k, v := range map[string]string{
+		"CY_API_KEY": cfg.APIKey,
+		"CY_API_URL": cfg.APIUrl,
+		"CY_ORG":     cfg.Org,
+	} {
+		if err := os.Setenv(k, v); err != nil {
+			log.Fatalf("failed to set %s: %v", k, err)
+		}
+	}
 
 	// Pre-populate LoadTestConfig so tests don't need test_config.yaml.
 	primeTestConfig(testConfigFromBootstrap(cfg))

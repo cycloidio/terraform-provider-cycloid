@@ -31,7 +31,7 @@ func CurlToFile(url, filename string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch content from '%s'", url)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	outputFile, err := os.Create(filename)
 	if err != nil {
@@ -196,7 +196,7 @@ func SwaggerExpandRefProperties(m map[string]interface{}, ref string) (map[strin
 	// It's dirty but it's a script, If you need to change this, this means that requirements have change -.o.-
 
 	// I can at least assert that
-	if len(refKeys) != 3 || !(slices.Contains(refKeys, "components") && slices.Contains(refKeys, "schemas")) {
+	if len(refKeys) != 3 || !slices.Contains(refKeys, "components") || !slices.Contains(refKeys, "schemas") {
 		return nil, errors.Errorf(
 			"Reference '%s' is not contains in the 'components.schemas' section of the OpenAPI file.\n%s",
 			ref, "This script does not support ref outside this key.")

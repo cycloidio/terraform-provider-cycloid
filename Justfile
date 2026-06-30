@@ -24,12 +24,13 @@ test-unit:
     go test ./... -v -short
 
 # Mint .env from .env.sample using cy uri interpolate (requires CY_SAAS_API_KEY).
-# Mirrors cycloid-cli's `make .env` target.
+# Mirrors cycloid-cli's `make .env` target. CY_SAAS_API_URL / CY_SAAS_ORG
+# override the SaaS endpoint/org the cy:// URIs resolve against (defaults below).
 env:
     @rm -f .env || true
-    @CY_API_KEY=$${CY_SAAS_API_KEY?A valid API key to the cycloid org in cycloid SaaS is required. Set CY_SAAS_API_KEY.} \
-        CY_API_URL=https://http-api.cycloid.io \
-        CY_ORG=cycloid \
+    @CY_API_KEY=${CY_SAAS_API_KEY?A valid API key to the cycloid org in cycloid SaaS is required. Set CY_SAAS_API_KEY.} \
+        CY_API_URL=${CY_SAAS_API_URL:-https://http-api.cycloid.io} \
+        CY_ORG=${CY_SAAS_ORG:-cycloid} \
         cy uri interpolate .env.sample > .env
 
 # Run all tests including acceptance (requires CY_API_URL, CY_API_KEY, CY_ORG or .env)
@@ -57,6 +58,11 @@ be-stop:
     docker compose down -v
 
 be-reset: be-stop be-start
+
+# Log in to the Scaleway registry so compose can pull cycloid-backend.
+# Reads SCW_REGISTRY_USER / SCW_REGISTRY_PASSWORD from .env (run `just env` first).
+be-login:
+    @printf '%s' "$SCW_REGISTRY_PASSWORD" | docker login rg.fr-par.scw.cloud -u "$SCW_REGISTRY_USER" --password-stdin
 
 be-pull:
     docker compose pull

@@ -239,7 +239,9 @@ func checkOrgMembersContainsPendingEmail(org, email string) resource.TestCheckFu
 		}
 
 		count := 0
-		fmt.Sscanf(countStr, "%d", &count)
+		if _, err := fmt.Sscanf(countStr, "%d", &count); err != nil {
+			return fmt.Errorf("failed to parse members count %q: %w", countStr, err)
+		}
 
 		for i := 0; i < count; i++ {
 			prefix := fmt.Sprintf("members.%d.", i)

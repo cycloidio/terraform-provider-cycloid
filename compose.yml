@@ -15,8 +15,13 @@ services:
       timeout: 45s
       retries: 30
 
+    # Published API host port. Default keeps local dev on a fixed host:container
+    # 3001:3001 (unchanged). CI sets TFACC_API_PORT=<BASE> so each parallel run
+    # on the shared self-hosted runner publishes the api on a distinct, KNOWN
+    # host port (the registry uses BASE+1), avoiding collisions without
+    # ephemeral-port discovery.
     ports:
-      - 3001:3001
+      - "${TFACC_API_PORT:-3001}:3001"
     ulimits:
       nproc: 65535
       nofile:
@@ -233,8 +238,14 @@ services:
   ## Plugin registry (docker image store for plugins)
   docker-registry:
     image: registry:3.0.0
+    # Published registry HOST port. Default keeps local dev on 5000:5000
+    # (unchanged). CI sets TFACC_REGISTRY_PORT=<BASE+1> (derived from the api
+    # BASE) so each parallel run publishes the registry on a distinct host port.
+    # The internal container port is always 5000, and in-network pulls use the
+    # service name (docker-registry:5000), so the host port is irrelevant to the
+    # plugin-manager/-registry pull path.
     ports:
-      - "${DOCKER_REGISTRY_HOST_PORT:-5000}:5000"
+      - "${TFACC_REGISTRY_PORT:-5000}:5000"
     configs:
       - source: registry_htpasswd
         target: /auth/htpasswd
@@ -479,6 +490,11 @@ configs:
       worker-run-internal: true
       worker-run-scheduler: true
 
+      # Pull catalog versions every 15s (BE default 10m) so the acceptance
+      # bootstrap finds the "stacks" version on a fresh backend (CI wipes volumes;
+      # testcfg refreshes the source but doesn't trigger the version pull).
+      scheduler-check-refresh-service-catalog-source-versions-interval: 15s
+
   redisTLSCert:
     content: |
       -----BEGIN CERTIFICATE-----
@@ -540,7 +556,11 @@ configs:
   ## Credentials: cycloid / cycloid123 (bcrypt hash). Scope is the local
   ## docker-registry container on localhost:5000; not used outside this stack.
   registry_htpasswd:
-    content: "cycloid:$2y$05$sNTvLFbEI0nZzjV3wAgpROU7kIM07zm1MtUH5RBEteXhLnknSrMH2\n"
+    # bcrypt hash of "cycloid123" for user "cycloid". The $ must be doubled:
+    # docker compose interprets a lone $ as variable interpolation, which ate the
+    # hash body (".../$sNTv..." -> "") and shipped a mangled htpasswd to the
+    # registry -> every `docker login` got 401 (plugin registry/version tests).
+    content: "cycloid:$$2y$$05$$sNTvLFbEI0nZzjV3wAgpROU7kIM07zm1MtUH5RBEteXhLnknSrMH2\n"
 
 networks:
   cycloid: {}

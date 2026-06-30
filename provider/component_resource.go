@@ -165,18 +165,9 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		name, canonical = componentPlan.Name.ValueString(), componentPlan.Canonical.ValueString()
 	}
 
-	components, _, err := m.ListComponents(org, project, environment)
-	if err != nil {
+	if _, _, err := m.ListComponents(org, project, environment); err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
 		return
-	}
-
-	var component *models.Component
-	for _, c := range components {
-		if ptr.Value(c.Canonical) == canonical {
-			component = c
-			break
-		}
 	}
 
 	stackRef := componentPlan.StackRef.ValueString()
@@ -208,7 +199,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	component, _, err = m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
+	component, _, err := m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return

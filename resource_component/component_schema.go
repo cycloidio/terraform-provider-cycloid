@@ -63,6 +63,11 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIfConfigured(),
+					// canonical is inferred from name when not configured; without
+					// this, a change to any other field re-plans canonical as
+					// "(known after apply)" and the post-apply refresh shows drift
+					// (TestAccComponentResource_DriftDetection). Mirrors stack_version.
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					stringvalidator.AtLeastOneOf(

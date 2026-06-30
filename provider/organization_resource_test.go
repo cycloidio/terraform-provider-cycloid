@@ -13,8 +13,9 @@ func TestAccOrganizationResource_WithAllowDestroy(t *testing.T) {
 
 	orgCanonical := RandomCanonical("test-org")
 	orgName := orgCanonical
-	orgCanonicalUpdated := orgCanonical + "-updated"
-	orgNameUpdated := orgCanonicalUpdated
+	// canonical is immutable server-side (UpdateOrganization sends name only), so
+	// the update step changes only the display name and keeps canonical constant.
+	orgNameUpdated := orgName + "-updated"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
@@ -30,10 +31,10 @@ func TestAccOrganizationResource_WithAllowDestroy(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccOrganizationConfig_allowDestroy(rootOrg, orgCanonicalUpdated, orgNameUpdated),
+				Config: testAccOrganizationConfig_allowDestroy(rootOrg, orgCanonical, orgNameUpdated),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cycloid_organization.test", "name", orgNameUpdated),
-					resource.TestCheckResourceAttr("cycloid_organization.test", "canonical", orgCanonicalUpdated),
+					resource.TestCheckResourceAttr("cycloid_organization.test", "canonical", orgCanonical),
 					resource.TestCheckResourceAttr("cycloid_organization.test", "allow_destroy", "true"),
 				),
 			},

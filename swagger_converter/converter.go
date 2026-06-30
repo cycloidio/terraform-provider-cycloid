@@ -176,11 +176,15 @@ func (c Converter) Convert() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to open or create output file '%s'", c.OpenApiDestFile)
 	}
-
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	encoder := yaml.NewEncoder(file)
-	defer encoder.Close()
 	encoder.SetIndent(2)
-	return encoder.Encode(openApiData)
+	if err := encoder.Encode(openApiData); err != nil {
+		return errors.Wrapf(err, "failed to encode output to '%s'", c.OpenApiDestFile)
+	}
+	if err := encoder.Close(); err != nil {
+		return errors.Wrapf(err, "failed to flush output to '%s'", c.OpenApiDestFile)
+	}
+	return file.Close()
 }

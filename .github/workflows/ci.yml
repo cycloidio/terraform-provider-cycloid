@@ -1,38 +1,237 @@
 name: CI
 
+# Runs on Cycloid's dedicated self-hosted runner (tags: self-hosted, cycloid).
+# The runner provides nix + docker + the `devenv` binary. Every `run:` step
+# executes inside the devenv toolchain via the default shell below, so scripts
+# are plain commands — no per-step `devenv shell --` wrapper. Do NOT add apt
+# installs / setup-go here — the toolchain is pinned in devenv.nix.
+#
+# SECURITY: this is a PUBLIC repo with a SELF-HOSTED runner. The `authorize`
+# gate below makes every real job depend on the PR branch living in this repo
+# (a same-repo branch implies write access), so untrusted fork PRs are skipped
+# by GitHub before any code (or secret) reaches the runner. Defense-in-depth:
+# also set Settings > Actions > "Require approval for all external contributors".
+
 on:
   push:
   pull_request:
-    branches:
-      - master
+
+# Run every step's script inside the devenv shell (mirrors GitHub's default
+# bash flags: -e + pipefail). `{0}` is the generated script file.
+defaults:
+  run:
+    shell: devenv shell -- bash --noprofile --norc -eo pipefail {0}
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Authorization gate. Runs on a GitHub-hosted runner (free for public repos)
+  # so the trust check never touches the self-hosted runner. Every other job
+  # `needs: authorize`, so an untrusted PR is skipped before its code is ever
+  # checked out on Cycloid infra.
+  #
+  # Trust signal: the PR branch lives in THIS repo. GitHub only lets you push a
+  # branch to a repo you have write access to, so a same-repo PR is necessarily
+  # authored by a Cycloid member / collaborator. (We deliberately do NOT use
+  # author_association: GitHub reports PRIVATE org members as CONTRIBUTOR in the
+  # event payload, which would wrongly block real maintainers.) Fork PRs are
+  # denied here; a maintainer re-runs them from an internal branch, or enables
+  # Settings > Actions > "Require approval for all external contributors".
+  # ---------------------------------------------------------------------------
+  authorize:
+    name: Authorize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the PR to originate from this repo (not a fork)
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "event=$EVENT by $ACTOR implies write access — allowed"; exit 0
+          fi
+          if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+            echo "PR branch lives in $BASE_REPO ($ACTOR has write access) — allowed"; exit 0
+          fi
+          echo "::error::PR head '$HEAD_REPO' is a fork. CI runs on a self-hosted runner and is not run automatically for fork PRs; a maintainer must re-run it from an internal branch (or approve via the repo's Actions fork-PR settings)."
+          exit 1
+
+  # ---------------------------------------------------------------------------
+  # Lint + build + vet + docs-drift. No backend needed.
+  # ---------------------------------------------------------------------------
+  lint-build:
+    name: Lint / Build / Docs
+    needs: authorize
+    runs-on: [self-hosted, cycloid]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: golangci-lint
+        run: golangci-lint run --timeout 5m ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: tfplugindocs drift check
+        run: |
+          tfplugindocs generate \
+            --examples-dir examples/ --provider-dir . --provider-name cycloid ./..
+          git diff --exit-code docs/ || {
+            echo "::error::Docs are stale — run 'just docs' locally and commit the result."
+            exit 1
+          }
+
+  # ---------------------------------------------------------------------------
+  # Standard / unit tests (no backend, -short). Runs IN PARALLEL with acceptance.
+  # ---------------------------------------------------------------------------
   test:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    needs: authorize
+    runs-on: [self-hosted, cycloid]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: "go.mod"
-          cache: true
-      - name: Run unit tests
+
+      - name: go test (short)
         run: go test ./... -short
 
-  docs:
-    name: Docs Check
-    runs-on: ubuntu-latest
+  # ---------------------------------------------------------------------------
+  # Acceptance tests against the local docker-compose backend stack.
+  # Runs IN PARALLEL with the unit `test` job (separate job).
+  # ---------------------------------------------------------------------------
+  acceptance:
+    name: Acceptance Tests
+    needs: authorize
+    runs-on: [self-hosted, cycloid]
+    timeout-minutes: 60
+    env:
+      # Per-run compose project name isolates containers/network/volumes so
+      # concurrent runs don't clobber each other. CI-only (do NOT put in compose.yml).
+      COMPOSE_PROJECT_NAME: tfacc-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Bootstrap config consumed by provider/main_test.go -> testcfg.NewConfig.
+      # CY_TEST_API_URL + the port vars are derived in "Pick base port" below.
+      CY_TEST_PROVISION_API: "1"
+      CY_TEST_ROOT_ORG: cycloid
+      # API_LICENCE_KEY + the Scaleway registry login are resolved from the
+      # cy:// URIs in .env.sample via `just env` (same path local devs use).
+      # Bootstrap secret: CY_API_KEY (-> CY_SAAS_API_KEY); CY_API_URL = SaaS URL.
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: "go.mod"
-          cache: true
-      - name: Install tfplugindocs
-        run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
-      - name: Generate docs
-        run: tfplugindocs generate --examples-dir examples/ --provider-dir . --provider-name cycloid ./..
-      - name: Check docs are up to date
+
+      - name: Pick base port (api=BASE, registry=BASE+1)
+        # One BASE drives both services (api=BASE, registry=BASE+1); each parallel
+        # run probes for a free even pair so api and registry never collide.
         run: |
-          git diff --exit-code docs/ || \
-            (echo "Docs are stale — run 'just docs' locally and commit the result before releasing." && exit 1)
+          set -euo pipefail
+          # port_free $1 → 0 if nothing is listening (bash /dev/tcp, no python dep).
+          port_free() { ! (exec 3<>/dev/tcp/127.0.0.1/"$1") 2>/dev/null; }
+
+          base="${TFACC_API_PORT:-}"
+          if [ -n "$base" ]; then
+            echo "TFACC_API_PORT already set ($base) — honoring as-is"
+          else
+            start=$(( 20000 + (RANDOM % 20000) ))
+            start=$(( start - (start % 2) ))   # force even
+            base=""
+            for off in $(seq 0 2 4096); do
+              cand=$(( start + off ))
+              if port_free "$cand" && port_free "$(( cand + 1 ))"; then
+                base="$cand"; break
+              fi
+            done
+            if [ -z "$base" ]; then
+              echo "::error::could not find a free (BASE, BASE+1) port pair"; exit 1
+            fi
+          fi
+
+          reg=$(( base + 1 ))
+          echo "selected BASE=$base -> api=$base registry=$reg"
+          {
+            echo "TFACC_API_PORT=$base"
+            echo "TFACC_REGISTRY_PORT=$reg"
+            echo "TFACC_REGISTRY_HOST=localhost:$reg"
+            echo "CY_TEST_API_URL=http://localhost:$base"
+          } >> "$GITHUB_ENV"
+
+      - name: Mint .env + registry login (single source — .env.sample)
+        # Resolve the first-boot licence + Scaleway registry login from the
+        # cy:// URIs in .env.sample, the exact `just env` path local devs use.
+        # No bespoke `cy credential get`/jq — .env.sample is the only source.
+        env:
+          CY_SAAS_API_KEY: ${{ secrets.CY_API_KEY }}
+          CY_SAAS_API_URL: ${{ secrets.CY_API_URL }}
+        run: |
+          # cy: prefer the system binary, else fetch a pinned release onto PATH.
+          if ! command -v cy >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/cy \
+              "https://github.com/cycloidio/cycloid-cli/releases/download/v6.10.25/cy-linux-amd64"
+            chmod +x /tmp/cy
+            export PATH="/tmp:$PATH"
+          fi
+
+          just env                       # interpolate .env.sample -> .env
+          set -a; . ./.env; set +a       # load licence + SCW_REGISTRY_* creds
+          if [ -z "${API_LICENCE_KEY:-}" ] || [ -z "${SCW_REGISTRY_PASSWORD:-}" ]; then
+            echo "::error::cy uri interpolate left a blank value — check .env.sample URIs / CY_SAAS_API_KEY"; exit 1
+          fi
+          echo "::add-mask::$API_LICENCE_KEY"
+          echo "::add-mask::$SCW_REGISTRY_PASSWORD"
+          echo "API_LICENCE_KEY=$API_LICENCE_KEY" >> "$GITHUB_ENV"
+          just be-login                  # docker login rg.fr-par.scw.cloud
+
+      - name: Start backend stack (docker compose)
+        # `just be-start` == `docker compose up -dV`; honors COMPOSE_PROJECT_NAME +
+        # TFACC_API_PORT + TFACC_REGISTRY_PORT from env. ElasticSearch stays OFF.
+        run: just be-start
+
+      - name: Wait for youdeploy-api healthy
+        run: |
+          for i in $(seq 1 60); do
+            ok=$(curl -s "$CY_TEST_API_URL/status" \
+              | jq -r ".data.checks | map(select((.canonical | contains(\"database\",\"pipeline\",\"secret\")) and .status == \"Success\")) | length" 2>/dev/null || true)
+            if [ "$ok" = "3" ]; then echo "backend healthy at $CY_TEST_API_URL"; exit 0; fi
+            echo "waiting for backend ($i/60)…"; sleep 5
+          done
+          echo "::error::backend did not become healthy at $CY_TEST_API_URL"
+          docker compose -p "$COMPOSE_PROJECT_NAME" ps || true
+          docker compose -p "$COMPOSE_PROJECT_NAME" logs youdeploy-api | tail -100 || true
+          exit 1
+
+      - name: Run acceptance suite (TF_ACC=1)
+        env:
+          TF_ACC: "1"
+        run: go test ./provider/ -count=1 -timeout 45m -v
+
+      - name: Diagnose catalog scan (on failure)
+        if: failure()
+        # If the bootstrap catalog scan never yields the "stacks" version, dump the
+        # relevant logs + probe backend egress to github.com so the cause is visible.
+        run: |
+          P="$COMPOSE_PROJECT_NAME"
+          echo "=== services ==="; docker compose -p "$P" ps || true
+          echo "=== logs grep catalog/git/clone/github/stack/refresh ==="
+          docker compose -p "$P" logs --no-color 2>&1 \
+            | grep -iE "catalog|git |clone|fetch|github|stack|refresh|scan|x509|dial|timeout|no route|denied|fatal" \
+            | tail -150 || true
+          echo "=== backend egress probe (github.com) ==="
+          for svc in youdeploy-api youdeploy-worker worker; do
+            docker compose -p "$P" exec -T "$svc" sh -c "getent hosts github.com || nslookup github.com 2>/dev/null || echo DNS-FAIL; (command -v curl >/dev/null && curl -sS -m 10 -o /dev/null -w \"  curl github=%{http_code}\n\" https://github.com) || (command -v wget >/dev/null && wget -q -T 10 -O /dev/null https://github.com && echo \"  wget github=OK\") || echo \"  no curl/wget in $svc\"" 2>&1 | sed "s/^/[$svc] /" || true
+          done
+
+      # Always tear the stack down, even on failure / cancellation. Target THIS
+      # run's project explicitly so teardown never touches a sibling run's stack.
+      - name: Tear down backend stack
+        if: always()
+        run: docker compose -p "$COMPOSE_PROJECT_NAME" down -v

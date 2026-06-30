@@ -38,6 +38,7 @@ func TestAccPluginManagerResource(t *testing.T) {
 	}
 	if mgr == nil {
 		t.Skip("skipping: no accepted plugin manager in org (is plugin-manager service running?)")
+		return
 	}
 	managerID := strconv.FormatInt(int64(ptr.Value(mgr.ID)), 10)
 	managerName := ptr.Value(mgr.Name)
