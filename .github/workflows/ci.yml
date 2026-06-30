@@ -80,8 +80,9 @@ jobs:
       # CY_TEST_API_URL + the port vars are derived in "Pick base port" below.
       CY_TEST_PROVISION_API: "1"
       CY_TEST_ROOT_ORG: cycloid
-      # API_LICENCE_KEY + the Scaleway registry login are pulled at runtime via
-      # the `cy` CLI below; only CY_API_URL/CY_API_KEY/CY_ORG are GitHub secrets.
+      # API_LICENCE_KEY + the Scaleway registry login are resolved from the
+      # cy:// URIs in .env.sample via `just env` (same path local devs use).
+      # Bootstrap secret: CY_API_KEY (-> CY_SAAS_API_KEY); CY_API_URL = SaaS URL.
     steps:
       - uses: actions/checkout@v4
 
@@ -120,48 +121,31 @@ jobs:
             echo "CY_TEST_API_URL=http://localhost:$base"
           } >> "$GITHUB_ENV"
 
-      - name: Cycloid login + pull credentials (Scaleway registry + licence)
-        # Recover the private-registry login + first-boot licence at runtime via
-        # `cy` — not GitHub secrets. `command cy` bypasses the interactive
-        # `_cy_load` wrapper so the env-driven binary is invoked.
+      - name: Mint .env + registry login (single source — .env.sample)
+        # Resolve the first-boot licence + Scaleway registry login from the
+        # cy:// URIs in .env.sample, the exact `just env` path local devs use.
+        # No bespoke `cy credential get`/jq — .env.sample is the only source.
         env:
-          CY_API_URL: ${{ secrets.CY_API_URL }}
-          CY_API_KEY: ${{ secrets.CY_API_KEY }}
-          CY_ORG: ${{ secrets.CY_ORG }}
+          CY_SAAS_API_KEY: ${{ secrets.CY_API_KEY }}
+          CY_SAAS_API_URL: ${{ secrets.CY_API_URL }}
         run: |
-          set -euo pipefail
-
-          # cy: prefer the system binary, else fetch a pinned release.
+          # cy: prefer the system binary, else fetch a pinned release onto PATH.
           if ! command -v cy >/dev/null 2>&1; then
             curl -fsSL -o /tmp/cy \
               "https://github.com/cycloidio/cycloid-cli/releases/download/v6.10.25/cy-linux-amd64"
             chmod +x /tmp/cy
             export PATH="/tmp:$PATH"
           fi
-          command cy version 2>/dev/null | head -1 || true
 
-          # On a field miss, dump only the non-sensitive cred shape (no values).
-          cred_shape() { printf "%s" "$1" | jq -c "{type, keys}"; }
-
-          # Scaleway registry login (compose pulls rg.fr-par.scw.cloud/.../cycloid-backend).
-          # scaleway_cycloid_automation_admin is a custom cred -> fields under .raw.raw.*
-          REG_JSON=$(command cy credential get scaleway_cycloid_automation_admin -o json)
-          REG_USER=$(printf "%s" "$REG_JSON" | jq -r ".raw.raw.access_key // empty")
-          REG_PASS=$(printf "%s" "$REG_JSON" | jq -r ".raw.raw.secret_key // empty")
-          if [ -z "$REG_USER" ] || [ -z "$REG_PASS" ]; then
-            echo "::error::scaleway_cycloid_automation_admin: expected raw.raw.access_key + raw.raw.secret_key; got $(cred_shape "$REG_JSON")"; exit 1
+          just env                       # interpolate .env.sample -> .env
+          set -a; . ./.env; set +a       # load licence + SCW_REGISTRY_* creds
+          if [ -z "${API_LICENCE_KEY:-}" ] || [ -z "${SCW_REGISTRY_PASSWORD:-}" ]; then
+            echo "::error::cy uri interpolate left a blank value — check .env.sample URIs / CY_SAAS_API_KEY"; exit 1
           fi
-          echo "::add-mask::$REG_PASS"
-          printf "%s" "$REG_PASS" | docker login rg.fr-par.scw.cloud -u "$REG_USER" --password-stdin
-
-          # First-boot licence (custom cred -> .raw.raw.licence_key).
-          LIC_JSON=$(command cy credential get scaleway-cycloid-backend -o json)
-          LIC=$(printf "%s" "$LIC_JSON" | jq -r ".raw.raw.licence_key // empty")
-          if [ -z "$LIC" ]; then
-            echo "::error::scaleway-cycloid-backend: expected raw.raw.licence_key; got $(cred_shape "$LIC_JSON")"; exit 1
-          fi
-          echo "::add-mask::$LIC"
-          echo "API_LICENCE_KEY=$LIC" >> "$GITHUB_ENV"
+          echo "::add-mask::$API_LICENCE_KEY"
+          echo "::add-mask::$SCW_REGISTRY_PASSWORD"
+          echo "API_LICENCE_KEY=$API_LICENCE_KEY" >> "$GITHUB_ENV"
+          just be-login                  # docker login rg.fr-par.scw.cloud
 
       - name: Start backend stack (docker compose)
         # `just be-start` == `docker compose up -dV`; honors COMPOSE_PROJECT_NAME +
