@@ -3,23 +3,45 @@ package provider
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
 )
 
 const (
-	localRegistryHost        = "localhost:5000"
+	// clusterRegistryHost is the IN-NETWORK registry reference (service name on
+	// the compose network, internal port always 5000). It is what the
+	// plugin-registry/plugin-manager containers use to PULL the image. It is
+	// independent of the published HOST port, so it MUST stay hardcoded — the
+	// repository name is what matches across host-side push and in-network pull
+	// on the same registry instance.
 	clusterRegistryHost      = "docker-registry:5000"
 	clusterPluginRegistryURL = "http://plugin-registry:4000"
 	clusterPluginManagerURL  = "http://plugin-manager:4000"
 	clusterTestPluginManager = "test-plugin-manager"
-	pluginImageName        = "plugin-hello-world"
-	pluginImageTag         = "1.0.0"
-	pluginImageLocal       = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageCluster     = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
-	pluginImageSource      = "docker.io/cycloid/" + pluginImageName
+	pluginImageName          = "plugin-hello-world"
+	pluginImageTag           = "1.0.0"
+	// pluginImageCluster is the in-network pull reference (unchanged).
+	pluginImageCluster = clusterRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
+	pluginImageSource  = "docker.io/cycloid/" + pluginImageName
 )
+
+// localRegistryHost is the HOST-SIDE registry reference used by the test process
+// (docker login / tag / push, reachability + manifest checks) from the host. In
+// CI each parallel run publishes the registry on a distinct host port, so this
+// reads TFACC_REGISTRY_HOST (default "localhost:5000" for local dev). It does
+// NOT affect the in-network pull path — the manager still pulls via
+// clusterRegistryHost (docker-registry:5000) against the same registry instance.
+var localRegistryHost = func() string {
+	if h := os.Getenv("TFACC_REGISTRY_HOST"); h != "" {
+		return h
+	}
+	return "localhost:5000"
+}()
+
+// pluginImageLocal is the host-side push tag, derived from the env-driven host.
+var pluginImageLocal = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
 
 // ensurePluginHelloWorld pushes plugin-hello-world:1.0.0 to the local docker-registry
 // and returns the in-cluster image reference (docker-registry:5000/...) that the
@@ -51,7 +73,7 @@ func isRegistryReachable() bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return true
 }
 
@@ -68,7 +90,7 @@ func manifestExists() bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
 
