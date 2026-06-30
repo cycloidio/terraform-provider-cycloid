@@ -23,8 +23,8 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			"canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the config repository.",
+				MarkdownDescription: "The canonical of the config repository.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -32,8 +32,8 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"credential_canonical": schema.StringAttribute{
 				Required:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the credential used to access the repository.",
+				MarkdownDescription: "The canonical of the credential used to access the repository.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -41,13 +41,13 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"default": schema.BoolAttribute{
 				Required:            true,
-				Description:         "Whether the given entity is default one",
-				MarkdownDescription: "Whether the given entity is default one",
+				Description:         "Whether this config repository is the default one for the organization.",
+				MarkdownDescription: "Whether this config repository is the default one for the organization.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				Description:         "The name of an entity",
-				MarkdownDescription: "The name of an entity",
+				Description:         "The name of the config repository displayed in the UI.",
+				MarkdownDescription: "The name of the config repository displayed in the UI.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
@@ -64,8 +64,8 @@ func ConfigRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"url": schema.StringAttribute{
 				Required:            true,
-				Description:         "GitURL represents all git URL formats we accept.\n",
-				MarkdownDescription: "GitURL represents all git URL formats we accept.\n",
+				Description:         "Git URL of the config repository. SSH and HTTPS formats are accepted.",
+				MarkdownDescription: "Git URL of the config repository. SSH and HTTPS formats are accepted.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^((/|~)[^/]*)+.(\\.git)|(([\\w\\]+@[\\w\\.]+))(:(//)?)([\\w\\.@\\:/\\-~]+)(/)?"), ""),
 				},

@@ -82,8 +82,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 							},
 						},
 						Computed:            true,
-						Description:         "Represents list of service catalogs in the service catalog source. Not used during update action on a service catalog source.",
-						MarkdownDescription: "Represents list of service catalogs in the service catalog source. Not used during update action on a service catalog source.",
+						Description:         "Represents list of stacks in the catalog repository. Not used during update action on a catalog repository.",
+						MarkdownDescription: "Represents list of stacks in the catalog repository. Not used during update action on a catalog repository.",
 					},
 					"url": schema.StringAttribute{
 						Computed: true,
@@ -104,8 +104,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			"on_create_team": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Team responsible for the maintenance of the underlying service catalogs\n",
-				MarkdownDescription: "Team responsible for the maintenance of the underlying service catalogs\n",
+				Description:         "Team responsible for the maintenance of the underlying stacks.",
+				MarkdownDescription: "Team responsible for the maintenance of the underlying stacks.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -135,8 +135,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 			"owner": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "User canonical that owns this service catalog source. If omitted then the person\ncreating this service catalog source will be assigned as owner. When a user is the\nowner of a service catalog source they has all the permissions on it.\n",
-				MarkdownDescription: "User canonical that owns this service catalog source. If omitted then the person\ncreating this service catalog source will be assigned as owner. When a user is the\nowner of a service catalog source they has all the permissions on it.\n",
+				Description:         "User canonical that owns this catalog repository. If omitted then the person creating this catalog repository will be assigned as owner. When a user is the owner of a catalog repository they have all the permissions on it.",
+				MarkdownDescription: "User canonical that owns this catalog repository. If omitted then the person creating this catalog repository will be assigned as owner. When a user is the owner of a catalog repository they have all the permissions on it.",
 			},
 			"url": schema.StringAttribute{
 				Required:            true,

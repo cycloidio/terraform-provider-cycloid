@@ -59,7 +59,7 @@ terraform {
 ### Required
 
 - `email` (String) Invite user by email
-- `role_canonical` (String) The canonical of an entity
+- `role_canonical` (String) The canonical of the role assigned to the member.
 
 ### Optional
 

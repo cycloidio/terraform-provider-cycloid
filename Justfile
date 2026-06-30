@@ -74,21 +74,7 @@ be-logs SERVICE="plugin-manager":
 # Run unit tests (default; use test-acc for acceptance tests)
 test: test-unit
 
-# Convert swagger
-convert-swagger:
-    go run ./swagger_converter exec
-
-# Regenerate provider spec and models (run convert-swagger first)
-tf-generate:
-    # Some datasources / credentials have separate codegen scripts
-    ./datasource_credential/gen.sh
-    ./datasource_credentials/gen.sh
-    ./datasource_stacks/gen.sh
-    ./resource_catalog_repository/gen.sh
-    tfplugingen-framework generate resources --input ./out_code_spec.json --output .
-    tfplugingen-framework generate data-sources --input ./out_code_spec.json --output .
-
-# Install codegen and doc tools
+# Install doc tools
 install:
     go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
