@@ -209,8 +209,6 @@ func ebCYModelToData(ctx context.Context, diag diag.Diagnostics, org string, eb 
 	default:
 		diag.AddError("Unable to read configuration", "Unknown engine")
 	}
-
-	return
 }
 
 func (r *externalBackendResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

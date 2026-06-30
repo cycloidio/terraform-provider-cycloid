@@ -137,11 +137,6 @@ func (s *stackResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 }
 
-type stackCyModel struct {
-	Visibility string `json:"visibility" tfsdk:"visibility"`
-	Team       string `json:"team_canonical" tfsdk:"team"`
-}
-
 // UpdateStack will update the stack and merge the state in `data`
 func (s *stackResource) UpdateStack(org string, stack *models.ServiceCatalog, data *stackResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics

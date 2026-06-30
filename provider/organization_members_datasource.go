@@ -70,7 +70,7 @@ func (d *organizationMembersDataSource) Schema(_ context.Context, _ datasource.S
 				MarkdownDescription: "Canonical of the organization. Defaults to the provider organization setting.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
 				},
 			},
 			"members": schema.ListNestedAttribute{
