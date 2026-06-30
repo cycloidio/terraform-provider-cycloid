@@ -220,6 +220,11 @@ func (r *pluginVersionResource) ImportState(ctx context.Context, req resource.Im
 
 	var data pluginVersionResourceModel
 	pluginVersionToModel(org, version, &data)
+	// registry_id / plugin_id are path params, not returned on the version object,
+	// so set them from the import ID — otherwise they default to 0 and the
+	// post-import refresh reads /plugin_registries/0/... (API 422).
+	data.RegistryID = types.Int64Value(registryID)
+	data.PluginID = types.Int64Value(pluginID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
