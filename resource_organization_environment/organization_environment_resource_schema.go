@@ -1,21 +1,19 @@
-package resource_environment
+package resource_organization_environment
 
 import (
 	"context"
 	"regexp"
 
-	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
+func OrganizationEnvironmentResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		DeprecationMessage:  "cycloid_environment is deprecated. Manage organization-level environments with cycloid_organization_environment (full create/delete lifecycle) and attach them to projects with cycloid_environment_link. cycloid_environment will be removed in a future major version.",
-		Description:         "Deprecated: cycloid_environment is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with cycloid_organization_environment (full create/delete) and attach them to projects with cycloid_environment_link. cycloid_environment will be removed in a future major version. This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use `cycloid_environment_link` to attach the same environment to additional projects. Docs: https://docs.cycloid.io/reference/core-concepts/",
-		MarkdownDescription: "**Deprecated:** `cycloid_environment` is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with [`cycloid_organization_environment`](./organization_environment.md) (full create/delete) and attach them to projects with [`cycloid_environment_link`](./environment_link.md). `cycloid_environment` will be removed in a future major version.\n\nThis resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use [`cycloid_environment_link`](./environment_link.md) to attach the same environment to additional projects. [Docs](https://docs.cycloid.io/reference/core-concepts/).",
+		Description:         "This resource manages an organization-scoped Cycloid environment. Unlike `cycloid_environment`, it is NOT linked to any project: the environment is a first-class organization entity that can later be attached to one or more projects via `cycloid_environment_link`. Creating this resource creates the environment in the organization; deleting it deletes the environment itself. Docs: https://docs.cycloid.io/reference/core-concepts/",
+		MarkdownDescription: "This resource manages an organization-scoped Cycloid environment. Unlike [`cycloid_environment`](./environment.md), it is **not** linked to any project: the environment is a first-class organization entity that can later be attached to one or more projects via [`cycloid_environment_link`](./environment_link.md). Creating this resource creates the environment in the organization; deleting it deletes the environment itself. [Docs](https://docs.cycloid.io/reference/core-concepts/).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Computed:            true,
@@ -31,13 +29,8 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 			"canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Stable identifier of the environment. Either `name` or `canonical` must be set.",
-				MarkdownDescription: "Stable identifier of the environment. Either `name` or `canonical` must be set.",
-			},
-			"project": schema.StringAttribute{
-				Required:            true,
-				Description:         "Project canonical that this resource will link the environment to at creation. The environment itself remains an organization-scoped entity; deleting this resource only unlinks it from this project. Use `cycloid_environment_link` for additional projects.",
-				MarkdownDescription: "Project canonical that this resource will link the environment to at creation. The environment itself remains an organization-scoped entity; deleting this resource only unlinks it from this project. Use [`cycloid_environment_link`](./environment_link.md) for additional projects.",
+				Description:         "Stable identifier of the environment. Either `name` or `canonical` must be set. Changing it forces a new resource.",
+				MarkdownDescription: "Stable identifier of the environment. Either `name` or `canonical` must be set. Changing it forces a new resource.",
 			},
 			"organization": schema.StringAttribute{
 				Optional:            true,
@@ -47,16 +40,6 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
-				},
-			},
-			"color": schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				DeprecationMessage:  "color is no longer carried by an environment; it now lives on the linked `cycloid_environment_type`. This attribute is accepted for backward compatibility and ignored on write.",
-				Description:         "Deprecated. Color now lives on the linked `cycloid_environment_type` and is exposed read-only via `type`. Setting this attribute has no effect.",
-				MarkdownDescription: "**Deprecated.** Color now lives on the linked [`cycloid_environment_type`](./environment_type.md) and is exposed read-only via `type`. Setting this attribute has no effect.",
-				Validators: []validator.String{
-					stringvalidator.OneOf(icons.ValidColors...),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -71,8 +54,8 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 			"type": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Canonical of the `cycloid_environment_type` to associate with this environment (e.g. `production`, `staging`). Defaults to `production` until the backend infers the type from the environment canonical.",
-				MarkdownDescription: "Canonical of the [`cycloid_environment_type`](./environment_type.md) to associate with this environment (e.g. `production`, `staging`). Defaults to `production` until the backend infers the type from the environment canonical.",
+				Description:         "Canonical of the `cycloid_environment_type` to associate with this environment (e.g. `production`, `staging`). Defaults to `production` when omitted.",
+				MarkdownDescription: "Canonical of the [`cycloid_environment_type`](./environment_type.md) to associate with this environment (e.g. `production`, `staging`). Defaults to `production` when omitted.",
 			},
 			"owner": schema.StringAttribute{
 				Optional:            true,
@@ -149,7 +132,7 @@ func EnvironmentResourceSchema(ctx context.Context) schema.Schema {
 	}
 }
 
-type EnvironmentVariableModel struct {
+type OrganizationEnvironmentVariableModel struct {
 	Key         types.String `tfsdk:"key"`
 	Type        types.String `tfsdk:"type"`
 	Value       types.String `tfsdk:"value"`
@@ -157,10 +140,8 @@ type EnvironmentVariableModel struct {
 	Sensitive   types.Bool   `tfsdk:"sensitive"`
 }
 
-type EnvironmentModel struct {
-	Project                types.String `tfsdk:"project"`
+type OrganizationEnvironmentModel struct {
 	Canonical              types.String `tfsdk:"canonical"`
-	Color                  types.String `tfsdk:"color"`
 	ID                     types.Int64  `tfsdk:"id"`
 	Name                   types.String `tfsdk:"name"`
 	Organization           types.String `tfsdk:"organization"`

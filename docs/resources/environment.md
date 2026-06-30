@@ -3,10 +3,13 @@
 page_title: "cycloid_environment Resource - cycloid"
 subcategory: ""
 description: |-
+  Deprecated: cycloid_environment is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with cycloid_organization_environment ./organization_environment.md (full create/delete) and attach them to projects with cycloid_environment_link ./environment_link.md. cycloid_environment will be removed in a future major version.
   This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required project attribute; use cycloid_environment_link ./environment_link.md to attach the same environment to additional projects. Docs https://docs.cycloid.io/reference/core-concepts/.
 ---
 
 # cycloid_environment (Resource)
+
+**Deprecated:** `cycloid_environment` is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with [`cycloid_organization_environment`](./organization_environment.md) (full create/delete) and attach them to projects with [`cycloid_environment_link`](./environment_link.md). `cycloid_environment` will be removed in a future major version.
 
 This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use [`cycloid_environment_link`](./environment_link.md) to attach the same environment to additional projects. [Docs](https://docs.cycloid.io/reference/core-concepts/).
 
