@@ -59,14 +59,14 @@ terraform {
 
 - `aws_storage` (Attributes) Representation of AWS storage for external backend.
 Must be matched with a credential of the "aws" type. (see [below for nested schema](#nestedatt--aws_storage))
-- `credential_canonical` (String) The canonical of an entity
-- `default` (Boolean) Whether the given entity is default one
-- `environment_canonical` (String) The canonical of an entity
+- `credential_canonical` (String) The canonical of the credential used by this external backend.
+- `default` (Boolean) Whether this is the default external backend for the organization.
+- `environment_canonical` (String) The canonical of the environment this external backend is scoped to.
 - `external_backend_id` (Number) External Backend ID
 - `gcp_storage` (Attributes) Representation of GCP remote tf state for external backend.
 Must be matched with a credential of the "gcp" type. (see [below for nested schema](#nestedatt--gcp_storage))
 - `organization_canonical` (String) A canonical of an organization.
-- `project_canonical` (String) The canonical of an entity
+- `project_canonical` (String) The canonical of the project this external backend is scoped to.
 - `swift_storage` (Attributes) Representation of Swift remote tf state for external backend.
 Must be matched with a credential of the "swift" type. (see [below for nested schema](#nestedatt--swift_storage))
 

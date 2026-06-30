@@ -73,8 +73,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"credential_canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the credential used by this external backend.",
+				MarkdownDescription: "The canonical of the credential used by this external backend.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
@@ -83,8 +83,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"default": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "Whether the given entity is default one",
-				MarkdownDescription: "Whether the given entity is default one",
+				Description:         "Whether this is the default external backend for the organization.",
+				MarkdownDescription: "Whether this is the default external backend for the organization.",
 			},
 			"engine": schema.StringAttribute{
 				Required: true,
@@ -99,8 +99,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"environment_canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the environment this external backend is scoped to.",
+				MarkdownDescription: "The canonical of the environment this external backend is scoped to.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[\\da-zA-Z]+(?:(?:[\\da-zA-Z\\-._]+)?[\\da-zA-Z])?$"), ""),
@@ -150,8 +150,8 @@ func ExternalBackendResourceSchema(ctx context.Context) schema.Schema {
 			"project_canonical": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the project this external backend is scoped to.",
+				MarkdownDescription: "The canonical of the project this external backend is scoped to.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("(^[a-z0-9]+(([a-z0-9\\-_]+)?[a-z0-9]+)?$)"), ""),

@@ -21,15 +21,6 @@ test-acc:
 test-acc-one:
 	@just test-acc-one $(TEST)
 
-convert-swagger:
-	@just convert-swagger
-
-tf-generate:
-	@just tf-generate
-
-new-resource:
-	@just new-resource $(R)
-
 install:
 	@just install
 

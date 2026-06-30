@@ -64,9 +64,7 @@ terraform {
 This option is only applied during initial catalog repository creation, not for subsequent updates.
 - `on_create_visibility` (String) Team responsible for the maintenance of the underlying service catalogs
 - `organization_canonical` (String) A canonical of an organization.
-- `owner` (String) User canonical that owns this service catalog source. If omitted then the person
-creating this service catalog source will be assigned as owner. When a user is the
-owner of a service catalog source they has all the permissions on it.
+- `owner` (String) User canonical that owns this catalog repository. If omitted then the person creating this catalog repository will be assigned as owner. When a user is the owner of a catalog repository they have all the permissions on it.
 - `refresh_on_create` (Boolean) When `true` (default), immediately re-indexes all branches and tags for the catalog repository after create or update, instead of waiting for the background cron (~10 min). Set to `false` to skip the immediate refresh and rely on the background cron instead.
 
 ### Read-Only
@@ -83,7 +81,7 @@ Read-Only:
 - `credential_canonical` (String)
 - `name` (String)
 - `stack_count` (Number)
-- `stacks` (Attributes List) Represents list of service catalogs in the service catalog source. Not used during update action on a service catalog source. (see [below for nested schema](#nestedatt--data--stacks))
+- `stacks` (Attributes List) Represents list of stacks in the catalog repository. Not used during update action on a catalog repository. (see [below for nested schema](#nestedatt--data--stacks))
 - `url` (String)
 
 <a id="nestedatt--data--stacks"></a>

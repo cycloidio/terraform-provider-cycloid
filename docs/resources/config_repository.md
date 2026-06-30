@@ -47,14 +47,14 @@ terraform {
 ### Required
 
 - `branch` (String) Branch needs to be valid git repository branch
-- `credential_canonical` (String) The canonical of an entity
-- `default` (Boolean) Whether the given entity is default one
-- `name` (String) The name of an entity
-- `url` (String) GitURL represents all git URL formats we accept.
+- `credential_canonical` (String) The canonical of the credential used to access the repository.
+- `default` (Boolean) Whether this config repository is the default one for the organization.
+- `name` (String) The name of the config repository displayed in the UI.
+- `url` (String) Git URL of the config repository. SSH and HTTPS formats are accepted.
 
 ### Optional
 
-- `canonical` (String) The canonical of an entity
+- `canonical` (String) The canonical of the config repository.
 - `organization_canonical` (String) A canonical of an organization.
 
 

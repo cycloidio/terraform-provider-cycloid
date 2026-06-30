@@ -49,8 +49,8 @@ func OrganizationMemberResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"role_canonical": schema.StringAttribute{
 				Required:            true,
-				Description:         "The canonical of an entity",
-				MarkdownDescription: "The canonical of an entity",
+				Description:         "The canonical of the role assigned to the member.",
+				MarkdownDescription: "The canonical of the role assigned to the member.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 100),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
