@@ -8,9 +8,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+// NOTE: the stack acceptance tests are intentionally NOT t.Parallel().
+// Both TestAccStackResource and TestAccStackResource_TeamEmpty adopt the same
+// backend stack (data.cycloid_stacks...stacks[0]) and mutate it (visibility vs
+// team). Run in parallel they race on that shared stack, so one test's apply
+// dirties the other's refresh ("refresh plan was not empty"). Keeping them
+// non-parallel serializes the shared-stack mutation.
 func TestAccStackResource(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
@@ -47,8 +51,7 @@ func TestAccStackResource(t *testing.T) {
 // applying a cycloid_stack with team="" must not produce
 // "Provider produced inconsistent result after apply" (.team was "" but now null).
 func TestAccStackResource_TeamEmpty(t *testing.T) {
-	t.Parallel()
-
+	// Not t.Parallel(): shares stacks[0] with TestAccStackResource (see note above).
 	ctx := context.Background()
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
