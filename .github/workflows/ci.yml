@@ -5,6 +5,12 @@ name: CI
 # executes inside the devenv toolchain via the default shell below, so scripts
 # are plain commands — no per-step `devenv shell --` wrapper. Do NOT add apt
 # installs / setup-go here — the toolchain is pinned in devenv.nix.
+#
+# SECURITY: this is a PUBLIC repo with a SELF-HOSTED runner. The `authorize`
+# gate below makes every real job depend on the PR branch living in this repo
+# (a same-repo branch implies write access), so untrusted fork PRs are skipped
+# by GitHub before any code (or secret) reaches the runner. Defense-in-depth:
+# also set Settings > Actions > "Require approval for all external contributors".
 
 on:
   push:
@@ -23,10 +29,46 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # Authorization gate. Runs on a GitHub-hosted runner (free for public repos)
+  # so the trust check never touches the self-hosted runner. Every other job
+  # `needs: authorize`, so an untrusted PR is skipped before its code is ever
+  # checked out on Cycloid infra.
+  #
+  # Trust signal: the PR branch lives in THIS repo. GitHub only lets you push a
+  # branch to a repo you have write access to, so a same-repo PR is necessarily
+  # authored by a Cycloid member / collaborator. (We deliberately do NOT use
+  # author_association: GitHub reports PRIVATE org members as CONTRIBUTOR in the
+  # event payload, which would wrongly block real maintainers.) Fork PRs are
+  # denied here; a maintainer re-runs them from an internal branch, or enables
+  # Settings > Actions > "Require approval for all external contributors".
+  # ---------------------------------------------------------------------------
+  authorize:
+    name: Authorize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the PR to originate from this repo (not a fork)
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "event=$EVENT by $ACTOR implies write access — allowed"; exit 0
+          fi
+          if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+            echo "PR branch lives in $BASE_REPO ($ACTOR has write access) — allowed"; exit 0
+          fi
+          echo "::error::PR head '$HEAD_REPO' is a fork. CI runs on a self-hosted runner and is not run automatically for fork PRs; a maintainer must re-run it from an internal branch (or approve via the repo's Actions fork-PR settings)."
+          exit 1
+
+  # ---------------------------------------------------------------------------
   # Lint + build + vet + docs-drift. No backend needed.
   # ---------------------------------------------------------------------------
   lint-build:
     name: Lint / Build / Docs
+    needs: authorize
     runs-on: [self-hosted, cycloid]
     timeout-minutes: 20
     steps:
@@ -55,6 +97,7 @@ jobs:
   # ---------------------------------------------------------------------------
   test:
     name: Unit Tests
+    needs: authorize
     runs-on: [self-hosted, cycloid]
     timeout-minutes: 20
     steps:
@@ -69,6 +112,7 @@ jobs:
   # ---------------------------------------------------------------------------
   acceptance:
     name: Acceptance Tests
+    needs: authorize
     runs-on: [self-hosted, cycloid]
     timeout-minutes: 60
     env:
