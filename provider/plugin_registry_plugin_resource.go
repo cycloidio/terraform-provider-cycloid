@@ -69,6 +69,13 @@ func (r *pluginRegistryPluginResource) Create(ctx context.Context, req resource.
 		return
 	}
 
+	// The create echo populates read-only fields (e.g. owned) inconsistently with
+	// the read path, which breaks ImportStateVerify and causes post-apply drift.
+	// Re-read so state matches exactly what Read/import returns.
+	if fresh, _, rerr := m.GetRegistryPlugin(org, registryID, uint32(ptr.Value(plugin.ID))); rerr == nil && fresh != nil {
+		plugin = fresh
+	}
+
 	pluginRegistryPluginToModel(org, plugin, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -128,6 +135,11 @@ func (r *pluginRegistryPluginResource) Update(ctx context.Context, req resource.
 			err.Error(),
 		)
 		return
+	}
+
+	// Re-read so read-only fields (e.g. owned) match the read path (see Create).
+	if fresh, _, rerr := m.GetRegistryPlugin(org, registryID, pluginID); rerr == nil && fresh != nil {
+		plugin = fresh
 	}
 
 	pluginRegistryPluginToModel(org, plugin, &data)
