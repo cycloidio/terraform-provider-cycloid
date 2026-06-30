@@ -1,0 +1,9 @@
+# devenv.yaml — input sources for the dev environment.
+# https://devenv.sh/reference/yaml-options/
+inputs:
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/rolling
+# terraform is BSL-licensed (kept for registry parity); allow unfree at
+# evaluation so `devenv shell` builds it. Previously carried by the flake
+# wrapper's config.allowUnfree; that wrapper is gone (devenv is on the runner).
+allowUnfree: true

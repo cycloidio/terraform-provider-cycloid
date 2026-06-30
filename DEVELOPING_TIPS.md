@@ -9,7 +9,7 @@ git tag v0.5.3
 git push origin v0.5.3
 ```
 
----
+______________________________________________________________________
 
 ## Contributing
 
@@ -37,7 +37,7 @@ When merging PRs that are blocked by branch protection (e.g. no review yet), use
 gh pr merge 84 --admin --squash --delete-branch
 ```
 
----
+______________________________________________________________________
 
 ## Error handling patterns
 
@@ -111,7 +111,7 @@ if err != nil {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Terraform Plugin Framework custom types
 
@@ -137,24 +137,41 @@ types.ListValueFrom(ctx, basetypes.ObjectType{AttrTypes: techType}, elems)
 types.ListValueFrom(ctx, datasource_stacks.TechnologiesType{ObjectType: types.ObjectType{AttrTypes: techType}}, elems)
 ```
 
----
+______________________________________________________________________
 
 ## Dev tooling
-### Requirements
 
-To make the dev environment work, you need those binaries installed on your machine.
+### Requirements (devenv)
 
-No environment is provided, so you will have to install them yourself.
+The dev environment is provided by [devenv.sh](https://devenv.sh) — you no longer
+install the toolchain by hand. With `devenv` installed (and optionally `direnv`):
 
-| executable | version | doc | required |
-| ---        | ---     | --- | ---      |
-| `go` | v1.22.9 | | true |
-| `cy` | latest  | Will be used to fetch credentials from our prod console. You need to have a configured access to our `cycloid` org, see [the docs](https://docs.cycloid.io/reference/cli/) | true |
-| `jq` | latest | to parse json, required in scripts | true |
-| `curl` | any | fetch stuff | true |
-| `openapi-generator-cli` | latest | required for the swagger to openAPI conversion [docs](openapi-generator-cli) | true |
-| `terraform-plugin-doc` | latest | required for docgen [docs](https://github.com/hashicorp/terraform-plugin-docs) | true |
-| `make` | any | run tasks | true |
+```sh
+devenv shell            # enter the pinned toolchain; or `direnv allow` once
+devenv shell -- <cmd>   # run one command inside it
+```
+
+`devenv.nix` pins everything the project needs: `go` (1.25), `golangci-lint`,
+`tfplugindocs`, `just`, `opentofu`/`terraform`, `jq`, `curl`, `git`, `gnumake`
+and the `docker compose` client. `devenv.yaml` sets `allowUnfree: true` (BSL
+terraform). The same shell is used locally and in CI.
+
+You still need, from your own machine / account:
+
+| tool | why |
+| --- | --- |
+| `devenv` (+ `direnv`) | provides the toolchain shell |
+| `docker` daemon | runs the local backend stack for acceptance tests (`just be-start`) |
+| `cy` access to the `cycloid` SaaS org | `just env` fetches local-stack creds via `cy uri interpolate` (`CY_SAAS_API_KEY`) |
+| `openapi-generator-cli` | only for the swagger→OpenAPI conversion ([docs](https://openapi-generator.tech/)) — not in devenv |
+
+### Testing
+
+- Unit: `devenv shell -- just test-unit` (no backend/creds).
+- Acceptance: `devenv shell -- just be-start` then `just test-acc` (needs
+  `CY_SAAS_API_KEY` + `API_LICENCE_KEY`); or one-shot `just test-acc-fresh`.
+
+See the **Testing** section of `README.md` for the full flow.
 
 ## Code generation
 
@@ -166,10 +183,12 @@ No environment is provided, so you will have to install them yourself.
 Docs: https://developer.hashicorp.com/terraform/plugin/code-generation/openapi-generator#generator-config
 
 We have 2 required files:
-* `openapi.yaml`: Which is the Swagger spec of the Cycloid API
-* `generator_config.yaml`: Which is the definition of the Provider spec. It basically says which parts of the `openapi.yaml` are part of the Provider when generating
+
+- `openapi.yaml`: Which is the Swagger spec of the Cycloid API
+- `generator_config.yaml`: Which is the definition of the Provider spec. It basically says which parts of the `openapi.yaml` are part of the Provider when generating
 
 The `tfplugingen-openapi` has several issues, namely it doesn't support (issues exists since a long time on this and it's not going to be fixed anytime soon):
+
 - Recursive attributes (we have one issue with the admin model that is a memberOf)
 - `$ref` or attributed merging
 
@@ -181,6 +200,7 @@ So a script has been made in go, contained in [the swagger_converter directory](
 Its main purpose is to fix the openapi spec to remove or merge problematic attributes.
 
 The script will:
+
 1. Fetch our production swagger
 1. Convert the swagger to an openAPI v3 using `openapi-generator-cli`
 1. Fix compatibility issues in the OpenAPI (mainly `$ref` and recursive attributes.)
@@ -192,6 +212,7 @@ All the current exception handling is made in the Convert function in the `conve
 
 Related code:
 https://github.com/cycloidio/terraform-provider-cycloid/blob/284bea0538cd047e940b9b49dbd922cef86afc56/swagger_converter/converter.go#L59-L169
+
 </details>
 
 Append directly your changes in the `out_code_spec.json` using the [spec from terraform](https://developer.hashicorp.com/terraform/plugin/code-generation/specification)
@@ -204,6 +225,7 @@ Once the `out_code_spec.json` is changed, the `tfplugingen-framework` cli will g
 > to use when managing terraform resources.
 >
 > If you need to add extensive changes to a resource schema, I would advise to do it this way:
+>
 > - If the resource is small, with little or no nested arrays/objects -> write it by hand like the `resource_stack`
 > - If you only need to ignore some changes. Generate it using the `generator_config.yml` and use the ignore keyword
 > - If you need extensive changes (rename attributes, add attributes outside of the swagger model, and so on)
@@ -218,7 +240,7 @@ Once the `out_code_spec.json` is changed, the `tfplugingen-framework` cli will g
 >
 > Maintaining the openAPI of this repo up to date could be really painful, be careful when trying to update.
 
----
+______________________________________________________________________
 
 From that using the `out_code_spec.json` we can us it to generate:
 
@@ -345,6 +367,6 @@ resource "cycloid_environment" "test" {
 To add support for other resource dependencies:
 
 1. Add creation methods to `TestDependencyManager`
-2. Add cleanup logic to track created resources  
-3. Create new configuration functions using pre-existing dependencies
-4. Update tests to use the dependency manager
+1. Add cleanup logic to track created resources
+1. Create new configuration functions using pre-existing dependencies
+1. Update tests to use the dependency manager

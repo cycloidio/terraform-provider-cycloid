@@ -2,6 +2,49 @@
 
 This file contains important notes and context for the AI agent working on this terraform provider.
 
+## Dev environment & testing (devenv)
+
+The toolchain (Go, `golangci-lint`, `tfplugindocs`, `just`, `opentofu`/`terraform`,
+`jq`, the `docker compose` client, …) is pinned in [`devenv.nix`](./devenv.nix)
+and `devenv.yaml` (`allowUnfree: true` for BSL terraform). **Do not install these
+by hand** — enter the devenv:
+
+```sh
+devenv shell            # interactive; or `direnv allow` once for auto-enter
+devenv shell -- <cmd>   # run a single command inside it
+```
+
+[direnv](https://direnv.net/) auto-enters the shell on `cd` (and loads `.env`) —
+recommended. VS Code users: the [direnv](https://github.com/direnv/direnv-vscode)
+and [devenv](https://marketplace.visualstudio.com/items?itemName=datakurre.devenv)
+extensions wire the editor to the same environment.
+
+CI runs the exact same env via `devenv shell -- <cmd>` on the `[self-hosted, cycloid]`
+runner (see `.github/workflows/ci.yml`).
+
+**Standard / unit tests** (no backend, no creds; acceptance auto-skips):
+
+```sh
+devenv shell -- just test-unit          # go test ./... -short
+```
+
+**Acceptance tests** (`TF_ACC=1`) run against a **local docker-compose backend**
+(`youdeploy-api` + plugin-manager/-registry + docker-registry + concourse + vault
+
+- db + redis + git-server), not remote staging. Requires `CY_SAAS_API_KEY` (to
+  mint `.env` via `just env` → `cy uri interpolate`) and `API_LICENCE_KEY` (first-boot
+  licence). Bring the stack up and run:
+
+```sh
+devenv shell -- just be-start           # docker compose up -dV (local backend)
+devenv shell -- just env                # mint .env from CY_SAAS_API_KEY
+devenv shell -- just test-acc           # TF_ACC=1 go test ./... -v
+devenv shell -- just test-acc-one TestAccProjectResource   # single test
+devenv shell -- just be-stop            # docker compose down -v
+# one-shot (reset stack + .env + full suite):
+devenv shell -- just test-acc-fresh
+```
+
 ## Test Dependency Management
 
 When working with acceptance tests that require dependencies (e.g., environment resources needing projects):
@@ -109,20 +152,26 @@ Docs are generated, not hand-written. Never edit `docs/` by hand; always re-run 
 
 ## Cursor Cloud specific instructions
 
-This is a **Go Terraform Provider** for the Cycloid DevOps platform. It is a single Go module (not a monorepo) with no local databases or Docker dependencies.
+This is a **Go Terraform Provider** for the Cycloid DevOps platform — a single Go
+module (not a monorepo). Unit tests need nothing extra; **acceptance tests spin
+up a local docker-compose backend** (see "Dev environment & testing" above). The
+toolchain comes from devenv — don't hand-install Go/just/etc.
 
 ### Services
 
 | Service | Purpose | Command |
 |---|---|---|
-| Terraform Provider (Go binary) | The only artifact | `make build` or `go install .` |
+| Terraform Provider (Go binary) | The only build artifact | `devenv shell -- just build` / `go install .` |
+| Local backend stack (acceptance only) | youdeploy-api + plugin/registry + concourse + db/redis/vault/… | `devenv shell -- just be-start` |
 
-### Key commands
+### Key commands (inside `devenv shell`)
 
-- **Build**: `make build`
-- **Test**: `go test ./... -v` (or `make test`)
-- **Lint**: `go vet ./...` (staticcheck available at `~/go/bin/staticcheck ./...`)
-- **Install provider**: `go install .` (installs to `~/go/bin/`)
+- **Build**: `just build`
+- **Unit tests**: `just test-unit` (`go test ./... -short`)
+- **Acceptance**: `just be-start` then `just test-acc` (see the testing section above)
+- **Lint**: `golangci-lint run ./...` (and `go vet ./...`)
+- **Docs**: `just docs`
+- **Install provider**: `go install .` (lands in `~/go/bin/`)
 
 ### Running locally with Terraform
 
@@ -130,13 +179,10 @@ To test the provider with Terraform, create a dev override file (see `README.md`
 
 ### Gotchas
 
-- Go 1.25+ is required (per `go.mod`). The VM already has Go 1.25.0 pre-installed.
-- Terraform is installed at `/usr/local/bin/terraform`.
-- Use `make install-provider` or `go install .` for the provider binary. Note: `make install` installs codegen tools, not the provider itself.
-- All provider operations require a remote Cycloid API (`CY_API_URL`, `CY_API_KEY`, `CY_ORG` env vars). A dedicated testing environment is used for tests — do not run against production. No local services to start.
-- `staticcheck` reports pre-existing warnings (unused vars/funcs); these are not blockers.
-- `just` (command runner) is required for Makefile targets. Install via `curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin`.
-- Unit tests (`go test ./... -short`) will show `TestAccEnvironmentResource` as FAIL — this is a pre-existing bug where the test doesn't skip in non-acceptance mode. All actual unit tests pass. Use `-run 'Test[^A]|TestA[^c]'` to exclude acceptance tests cleanly, or just ignore that single failure.
+- Get the toolchain from `devenv shell` (Go 1.25, `just`, `golangci-lint`, `tfplugindocs`, `opentofu`/`terraform`, `jq`, `docker compose`). Don't `curl`-install `just` or rely on a system Go/terraform.
+- Acceptance tests run against the **local** docker-compose backend (`just be-start`), not remote staging — never point them at production. They need `CY_SAAS_API_KEY` (mints `.env`) + `API_LICENCE_KEY`.
+- `golangci-lint run ./...` is the lint gate (CI runs it); keep it clean.
+- Unit tests (`go test ./... -short`) may show `TestAccEnvironmentResource` as FAIL — a pre-existing bug where the test doesn't skip in non-acceptance mode. Use `just test-unit` and ignore that single failure, or `-run 'Test[^A]|TestA[^c]'`.
 
 <!-- gitnexus:start -->
 
