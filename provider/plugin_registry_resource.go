@@ -125,8 +125,52 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *pluginRegistryResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
-	// All fields use RequiresReplace — Update is never called.
+// Update is reached whenever wait_until_connected changes — it's the only
+// attribute without a RequiresReplace plan modifier. It must call
+// resp.State.Set with the plan's WaitUntilConnected value preserved (the API
+// doesn't return this client-side flag, so pluginRegistryToModel never
+// touches it); leaving it unset here is what caused TFPRO-51's "produced
+// inconsistent result after apply" on wait_until_connected.
+func (r *pluginRegistryResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data pluginRegistryResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	org := getOrganizationCanonical(*r.provider, data.Organization)
+	m := r.provider.Middleware
+	id := uint32(data.ID.ValueInt64())
+
+	if data.WaitUntilConnected.ValueBool() {
+		if err := pollPluginRegistryConnected(m, org, id, 5*time.Minute); err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("plugin registry %d did not reach connected status in org %q", id, org),
+				err.Error(),
+			)
+			return
+		}
+	}
+
+	registries, _, err := m.ListPluginRegistries(org)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugin registries in org %q", org), err.Error())
+		return
+	}
+	var registry *models.PluginRegistry
+	for _, reg := range registries {
+		if reg.ID != nil && uint32(*reg.ID) == id {
+			registry = reg
+			break
+		}
+	}
+	if registry == nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to update plugin registry %d in org %q", id, org), "registry not found")
+		return
+	}
+
+	pluginRegistryToModel(org, registry, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *pluginRegistryResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
