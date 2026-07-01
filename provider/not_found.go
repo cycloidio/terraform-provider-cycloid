@@ -12,10 +12,15 @@ func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
+	// A typed 404 is an unambiguous not-found signal.
 	var apiErr *cycloidmiddleware.APIResponseError
-	if errors.As(err, &apiErr) {
-		return apiErr.StatusCode == http.StatusNotFound
+	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
+		return true
 	}
+	// Some backends (e.g. plugin-manager) report a missing object as a 422
+	// validation error with a "was not found" message instead of a 404. Fall
+	// back to matching the message so those still resolve to state removal
+	// instead of a hard error.
 	errMessage := strings.ToLower(err.Error())
 	return strings.Contains(errMessage, " not found") ||
 		strings.Contains(errMessage, "notfound") ||

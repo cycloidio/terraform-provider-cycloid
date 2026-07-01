@@ -94,13 +94,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 	if component == nil {
-		resp.Diagnostics.Append(
-			ComponentToModel(ctx, org, nil, nil, nil, &componentState, false)...,
-		)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resp.Diagnostics.Append(resp.State.Set(ctx, &componentState)...)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

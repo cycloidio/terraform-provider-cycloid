@@ -85,6 +85,11 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 	}
 
+	if team == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	resp.Diagnostics.Append(
 		TeamToModel(ctx, org, team, &teamState)...,
 	)

@@ -86,6 +86,10 @@ func (s *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	stackRef := fmt.Sprintf("%s:%s", orgCan, data.Canonical.ValueString())
 	stack, _, err := mid.GetStack(orgCan, stackRef)
 	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to get stack informations with ref '%s'.", stackRef), err.Error())
 		return
 	}

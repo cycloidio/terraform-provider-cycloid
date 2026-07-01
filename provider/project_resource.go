@@ -71,19 +71,17 @@ func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	if i := slices.IndexFunc(projects, func(p *models.Project) bool {
+	i := slices.IndexFunc(projects, func(p *models.Project) bool {
 		return ptr.Value(p.Canonical) == canonical
-	}); i == -1 {
-		// Project doesn't exist, so empty state
-		resp.Diagnostics.Append(projectToValue(ctx, org, &models.Project{}, &data)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		resp.Diagnostics.Append(projectToValue(ctx, org, projects[i], &data)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	})
+	if i == -1 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	resp.Diagnostics.Append(projectToValue(ctx, org, projects[i], &data)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
