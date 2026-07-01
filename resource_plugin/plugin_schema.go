@@ -13,9 +13,9 @@ import (
 func PluginResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Install a plugin in an organization. " +
-			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
+			"Configuration can be updated in-place; version, registry, plugin ID, and organization require replacement.",
 		MarkdownDescription: "Install a plugin in an organization. " +
-			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
+			"Configuration can be updated in-place; version, registry, plugin ID, and organization require replacement.",
 		Attributes: map[string]schema.Attribute{
 			"organization": schema.StringAttribute{
 				Description:         "The organization canonical, defaults to the provider `default_organization`.",
@@ -37,9 +37,10 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"plugin_version_id": schema.Int64Attribute{
-				Description:         "The ID of the plugin version to install. Can be updated in-place.",
-				MarkdownDescription: "The ID of the plugin version to install. Can be updated in-place.",
+				Description:         "The ID of the plugin version to install. Changing this triggers replacement.",
+				MarkdownDescription: "The ID of the plugin version to install. Changing this triggers replacement.",
 				Required:            true,
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
 			},
 			"configuration": schema.MapAttribute{
 				Description: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
