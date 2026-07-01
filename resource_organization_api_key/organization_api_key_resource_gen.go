@@ -16,6 +16,8 @@ import (
 
 func OrganizationAPIKeyResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
+		Description:         "Manages an organization API key in Cycloid.",
+		MarkdownDescription: "Manages an organization API key in Cycloid.",
 		Attributes: map[string]schema.Attribute{
 			"organization_canonical": schema.StringAttribute{
 				Optional:            true,

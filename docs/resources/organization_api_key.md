@@ -2,14 +2,16 @@
 
 Manages an **Organization API key** in Cycloid.
 
-An API key is a JWT token scoped to an organization. It grants programmatic access to the Cycloid API without using a personal user account — useful for CI/CD pipelines, automation, and DIGIT-style integrations.
+An API key is a JWT token scoped to an organization. It grants programmatic access to the Cycloid API without using a personal user account — useful for CI/CD pipelines, automation, and third-party integrations.
 
-> **Sensitive value:** The `token` attribute contains the full JWT and is only available immediately after creation. It is stored in the Terraform state as a sensitive value. Reference it at apply time (for example via a `sensitive` output) — subsequent reads return an empty token from the API, and Terraform preserves the value already in state.
+> **Sensitive value:** The `token` attribute contains the full JWT and is only available immediately after creation. It is stored in the Terraform state as a sensitive value. For anything beyond a one-off `sensitive` output, store it in a [`cycloid_credential`](credential) instead of passing it around as a plain output — see the second example below.
 
 > **Immutable rules:** The `rules` block is immutable after creation. Any change to `rules` forces the API key to be destroyed and recreated, generating a new token.
 
 
 ## Example Usage
+
+### Scoped key with a sensitive output
 
 ```terraform
 resource "cycloid_organization_api_key" "ci_key" {
@@ -47,6 +49,56 @@ terraform {
   required_providers {
     cycloid = {
       source = "cycloidio/cycloid"
+    }
+  }
+}
+```
+
+### Full admin key
+
+`action = "**"` grants every action. Reserve this for break-glass or bootstrap use — prefer
+scoped rules like the example above for anything that runs unattended.
+
+```terraform
+resource "cycloid_organization_api_key" "admin_key" {
+  name        = "full-admin-key"
+  description = "Full admin access, use sparingly"
+
+  rules = [
+    {
+      action    = "**"
+      effect    = "allow"
+      resources = []
+    },
+  ]
+}
+```
+
+### Persisting the token in a credential
+
+```terraform
+resource "cycloid_organization_api_key" "ci_key" {
+  name        = "ci-pipeline-key"
+  description = "API key used by the CI pipeline"
+
+  rules = [
+    {
+      action    = "organization:project:read"
+      effect    = "allow"
+      resources = []
+    },
+  ]
+}
+
+# Persist the token in a Cycloid credential instead of a raw sensitive output,
+# so it can be referenced from pipelines without ever leaving Cycloid-managed storage.
+resource "cycloid_credential" "ci_key_credential" {
+  name = "ci-pipeline-key"
+  path = "ci-pipeline-key"
+  type = "custom"
+  body = {
+    raw = {
+      token = cycloid_organization_api_key.ci_key.token
     }
   }
 }
