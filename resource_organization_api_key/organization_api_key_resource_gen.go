@@ -86,10 +86,9 @@ func OrganizationAPIKeyResourceSchema(ctx context.Context) schema.Schema {
 						},
 						"resources": schema.ListAttribute{
 							Optional:            true,
-							Computed:            true,
 							ElementType:         types.StringType,
-							Description:         "The list of resources this rule applies to.",
-							MarkdownDescription: "The list of resources this rule applies to.",
+							Description:         "The list of resources this rule applies to. Omit or set to `[]` to make the rule apply globally; omitting it on a rules change clears any previously scoped resources.",
+							MarkdownDescription: "The list of resources this rule applies to. Omit or set to `[]` to make the rule apply globally; omitting it on a rules change clears any previously scoped resources.",
 						},
 					},
 				},

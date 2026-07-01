@@ -87,11 +87,10 @@ func OrganizationRoleResourceSchema(ctx context.Context) schema.Schema {
 							},
 						},
 						"resources": schema.ListAttribute{
-							Description:         "Resources where this action applies.",
-							MarkdownDescription: "Resources where this action applies.",
+							Description:         "Resources where this action applies. Omit or set to `[]` to make the rule apply globally; omitting it on update clears any previously scoped resources.",
+							MarkdownDescription: "Resources where this action applies. Omit or set to `[]` to make the rule apply globally; omitting it on update clears any previously scoped resources.",
 							ElementType:         types.StringType,
 							Optional:            true,
-							Computed:            true,
 						},
 					},
 				},

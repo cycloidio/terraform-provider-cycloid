@@ -136,7 +136,7 @@ Required:
 
 Optional:
 
-- `resources` (List of String) The list of resources this rule applies to.
+- `resources` (List of String) The list of resources this rule applies to. Omit or set to `[]` to make the rule apply globally; omitting it on a rules change clears any previously scoped resources.
 
 
 

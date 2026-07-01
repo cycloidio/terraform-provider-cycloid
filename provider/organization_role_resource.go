@@ -273,6 +273,25 @@ func organizationRoleCYModelToData(ctx context.Context, org string, role *models
 	var diags diag.Diagnostics
 
 	ruleObjectType := types.ObjectType{AttrTypes: resource_organization_role.OrganizationRoleRuleTypes}
+
+	// Preserve the user's empty-representation for resources. The API returns an
+	// empty list whether the user wrote `resources = []` or omitted it entirely,
+	// but since resources is Optional (not Computed) the framework requires the
+	// post-apply state to match config exactly. Capture the planned/prior value
+	// per action so a rule that is empty on the API keeps the null-vs-[] form the
+	// user wrote, while genuine drift (API has resources) still surfaces.
+	priorResources := map[string]types.List{}
+	if !roleState.Rules.IsNull() && !roleState.Rules.IsUnknown() {
+		var priorRules []organizationRoleRuleResourceModel
+		diags.Append(roleState.Rules.ElementsAs(ctx, &priorRules, false)...)
+		if diags.HasError() {
+			return diags
+		}
+		for _, pr := range priorRules {
+			priorResources[pr.Action.ValueString()] = pr.Resources
+		}
+	}
+
 	if role == nil {
 		roleState.Name = types.StringNull()
 		roleState.Canonical = types.StringNull()
@@ -290,10 +309,19 @@ func organizationRoleCYModelToData(ctx context.Context, org string, role *models
 			continue
 		}
 
-		resourcesList, resourcesDiags := types.ListValueFrom(ctx, types.StringType, roleRule.Resources)
-		diags.Append(resourcesDiags...)
-		if diags.HasError() {
-			return diags
+		var resourcesList types.List
+		if prior, ok := priorResources[ptr.Value(roleRule.Action)]; len(roleRule.Resources) == 0 && ok &&
+			!prior.IsUnknown() && (prior.IsNull() || len(prior.Elements()) == 0) {
+			// API has no resources for this rule and the user wrote null or [] —
+			// keep exactly what they configured to satisfy the consistency check.
+			resourcesList = prior
+		} else {
+			var resourcesDiags diag.Diagnostics
+			resourcesList, resourcesDiags = types.ListValueFrom(ctx, types.StringType, roleRule.Resources)
+			diags.Append(resourcesDiags...)
+			if diags.HasError() {
+				return diags
+			}
 		}
 
 		effect := ptr.Value(roleRule.Effect)

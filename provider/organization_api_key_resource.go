@@ -213,7 +213,28 @@ func apiKeyCYModelToData(ctx context.Context, org string, apiKey *models.APIKey,
 		data.Token = types.StringValue(apiKey.Token)
 	}
 
-	rules, rDiags := rulesToTFList(ctx, apiKey.Rules)
+	// Preserve the user's empty-representation for resources (same class of bug
+	// as TFPRO-42 / organization_role): the API returns an empty list whether the
+	// user wrote `resources = []` or omitted it entirely, but since resources is
+	// Optional (not Computed) the framework requires the post-apply state to
+	// match config exactly. Capture the planned/prior value per action so a rule
+	// that is empty on the API keeps the null-vs-[] form the user wrote, while
+	// genuine drift (API has resources) still surfaces. data.Rules still holds
+	// the plan (Create/Update) or prior state (Read) value at this point, since
+	// it hasn't been overwritten yet.
+	priorResources := map[string]types.List{}
+	if !data.Rules.IsNull() && !data.Rules.IsUnknown() {
+		var priorRules []resource_organization_api_key.RuleModel
+		diags.Append(data.Rules.ElementsAs(ctx, &priorRules, false)...)
+		if diags.HasError() {
+			return diags
+		}
+		for _, pr := range priorRules {
+			priorResources[pr.Action.ValueString()] = pr.Resources
+		}
+	}
+
+	rules, rDiags := rulesToTFList(ctx, apiKey.Rules, priorResources)
 	diags.Append(rDiags...)
 	if !diags.HasError() {
 		data.Rules = rules
@@ -236,7 +257,10 @@ func dataToNewRules(ctx context.Context, rulesVal types.List) ([]*models.NewRule
 	for i, rm := range ruleModels {
 		action := rm.Action.ValueString()
 		effect := rm.Effect.ValueString()
-		var resources []string
+		// Always send an explicit [] rather than JSON null, whether resources is
+		// omitted or empty in config — this is what actually clears scoped
+		// resources at the API (confirmed by the organization_role/TFPRO-42 fix).
+		resources := []string{}
 		if !rm.Resources.IsNull() && !rm.Resources.IsUnknown() {
 			diags.Append(rm.Resources.ElementsAs(ctx, &resources, false)...)
 			if diags.HasError() {
@@ -253,8 +277,10 @@ func dataToNewRules(ctx context.Context, rulesVal types.List) ([]*models.NewRule
 	return rules, diags
 }
 
-// rulesToTFList converts the API Rule slice to a Terraform types.List.
-func rulesToTFList(ctx context.Context, rules []*models.Rule) (types.List, diag.Diagnostics) {
+// rulesToTFList converts the API Rule slice to a Terraform types.List. priorResources
+// maps action -> the rule's resources value already in the plan/prior state, used to
+// preserve the user's null-vs-[] representation when the API reports no resources.
+func rulesToTFList(ctx context.Context, rules []*models.Rule, priorResources map[string]types.List) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	ruleModels := make([]resource_organization_api_key.RuleModel, len(rules))
@@ -269,7 +295,12 @@ func rulesToTFList(ctx context.Context, rules []*models.Rule) (types.List, diag.
 		}
 
 		var resourcesList types.List
-		if len(r.Resources) > 0 {
+		if prior, ok := priorResources[action]; len(r.Resources) == 0 && ok &&
+			!prior.IsUnknown() && (prior.IsNull() || len(prior.Elements()) == 0) {
+			// API has no resources for this rule and the user wrote null or [] —
+			// keep exactly what they configured to satisfy the consistency check.
+			resourcesList = prior
+		} else if len(r.Resources) > 0 {
 			var lDiags diag.Diagnostics
 			resourcesList, lDiags = types.ListValueFrom(ctx, types.StringType, r.Resources)
 			diags.Append(lDiags...)

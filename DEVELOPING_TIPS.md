@@ -137,6 +137,59 @@ types.ListValueFrom(ctx, basetypes.ObjectType{AttrTypes: techType}, elems)
 types.ListValueFrom(ctx, datasource_stacks.TechnologiesType{ObjectType: types.ObjectType{AttrTypes: techType}}, elems)
 ```
 
+### Never mark a "collection of things to configure" as Optional + Computed
+
+If a `List`/`Set`/`Map` attribute represents something the user should be able to
+**clear by omitting it** (scoped resources, tags, allowed IPs, permissions — anything
+where "not in my HCL" should mean "empty at the API"), do not add `Computed` to it.
+
+`Optional + Computed` tells the framework: "if the user omits this, keep whatever is
+already in state." That's correct for a genuinely server-defaulted scalar (`canonical`
+auto-derived from `name`, `organization` defaulting to the provider's default org). It
+is a bug for a collection, because it means removing the block from HCL is silently
+indistinguishable from not touching it — the stale value gets sent back to the API on
+every apply, forever, and the user has no way to actually clear it short of knowing to
+write `attr = []` instead of deleting the line. Worse, if the attribute is nested
+inside a list/set that itself has a `RequiresReplace`-on-any-change plan modifier, the
+Computed retention happens at the leaf *before* that outer modifier ever compares
+anything — so `terraform plan` reports **zero changes** even though the user edited
+their config.
+
+This exact bug shipped twice (`cycloid_organization_role.rules[].resources`, TFPRO-42;
+`cycloid_organization_api_key.rules[].resources`, same root cause, fixed in the same
+PR) before being generalized here.
+
+```go
+// Bad — omitting `resources` in a rule silently retains the old value forever
+"resources": schema.ListAttribute{
+    Optional: true,
+    Computed: true,
+    ElementType: types.StringType,
+},
+
+// Good — Optional only; omission now plans as null, which the conversion layer
+// (see organizationRoleCYModelToData / apiKeyCYModelToData) coerces to an
+// explicit empty list before sending to the API
+"resources": schema.ListAttribute{
+    Optional: true,
+    ElementType: types.StringType,
+},
+```
+
+Dropping `Computed` introduces a **new** consistency requirement: the framework now
+expects the post-apply state to match the config exactly (null stays null, `[]` stays
+`[]`). If the backend API doesn't distinguish "no resources" from "never had
+resources" in its response, your model-conversion function must preserve whichever
+form the user actually configured — see `organizationRoleCYModelToData` and
+`apiKeyCYModelToData` for the pattern (look up the prior plan/state value per element
+before deciding what to write into state), and always send an explicit `[]` rather
+than a nil slice (JSON `null`) on the request side — that's what actually clears the
+field at the API; `null` may not.
+
+`environment_resource_schema.go`'s `variables` and `cloud_account_canonicals`
+(`Optional` only, no `Computed`, PATCH semantics spelled out in the description) are a
+clean reference example of doing this right from the start.
+
 ______________________________________________________________________
 
 ## Dev tooling
