@@ -183,6 +183,7 @@ To test the provider with Terraform, create a dev override file (see `README.md`
 - Acceptance tests run against the **local** docker-compose backend (`just be-start`), not remote staging — never point them at production. They need `CY_SAAS_API_KEY` (mints `.env`) + `API_LICENCE_KEY`.
 - `golangci-lint run ./...` is the lint gate (CI runs it); keep it clean.
 - Unit tests (`go test ./... -short`) may show `TestAccEnvironmentResource` as FAIL — a pre-existing bug where the test doesn't skip in non-acceptance mode. Use `just test-unit` and ignore that single failure, or `-run 'Test[^A]|TestA[^c]'`.
+- Never set `Computed: true` on a `List`/`Set`/`Map` attribute meant to be cleared by omission (scoped resources, tags, permissions, …) — see [DEVELOPING_TIPS.md § Never mark a "collection of things to configure" as Optional + Computed](DEVELOPING_TIPS.md#never-mark-a-collection-of-things-to-configure-as-optional--computed) before adding a new list/set/map attribute to any schema. Shipped twice already (TFPRO-42, `cycloid_organization_api_key`).
 
 <!-- gitnexus:start -->
 
