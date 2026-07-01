@@ -170,6 +170,7 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewOIDCGroupMappingResource,
 		NewOIDCOrganizationSettingsResource,
 		NewOIDCIntegrationResource,
+		NewOrganizationAPIKeyResource,
 	}
 }
 
