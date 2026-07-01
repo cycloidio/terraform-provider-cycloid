@@ -105,6 +105,57 @@ func TestAccPluginManagerResource_Create(t *testing.T) {
 	})
 }
 
+// TestAccPluginManagerResource_RecreateAfterOutOfBandDelete reproduces TFPRO-50:
+// a plugin manager removed outside terraform must be detected during Read and
+// removed from state (RemoveResource), so the next apply recreates it cleanly
+// instead of hard-erroring on the backend's 422 "was not found" response.
+func TestAccPluginManagerResource_RecreateAfterOutOfBandDelete(t *testing.T) {
+	orgCanonical := testAccGetOrganizationCanonical()
+	depManager := NewTestDependencyManager(t)
+	m := depManager.GetProvider().Middleware
+
+	if m == nil {
+		t.Skip("skipping acceptance test: middleware not configured")
+	}
+
+	deleteAllPluginManagers(t, m, orgCanonical)
+	t.Cleanup(func() {
+		restoreClusterPluginManager(t, m, orgCanonical)
+	})
+
+	config := testAccPluginManagerConfig(orgCanonical, clusterTestPluginManager, clusterPluginManagerURL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: depManager.GetProviderFactories(),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
+				),
+			},
+			{
+				PreConfig: func() {
+					// Simulate the customer scenario: the plugin manager is
+					// removed out-of-band, i.e. outside terraform.
+					deleteAllPluginManagers(t, m, orgCanonical)
+				},
+				Config: config,
+				// A clean recreate: no 422 error, the resource comes back
+				// with the same config, and (via the framework's built-in
+				// post-apply plan check) a follow-up plan is empty.
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("cycloid_plugin_manager.test", "id"),
+					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "organization", orgCanonical),
+					resource.TestCheckResourceAttr("cycloid_plugin_manager.test", "name", clusterTestPluginManager),
+					testAccCheckPluginManagerInviteAccepted(orgCanonical, m),
+				),
+			},
+		},
+	})
+}
+
 func findAcceptedPluginManager(managers []*models.PluginManager) *models.PluginManager {
 	for _, mgr := range managers {
 		if mgr.InviteStatus == nil {

@@ -82,11 +82,7 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	if !found {
-		resp.Diagnostics.Append(environmentToValue(ctx, org, project, &models.Environment{}, &data)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

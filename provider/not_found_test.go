@@ -46,6 +46,26 @@ func TestIsNotFoundError(t *testing.T) {
 			expected: false,
 		},
 		{
+			// Regression for TFPRO-50: plugin-manager reports a deleted
+			// object as a 422 with a "was not found" message rather than a
+			// 404. isNotFoundError must not let the typed-error branch
+			// short-circuit past the message-based fallback in this case.
+			name: "*APIResponseError 422 plugin manager not found",
+			err: &cycloidmiddleware.APIResponseError{
+				StatusCode: http.StatusUnprocessableEntity,
+				Status:     "The Plugin Manager is invalid: The Plugin Manager was not found",
+			},
+			expected: true,
+		},
+		{
+			name: "*APIResponseError 422 unrelated validation error",
+			err: &cycloidmiddleware.APIResponseError{
+				StatusCode: http.StatusUnprocessableEntity,
+				Status:     "The Plugin Manager is invalid: Name cannot be blank",
+			},
+			expected: false,
+		},
+		{
 			name:     "non not found error",
 			err:      errors.New("A 500 error was returned on \"getConfigRepository\" call"),
 			expected: false,
