@@ -17,6 +17,18 @@ Singleton resource: a single nav ordering config exists per organization.
 ## Example Usage
 
 ```terraform
+data "cycloid_organization_plugin_widgets" "side_menu" {
+  organization = "my-org"
+  placement    = "sideMenuPage"
+}
+
+locals {
+  first_side_menu_plugin_widget_id = [
+    for widget in data.cycloid_organization_plugin_widgets.side_menu.widgets : widget.id
+    if widget.type == "iframe"
+  ][0]
+}
+
 resource "cycloid_organization_nav_order" "this" {
   organization = "my-org"
 
@@ -28,7 +40,7 @@ resource "cycloid_organization_nav_order" "this" {
     },
     {
       type     = "plugin_widget"
-      key      = "42"
+      key      = tostring(local.first_side_menu_plugin_widget_id)
       position = 2
     },
     {
@@ -70,6 +82,6 @@ terraform {
 
 Required:
 
-- `key` (String) Native section name (e.g. `dashboard`) or plugin_widget id (as a string).
+- `key` (String) Native section name (e.g. `dashboard`) or plugin widget ID (as a string).
 - `position` (Number) 1-indexed position. Must be unique across all items.
-- `type` (String) Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's plugin ID as a string).
+- `type` (String) Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's ID as a string).

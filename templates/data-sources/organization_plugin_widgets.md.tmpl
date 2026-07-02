@@ -1,0 +1,13 @@
+# {{ .Name }} ({{ .Type }})
+
+List organization-level plugin widgets for a placement. Use this data source to get the
+numeric plugin widget ID required by `cycloid_organization_nav_order` items whose
+`type` is `plugin_widget`.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
