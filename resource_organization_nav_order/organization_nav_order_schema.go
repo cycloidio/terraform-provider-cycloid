@@ -49,16 +49,16 @@ func OrganizationNavOrderResourceSchema(ctx context.Context) schema.Schema {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
-							Description:         "Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's plugin ID as a string).",
-							MarkdownDescription: "Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's plugin ID as a string).",
+							Description:         "Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's ID as a string).",
+							MarkdownDescription: "Either `native` (a built-in section, identified by name) or `plugin_widget` (identified by the widget's ID as a string).",
 							Required:            true,
 							Validators: []validator.String{
 								stringvalidator.OneOf("native", "plugin_widget"),
 							},
 						},
 						"key": schema.StringAttribute{
-							Description:         "Native section name (e.g. `dashboard`) or plugin_widget id (as a string).",
-							MarkdownDescription: "Native section name (e.g. `dashboard`) or plugin_widget id (as a string).",
+							Description:         "Native section name (e.g. `dashboard`) or plugin widget ID (as a string).",
+							MarkdownDescription: "Native section name (e.g. `dashboard`) or plugin widget ID (as a string).",
 							Required:            true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 255),
