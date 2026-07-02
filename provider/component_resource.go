@@ -101,7 +101,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 	var inputVariables map[string]map[string]map[string]any
 	var currentConfig map[string]map[string]map[string]any
 	var diags diag.Diagnostics
-	currentConfig, _, err = m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err = m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
 	if err != nil {
 		if isComponentNotFoundError(err) {
 			resp.Diagnostics.Append(
@@ -199,7 +199,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to fetch created config of create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -289,7 +289,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return

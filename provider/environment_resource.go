@@ -321,7 +321,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 			Variables:              apiVars,
 		}
 		if envType != "" {
-			createBody.Type = ptr.Ptr(envType)
+			createBody.Type = envType
 		}
 		current, _, err = m.CreateOrgEnv(org, createBody)
 		if err != nil {
