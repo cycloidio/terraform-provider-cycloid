@@ -11,12 +11,13 @@ import (
 // lifecycle: create with a scoped ordering, update to a different ordering,
 // then reset to defaults (items = []) before destroy.
 //
-// NOTE: as of writing, this requires the /organizations/{org}/nav backend
-// endpoint, which is missing from develop due to a regression (ENGBE-282,
-// restore PR youdeploy-http-api#5977). Until that lands (and the local
-// docker-compose backend image picks it up), this test will fail with a 404
-// against any currently-available backend — could not be run locally.
+// TODO(ENGBE-282): un-skip once the /organizations/{org}/nav backend endpoint
+// ships — restore PR youdeploy-http-api#5977 is still open. Until it merges
+// and releases, this test 404s against any currently-available backend. See
+// https://linear.app/cycloid/issue/ENGBE-282.
 func TestAccOrganizationNavOrderResource(t *testing.T) {
+	t.Skip("blocked on ENGBE-282 / youdeploy-http-api#5977 — /organizations/{org}/nav endpoint not released yet")
+
 	orgCanonical := testAccGetOrganizationCanonical()
 	depManager := NewTestDependencyManager(t)
 
