@@ -274,7 +274,7 @@ func (p *organizationEnvironmentResource) createOrUpdateOrgEnvironment(ctx conte
 			Name:                   ptr.Ptr(name),
 			Description:            description,
 			Owner:                  owner,
-			Type:                   ptr.Ptr(createType),
+			Type:                   createType,
 			CloudAccountCanonicals: cloudAccountCanonicals,
 			Variables:              apiVars,
 		}
