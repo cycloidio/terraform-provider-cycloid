@@ -191,6 +191,13 @@ jobs:
           echo "API_LICENCE_KEY=$API_LICENCE_KEY" >> "$GITHUB_ENV"
           just be-login                  # docker login rg.fr-par.scw.cloud
 
+      - name: Pull backend images
+        # Self-hosted runner persists the docker image cache across runs, and
+        # `cycloid-backend:${BACKEND_TAG:-staging}` is a floating tag — without
+        # an explicit pull, `docker compose up` happily reuses a stale cached
+        # image even after a new one has been pushed under the same tag.
+        run: just be-pull
+
       - name: Start backend stack (docker compose)
         # `just be-start` == `docker compose up -dV`; honors COMPOSE_PROJECT_NAME +
         # TFACC_API_PORT + TFACC_REGISTRY_PORT from env. ElasticSearch stays OFF.
