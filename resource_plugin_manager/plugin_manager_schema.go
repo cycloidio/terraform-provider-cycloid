@@ -48,9 +48,9 @@ func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 			},
 			"wait_until_connected": schema.BoolAttribute{
-				Description: "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
+				Description:         "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
 				MarkdownDescription: "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
-				Optional:    true,
+				Optional:            true,
 			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of plugin manager creation.",

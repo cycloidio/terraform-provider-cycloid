@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -21,17 +20,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var (
-	orgDescription = strings.Join([]string{
-		"A Cycloid organization is the top-most entity level in Cycloid.",
-		"Almost all resources in Cycloid are scoped by organizations.",
-		"",
-		"Organizations can be nested, meaning a org can have child and parent organizations.",
-		"Lookup the [Cycloid documentation](https://docs.cycloid.io/reference/organizations) for more information on organizations.",
-		"",
-		"Warning: an API key created in an organization can only manage its children.",
-	}, "\n")
-)
+var orgDescription = strings.Join([]string{
+	"A Cycloid organization is the top-most entity level in Cycloid.",
+	"Almost all resources in Cycloid are scoped by organizations.",
+	"",
+	"Organizations can be nested, meaning a org can have child and parent organizations.",
+	"Lookup the [Cycloid documentation](https://docs.cycloid.io/reference/organizations) for more information on organizations.",
+	"",
+	"Warning: an API key created in an organization can only manage its children.",
+}, "\n")
 
 func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
@@ -239,16 +236,32 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					},
 				},
 			},
+			"can_children_manage_oidc_mapping": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+				Description:         "Whether child organizations are allowed to manage their own OIDC group mappings.",
+				MarkdownDescription: "Whether child organizations are allowed to manage their own OIDC group mappings.",
+			},
+			"can_manage_oidc_mapping": schema.BoolAttribute{
+				Computed:            true,
+				Description:         "Whether this organization can manage OIDC group mappings (derived from parent's can_children_manage_oidc_mapping). Read-only.",
+				MarkdownDescription: "Whether this organization can manage OIDC group mappings (derived from parent's `can_children_manage_oidc_mapping`). Read-only.",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"allow_destroy": schema.BoolAttribute{
 				Description:         "Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.",
 				MarkdownDescription: "Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
+				// allow_destroy and soft_destroy are contradictory; reject only when
+				// BOTH are true. (A presence-based ConflictsWith false-positives here
+				// because both are Computed with a default value.)
 				Validators: []validator.Bool{
-					boolvalidator.ConflictsWith(
-						path.MatchRoot("soft_destroy"),
-					),
+					ConflictsWhenBothTrue(path.MatchRoot("soft_destroy")),
 				},
 			},
 			"soft_destroy": schema.BoolAttribute{
@@ -257,28 +270,25 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				Validators: []validator.Bool{
-					boolvalidator.ConflictsWith(
-						path.MatchRoot("allow_destroy"),
-					),
-				},
 			},
 		},
 	}
 }
 
 type OrganizationModel struct {
-	AllowDestroy       types.Bool   `tfsdk:"allow_destroy"`
-	Canonical          types.String `tfsdk:"canonical"`
-	Concourse          types.Object `tfsdk:"concourse"`
-	HasChildren        types.Bool   `tfsdk:"has_children"`
-	ID                 types.Int64  `tfsdk:"id"`
-	IsRoot             types.Bool   `tfsdk:"is_root"`
-	Licence            types.Object `tfsdk:"licence"`
-	Name               types.String `tfsdk:"name"`
-	ParentOrganization types.String `tfsdk:"parent_organization"`
-	SoftDestroy        types.Bool   `tfsdk:"soft_destroy"`
-	Subscription       types.Object `tfsdk:"subscription"`
+	AllowDestroy                 types.Bool   `tfsdk:"allow_destroy"`
+	CanChildrenManageOidcMapping types.Bool   `tfsdk:"can_children_manage_oidc_mapping"`
+	CanManageOidcMapping         types.Bool   `tfsdk:"can_manage_oidc_mapping"`
+	Canonical                    types.String `tfsdk:"canonical"`
+	Concourse                    types.Object `tfsdk:"concourse"`
+	HasChildren                  types.Bool   `tfsdk:"has_children"`
+	ID                           types.Int64  `tfsdk:"id"`
+	IsRoot                       types.Bool   `tfsdk:"is_root"`
+	Licence                      types.Object `tfsdk:"licence"`
+	Name                         types.String `tfsdk:"name"`
+	ParentOrganization           types.String `tfsdk:"parent_organization"`
+	SoftDestroy                  types.Bool   `tfsdk:"soft_destroy"`
+	Subscription                 types.Object `tfsdk:"subscription"`
 }
 
 type LicenceModel struct {

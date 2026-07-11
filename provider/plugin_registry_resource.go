@@ -6,16 +6,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginRegistryResource{}
-var _ resource.ResourceWithImportState = &pluginRegistryResource{}
+var (
+	_ resource.Resource                = &pluginRegistryResource{}
+	_ resource.ResourceWithImportState = &pluginRegistryResource{}
+)
 
 type pluginRegistryResourceModel resource_plugin_registry.PluginRegistryModel
 
@@ -58,7 +61,7 @@ func (r *pluginRegistryResource) Create(ctx context.Context, req resource.Create
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registry, _, err := m.CreatePluginRegistry(org, data.Name.ValueString(), data.URL.ValueString())
 	if err != nil {
@@ -66,7 +69,7 @@ func (r *pluginRegistryResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	id := uint32(ptr.Value(registry.ID))
+	id := ptr.Value(registry.ID)
 
 	if data.WaitUntilConnected.ValueBool() {
 		if err := pollPluginRegistryConnected(m, org, id, 5*time.Minute); err != nil {
@@ -80,7 +83,7 @@ func (r *pluginRegistryResource) Create(ctx context.Context, req resource.Create
 		registries, _, listErr := m.ListPluginRegistries(org)
 		if listErr == nil {
 			for _, reg := range registries {
-				if reg.ID != nil && uint32(*reg.ID) == id {
+				if reg.ID != nil && *reg.ID == id {
 					registry = reg
 					break
 				}
@@ -100,7 +103,7 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	// GET /plugin_registries/{id} is not supported (405); use list + filter.
 	id := uint32(data.ID.ValueInt64())
@@ -111,7 +114,7 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 	var registry *models.PluginRegistry
 	for _, reg := range registries {
-		if reg.ID != nil && uint32(*reg.ID) == id {
+		if reg.ID != nil && *reg.ID == id {
 			registry = reg
 			break
 		}
@@ -139,7 +142,7 @@ func (r *pluginRegistryResource) Update(ctx context.Context, req resource.Update
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 	id := uint32(data.ID.ValueInt64())
 
 	if data.WaitUntilConnected.ValueBool() {
@@ -159,7 +162,7 @@ func (r *pluginRegistryResource) Update(ctx context.Context, req resource.Update
 	}
 	var registry *models.PluginRegistry
 	for _, reg := range registries {
-		if reg.ID != nil && uint32(*reg.ID) == id {
+		if reg.ID != nil && *reg.ID == id {
 			registry = reg
 			break
 		}
@@ -181,7 +184,7 @@ func (r *pluginRegistryResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	id := uint32(data.ID.ValueInt64())
 	_, err := m.DeletePluginRegistry(org, id)
@@ -198,7 +201,7 @@ func (r *pluginRegistryResource) ImportState(ctx context.Context, req resource.I
 		return
 	}
 	org := r.provider.DefaultOrganization
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registries, _, err := m.ListPluginRegistries(org)
 	if err != nil {
@@ -207,7 +210,7 @@ func (r *pluginRegistryResource) ImportState(ctx context.Context, req resource.I
 	}
 	var registry *models.PluginRegistry
 	for _, reg := range registries {
-		if reg.ID != nil && uint32(*reg.ID) == uint32(id) {
+		if reg.ID != nil && *reg.ID == uint32(id) {
 			registry = reg
 			break
 		}
@@ -223,7 +226,7 @@ func (r *pluginRegistryResource) ImportState(ctx context.Context, req resource.I
 }
 
 // pollPluginRegistryConnected polls list+filter until the registry status == "connected".
-func pollPluginRegistryConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+func pollPluginRegistryConnected(m apiclient.APIClient, org string, id uint32, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		registries, _, err := m.ListPluginRegistries(org)
@@ -231,7 +234,7 @@ func pollPluginRegistryConnected(m middleware.Middleware, org string, id uint32,
 			return err
 		}
 		for _, reg := range registries {
-			if reg.ID != nil && uint32(*reg.ID) == id && ptr.Value(reg.Status) == "connected" {
+			if reg.ID != nil && *reg.ID == id && ptr.Value(reg.Status) == "connected" {
 				return nil
 			}
 		}

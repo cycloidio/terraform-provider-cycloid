@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_integration"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_integration"
 )
 
-var _ resource.Resource = (*oidcIntegrationResource)(nil)
-var _ resource.ResourceWithImportState = (*oidcIntegrationResource)(nil)
+var (
+	_ resource.Resource                = (*oidcIntegrationResource)(nil)
+	_ resource.ResourceWithImportState = (*oidcIntegrationResource)(nil)
+)
 
 // NewOIDCIntegrationResource is the constructor registered in provider.go.
 func NewOIDCIntegrationResource() resource.Resource {
@@ -58,7 +61,7 @@ func (r *oidcIntegrationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	integration, _, err := r.provider.Middleware.UpdateOIDCIntegration(org, oidcIntegrationConfig(&data))
+	integration, _, err := r.provider.Client.UpdateOIDCIntegration(org, oidcIntegrationConfig(&data))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create OIDC integration in org %q", org), err.Error())
 		return
@@ -78,7 +81,7 @@ func (r *oidcIntegrationResource) Read(ctx context.Context, req resource.ReadReq
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 
-	integration, _, err := r.provider.Middleware.GetOIDCIntegration(org)
+	integration, _, err := r.provider.Client.GetOIDCIntegration(org)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -104,7 +107,7 @@ func (r *oidcIntegrationResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	integration, _, err := r.provider.Middleware.UpdateOIDCIntegration(org, oidcIntegrationConfig(&data))
+	integration, _, err := r.provider.Client.UpdateOIDCIntegration(org, oidcIntegrationConfig(&data))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update OIDC integration in org %q", org), err.Error())
 		return
@@ -127,7 +130,7 @@ func (r *oidcIntegrationResource) Delete(ctx context.Context, req resource.Delet
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 
-	_, _, err := r.provider.Middleware.UpdateOIDCIntegration(org, map[string]interface{}{
+	_, _, err := r.provider.Client.UpdateOIDCIntegration(org, map[string]interface{}{
 		"type":    "AuthenticationOIDC",
 		"enabled": false,
 	})
@@ -216,7 +219,7 @@ func oidcIntegrationConfig(data *oidcIntegrationResourceModel) map[string]interf
 // never returns those values; overwriting them with an empty string would cause
 // perpetual drift on every subsequent plan. Callers must preserve the prior
 // state values for those two fields.
-func oidcIntegrationToData(org string, i *cycloidmiddleware.OIDCIntegration, data *oidcIntegrationResourceModel) {
+func oidcIntegrationToData(org string, i *cycloidapiclient.OIDCIntegration, data *oidcIntegrationResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.Enabled = types.BoolValue(i.Enabled)
 

@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_nav_order"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_nav_order"
 )
 
-var _ resource.Resource = (*organizationNavOrderResource)(nil)
-var _ resource.ResourceWithImportState = (*organizationNavOrderResource)(nil)
+var (
+	_ resource.Resource                = (*organizationNavOrderResource)(nil)
+	_ resource.ResourceWithImportState = (*organizationNavOrderResource)(nil)
+)
 
 func NewOrganizationNavOrderResource() resource.Resource {
 	return &organizationNavOrderResource{}
@@ -65,7 +68,7 @@ func (r *organizationNavOrderResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	config, _, err := r.provider.Middleware.UpdateOrgNav(org, items)
+	config, _, err := r.provider.Client.UpdateOrgNav(org, items)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create nav ordering in org %q", org), err.Error())
 		return
@@ -88,7 +91,7 @@ func (r *organizationNavOrderResource) Read(ctx context.Context, req resource.Re
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 
-	config, _, err := r.provider.Middleware.GetOrgNav(org)
+	config, _, err := r.provider.Client.GetOrgNav(org)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -120,7 +123,7 @@ func (r *organizationNavOrderResource) Update(ctx context.Context, req resource.
 		return
 	}
 
-	config, _, err := r.provider.Middleware.UpdateOrgNav(org, items)
+	config, _, err := r.provider.Client.UpdateOrgNav(org, items)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update nav ordering in org %q", org), err.Error())
 		return
@@ -146,7 +149,7 @@ func (r *organizationNavOrderResource) Delete(ctx context.Context, req resource.
 	// The API has no delete endpoint for this config. Reset to the default
 	// (empty) ordering so relinquishing Terraform management doesn't leave a
 	// custom ordering silently active.
-	_, _, err := r.provider.Middleware.UpdateOrgNav(org, nil)
+	_, _, err := r.provider.Client.UpdateOrgNav(org, nil)
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddWarning(
 			"Unable to reset nav ordering",
@@ -162,17 +165,17 @@ func (r *organizationNavOrderResource) ImportState(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// navItemsFromData converts the Terraform items list into the middleware's
+// navItemsFromData converts the Terraform items list into the apiclient's
 // NavItem slice. Always returns a non-nil slice (possibly empty) so the
 // caller sends an explicit [] rather than a JSON null — an empty array is
 // what resets the ordering to defaults; omitting the field or sending null
 // is not the same thing.
-func navItemsFromData(ctx context.Context, itemsVal types.List) ([]*cycloidmiddleware.NavItem, diag.Diagnostics) {
+func navItemsFromData(ctx context.Context, itemsVal types.List) ([]*cycloidapiclient.NavItem, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var itemModels []resource_organization_nav_order.NavItemModel
 
 	if itemsVal.IsNull() || itemsVal.IsUnknown() {
-		return []*cycloidmiddleware.NavItem{}, diags
+		return []*cycloidapiclient.NavItem{}, diags
 	}
 
 	diags.Append(itemsVal.ElementsAs(ctx, &itemModels, false)...)
@@ -180,9 +183,9 @@ func navItemsFromData(ctx context.Context, itemsVal types.List) ([]*cycloidmiddl
 		return nil, diags
 	}
 
-	items := make([]*cycloidmiddleware.NavItem, len(itemModels))
+	items := make([]*cycloidapiclient.NavItem, len(itemModels))
 	for i, im := range itemModels {
-		items[i] = &cycloidmiddleware.NavItem{
+		items[i] = &cycloidapiclient.NavItem{
 			Type:     im.Type.ValueString(),
 			Key:      im.Key.ValueString(),
 			Position: uint32(im.Position.ValueInt64()),
@@ -191,9 +194,9 @@ func navItemsFromData(ctx context.Context, itemsVal types.List) ([]*cycloidmiddl
 	return items, diags
 }
 
-// navConfigToData maps the middleware's NavConfig response into the
+// navConfigToData maps the apiclient's NavConfig response into the
 // Terraform state model.
-func navConfigToData(ctx context.Context, org string, config *cycloidmiddleware.NavConfig, data *organizationNavOrderResourceModel) diag.Diagnostics {
+func navConfigToData(ctx context.Context, org string, config *cycloidapiclient.NavConfig, data *organizationNavOrderResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	data.Organization = types.StringValue(org)

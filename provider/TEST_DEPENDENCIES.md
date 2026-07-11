@@ -4,14 +4,14 @@ This document describes the test dependency management system for handling resou
 
 ## Overview
 
-The `TestDependencyManager` provides a way to create and manage test dependencies using the Cycloid middleware, allowing tests to work with pre-existing resources instead of creating them inline in Terraform configurations.
+The `TestDependencyManager` provides a way to create and manage test dependencies using the Cycloid apiclient, allowing tests to work with pre-existing resources instead of creating them inline in Terraform configurations.
 
 ## Key Benefits
 
 1. **Cleaner Test Configurations**: Test configurations no longer need to include dependency resources
 2. **Realistic Testing**: Tests work with actual API-created resources, not mock ones
 3. **Dependency Management**: Automatic cleanup of created dependencies
-4. **Flexible**: Works for both unit tests (without middleware) and acceptance tests (with middleware)
+4. **Flexible**: Works for both unit tests (without apiclient) and acceptance tests (with apiclient)
 
 ## Usage Example
 
@@ -91,13 +91,13 @@ resource "cycloid_environment" "test" {
 
 ### Unit Tests (No Environment Variables)
 - When `CY_API_KEY`, `CY_API_URL`, or `CY_ORG` are not set
-- Middleware is not initialized
+- Client is not initialized
 - `EnsureTestProject` returns the project name as canonical
 - Dependencies are managed by Terraform during test execution
 
 ### Acceptance Tests (With Environment Variables)
 - When all required environment variables are set
-- Middleware is initialized with Cycloid API
+- Client is initialized with Cycloid API
 - `EnsureTestProject` creates actual API resources
 - Dependencies are automatically cleaned up
 
@@ -115,7 +115,7 @@ To add support for other resource dependencies:
 ```go
 // Add to TestDependencyManager
 func (dm *TestDependencyManager) EnsureTestTeam(ctx context.Context, t *testing.T, name string) (string, error) {
-    if dm.provider.Middleware == nil {
+    if dm.provider.Client == nil {
         return name, nil
     }
     // ... API logic to create/check team

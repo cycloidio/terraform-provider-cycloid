@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/cycloidio/terraform-provider-cycloid/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"github.com/cycloidio/youdeploy-http-api/tf_provider/provider"
 )
 
 func main() {

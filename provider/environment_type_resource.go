@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_environment_type"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_environment_type"
 )
 
-var _ resource.Resource = (*environmentTypeResource)(nil)
-var _ resource.ResourceWithImportState = (*environmentTypeResource)(nil)
+var (
+	_ resource.Resource                = (*environmentTypeResource)(nil)
+	_ resource.ResourceWithImportState = (*environmentTypeResource)(nil)
+)
 
 func NewEnvironmentTypeResource() resource.Resource {
 	return &environmentTypeResource{}
@@ -73,7 +76,7 @@ func (r *environmentTypeResource) Create(ctx context.Context, req resource.Creat
 		Color:     &color,
 	}
 
-	et, _, err := r.provider.Middleware.CreateEnvironmentType(org, body)
+	et, _, err := r.provider.Client.CreateEnvironmentType(org, body)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to create environment type", err.Error())
 		return
@@ -94,7 +97,7 @@ func (r *environmentTypeResource) Read(ctx context.Context, req resource.ReadReq
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	et, _, err := r.provider.Middleware.GetEnvironmentType(org, canonical)
+	et, _, err := r.provider.Client.GetEnvironmentType(org, canonical)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -126,7 +129,7 @@ func (r *environmentTypeResource) Update(ctx context.Context, req resource.Updat
 		Color: &color,
 	}
 
-	et, _, err := r.provider.Middleware.UpdateEnvironmentType(org, canonical, body)
+	et, _, err := r.provider.Client.UpdateEnvironmentType(org, canonical, body)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to update environment type", err.Error())
 		return
@@ -147,7 +150,7 @@ func (r *environmentTypeResource) Delete(ctx context.Context, req resource.Delet
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	_, err := r.provider.Middleware.DeleteEnvironmentType(org, canonical)
+	_, err := r.provider.Client.DeleteEnvironmentType(org, canonical)
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddError("failed to delete environment type", err.Error())
 	}

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_config_repository"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_config_repository"
 )
 
 var _ resource.Resource = (*configRepositoryResource)(nil)
@@ -60,7 +60,7 @@ func (r *configRepositoryResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
@@ -96,7 +96,7 @@ func (r *configRepositoryResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Read API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	can := data.Canonical.ValueString()
 
@@ -132,7 +132,7 @@ func (r *configRepositoryResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	// Update API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	name := data.Name.ValueString()
@@ -178,7 +178,7 @@ func (r *configRepositoryResource) Delete(ctx context.Context, req resource.Dele
 	}
 
 	// Delete API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)

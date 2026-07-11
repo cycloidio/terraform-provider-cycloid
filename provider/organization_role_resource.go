@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_role"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_role"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &organizationRoleResource{}
 
-type organizationRoleResourceModel resource_organization_role.OrganizationRoleModel
-type organizationRoleRuleResourceModel resource_organization_role.OrganizationRoleRuleModel
+type (
+	organizationRoleResourceModel     resource_organization_role.OrganizationRoleModel
+	organizationRoleRuleResourceModel resource_organization_role.OrganizationRoleRuleModel
+)
 
 func NewOrganizationRoleResource() resource.Resource {
 	return &organizationRoleResource{}
@@ -59,7 +62,7 @@ func (r *organizationRoleResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 	org := getOrganizationCanonical(*r.provider, rolePlan.Organization)
 	name, canonical, err := NameOrCanonical(rolePlan.Name.ValueString(), rolePlan.Canonical.ValueString())
 	if err != nil {
@@ -124,7 +127,7 @@ func (r *organizationRoleResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 	org := getOrganizationCanonical(*r.provider, roleState.Organization)
 	_, canonical, err := NameOrCanonical(roleState.Name.ValueString(), roleState.Canonical.ValueString())
 	if err != nil {
@@ -183,7 +186,7 @@ func (r *organizationRoleResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	role, _, err := m.UpdateRole(org, currentCanonical, &name, &canonical, rolePlan.Description.ValueStringPointer(), rules)
 	if err != nil {
@@ -207,7 +210,7 @@ func (r *organizationRoleResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 	org := getOrganizationCanonical(*r.provider, roleState.Organization)
 	_, canonical, err := NameOrCanonical(roleState.Name.ValueString(), roleState.Canonical.ValueString())
 	if err != nil {

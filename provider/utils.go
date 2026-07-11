@@ -46,7 +46,7 @@ func NameOrCanonical(name, canonical string) (string, string, error) {
 }
 
 // nilIfEmpty returns a pointer to s, or nil when s is the empty string.
-// Used to distinguish "not provided" from "" when calling middleware methods
+// Used to distinguish "not provided" from "" when calling apiclient methods
 // that accept optional *string parameters.
 func nilIfEmpty(s string) *string {
 	if s == "" {

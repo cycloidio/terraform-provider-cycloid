@@ -4,14 +4,14 @@ page_title: "cycloid_credential Data Source - cycloid"
 subcategory: ""
 description: |-
   This datasource allows you to fetch a credential and its value.
-  You can define a specific organiztion with the organization attribute or it will default the the provider's organization settings.
+  You can define a specific organization with the organization attribute or it will default the the provider's organization settings.
   The populated fields will depend on the credential types.
 ---
 
 # cycloid_credential (Data Source)
 
 This datasource allows you to fetch a credential and its value. 
-You can define a specific organiztion with the `organization` attribute or it will default the the provider's organization settings.
+You can define a specific organization with the `organization` attribute or it will default the the provider's organization settings.
  
 The populated fields will depend on the credential types.
 

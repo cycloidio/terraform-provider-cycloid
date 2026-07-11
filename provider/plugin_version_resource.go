@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_version"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_version"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 const (
@@ -19,8 +20,10 @@ const (
 	pluginVersionPollTimeout  = 10 * time.Minute
 )
 
-var _ resource.Resource = &pluginVersionResource{}
-var _ resource.ResourceWithImportState = &pluginVersionResource{}
+var (
+	_ resource.Resource                = &pluginVersionResource{}
+	_ resource.ResourceWithImportState = &pluginVersionResource{}
+)
 
 type pluginVersionResourceModel resource_plugin_version.PluginVersionModel
 
@@ -63,7 +66,7 @@ func (r *pluginVersionResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(data.PluginID.ValueInt64())
@@ -77,7 +80,7 @@ func (r *pluginVersionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	versionID := uint32(ptr.Value(version.ID))
+	versionID := ptr.Value(version.ID)
 
 	// Save state early so the resource exists even if polling fails.
 	pluginVersionToModel(org, version, &data)
@@ -133,7 +136,7 @@ func (r *pluginVersionResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(data.PluginID.ValueInt64())
@@ -168,7 +171,7 @@ func (r *pluginVersionResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(data.PluginID.ValueInt64())
@@ -210,7 +213,7 @@ func (r *pluginVersionResource) ImportState(ctx context.Context, req resource.Im
 	}
 
 	org := r.provider.DefaultOrganization
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	version, _, err := m.GetPluginVersion(org, uint32(registryID), uint32(pluginID), uint32(versionID))
 	if err != nil {

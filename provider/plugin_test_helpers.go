@@ -53,11 +53,11 @@ func ensurePluginHelloWorld(t *testing.T) string {
 	t.Helper()
 
 	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("skipping plugin image test: docker binary not found")
+		t.Fatal("docker binary not found: ensure docker is installed")
 	}
 
 	if !isRegistryReachable() {
-		t.Skip("skipping plugin image test: localhost:5000 unreachable (run just be-start first)")
+		t.Fatal("localhost:5000 unreachable: run just be-start first")
 	}
 
 	if !manifestExists() {

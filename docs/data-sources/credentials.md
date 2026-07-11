@@ -4,7 +4,7 @@ page_title: "cycloid_credentials Data Source - cycloid"
 subcategory: ""
 description: |-
   This datasource allows you to list the credentials of the designated cycloid organization.
-  You can define a specific organiztion with the organization attribute or it will default the the provider's organization settings.
+  You can define a specific organization with the organization attribute or it will default the the provider's organization settings.
   Credentials types can be filtered using the credentials_types attribute, you can fill more than one.
   This datasource will only return the credentials metadata, if you need the credentials values, you will need to use the datasource_credential to retrieve them.
 ---
@@ -12,7 +12,7 @@ description: |-
 # cycloid_credentials (Data Source)
 
 This datasource allows you to list the credentials of the designated cycloid organization. 
-You can define a specific organiztion with the `organization` attribute or it will default the the provider's organization settings.
+You can define a specific organization with the `organization` attribute or it will default the the provider's organization settings.
  
 Credentials types can be filtered using the `credentials_types` attribute, you can fill more than one. 
 This datasource will only return the credentials metadata, if you need the credentials values, you will need to use the `datasource_credential` to retrieve them.

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
 )
 
 func isNotFoundError(err error) bool {
@@ -13,7 +13,7 @@ func isNotFoundError(err error) bool {
 		return false
 	}
 	// A typed 404 is an unambiguous not-found signal.
-	var apiErr *cycloidmiddleware.APIResponseError
+	var apiErr *cycloidapiclient.APIResponseError
 	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
 		return true
 	}
@@ -35,7 +35,7 @@ func isCredentialInUseError(err error) bool {
 	if err == nil {
 		return false
 	}
-	var apiErr *cycloidmiddleware.APIResponseError
+	var apiErr *cycloidapiclient.APIResponseError
 	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == http.StatusConflict
 	}

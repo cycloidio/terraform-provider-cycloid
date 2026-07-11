@@ -6,16 +6,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_manager"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_manager"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginManagerResource{}
-var _ resource.ResourceWithImportState = &pluginManagerResource{}
+var (
+	_ resource.Resource                = &pluginManagerResource{}
+	_ resource.ResourceWithImportState = &pluginManagerResource{}
+)
 
 type pluginManagerResourceModel resource_plugin_manager.PluginManagerModel
 
@@ -58,7 +61,7 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), true)
 	if err != nil {
@@ -66,7 +69,7 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	pmID := uint32(ptr.Value(pm.ID))
+	pmID := ptr.Value(pm.ID)
 
 	if data.WaitUntilConnected.ValueBool() {
 		if err := pollPluginManagerConnected(m, org, pmID, 5*time.Minute); err != nil {
@@ -96,7 +99,7 @@ func (r *pluginManagerResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	id := uint32(data.ID.ValueInt64())
 	pm, _, err := m.GetPluginManager(org, id)
@@ -125,7 +128,7 @@ func (r *pluginManagerResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	id := uint32(data.ID.ValueInt64())
 	_, err := m.DeletePluginManager(org, id)
@@ -142,7 +145,7 @@ func (r *pluginManagerResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 	org := r.provider.DefaultOrganization
-	m := r.provider.Middleware
+	m := r.provider.Client
 	pm, _, err := m.GetPluginManager(org, uint32(id))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin manager %d for import", id), err.Error())
@@ -154,7 +157,7 @@ func (r *pluginManagerResource) ImportState(ctx context.Context, req resource.Im
 }
 
 // pollPluginManagerConnected polls GetPluginManager until status == "connected".
-func pollPluginManagerConnected(m middleware.Middleware, org string, id uint32, timeout time.Duration) error {
+func pollPluginManagerConnected(m apiclient.APIClient, org string, id uint32, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		pm, _, err := m.GetPluginManager(org, id)

@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_accounts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_accounts"
 )
 
 var _ datasource.DataSource = &cloudAccountsDataSource{}
@@ -64,7 +65,7 @@ func (s *cloudAccountsDataSource) Read(ctx context.Context, req datasource.ReadR
 	org := getOrganizationCanonical(*s.provider, data.Organization)
 	cloudProviderFilter := data.CloudProvider.ValueString()
 
-	cas, _, err := s.provider.Middleware.ListCloudAccounts(org)
+	cas, _, err := s.provider.Client.ListCloudAccounts(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list cloud accounts", err.Error())
 		return

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_environments"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_environments"
 )
 
 var _ datasource.DataSource = &environmentsDataSource{}
@@ -68,7 +69,7 @@ func (s *environmentsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	org := getOrganizationCanonical(*s.provider, data.Organization)
 	project := data.Project.ValueString()
 
-	envs, _, err := s.provider.Middleware.ListOrgEnvs(org)
+	envs, _, err := s.provider.Client.ListOrgEnvs(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list environments", err.Error())
 		return
@@ -77,7 +78,7 @@ func (s *environmentsDataSource) Read(ctx context.Context, req datasource.ReadRe
 	// When project filter is set, restrict to envs linked to that project.
 	var allowedCanonicals []string
 	if project != "" {
-		projEnvs, _, err := s.provider.Middleware.ListProjectEnvs(org, project)
+		projEnvs, _, err := s.provider.Client.ListProjectEnvs(org, project)
 		if err != nil {
 			resp.Diagnostics.AddError("failed to list project environments for filter", err.Error())
 			return

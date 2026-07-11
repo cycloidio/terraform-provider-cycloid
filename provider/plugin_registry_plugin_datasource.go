@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_registry_plugin"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_plugin_registry_plugin"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ datasource.DataSource = &pluginRegistryPluginDataSource{}
@@ -53,7 +54,7 @@ func (s *pluginRegistryPluginDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	org := getOrganizationCanonical(*s.provider, data.Organization)
-	m := s.provider.Middleware
+	m := s.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	plugins, _, err := m.ListRegistryPlugins(org, registryID)

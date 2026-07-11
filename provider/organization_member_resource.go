@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_member"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_member"
 )
 
 var _ resource.Resource = (*organizationMemberResource)(nil)
@@ -58,7 +59,7 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	email := data.Email.ValueString()
 	role := data.RoleCanonical.ValueString()
@@ -79,7 +80,7 @@ func (r *organizationMemberResource) Create(ctx context.Context, req resource.Cr
 	// a root-org admin role) the API returns the existing membership with its current
 	// role rather than the requested one. Reconcile by forcing the requested role.
 	if m.Role != nil && m.Role.Canonical != nil && *m.Role.Canonical != role {
-		m, _, err = mid.UpdateMember(orgCan, uint32(*m.ID), role)
+		m, _, err = mid.UpdateMember(orgCan, *m.ID, role)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to set requested role on existing member",
@@ -122,7 +123,7 @@ func (r *organizationMemberResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	memberID := data.MemberId
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
@@ -156,7 +157,7 @@ func (r *organizationMemberResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	memberID := data.MemberId.ValueInt64()
@@ -198,7 +199,7 @@ func (r *organizationMemberResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	memberID := data.MemberId.ValueInt64()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)

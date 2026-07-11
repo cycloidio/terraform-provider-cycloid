@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -13,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_credential"
 )
 
 var _ datasource.DataSource = &credentialDataSource{}
@@ -37,7 +38,7 @@ func (s *credentialDataSource) Schema(ctx context.Context, req datasource.Schema
 	// description in a json file.
 	description := fmt.Sprintln(
 		"This datasource allows you to fetch a credential and its value.",
-		"\nYou can define a specific organiztion with the `organization` attribute or it will default the the",
+		"\nYou can define a specific organization with the `organization` attribute or it will default the the",
 		"provider's organization settings.\n",
 		"\nThe populated fields will depend on the credential types.",
 	)
@@ -81,12 +82,12 @@ func (s *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	var organization = getOrganizationCanonical(*s.provider, data.Organization)
+	organization := getOrganizationCanonical(*s.provider, data.Organization)
 
-	if s.provider.Middleware == nil {
+	if s.provider.Client == nil {
 		return
 	}
-	m := s.provider.Middleware
+	m := s.provider.Client
 
 	canonical := data.Canonical.ValueString()
 

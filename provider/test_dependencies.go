@@ -6,15 +6,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/common"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/cmd/common"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-// TestDependencyManager handles creating and managing test dependencies using Cycloid middleware
+// TestDependencyManager handles creating and managing test dependencies using Cycloid apiclient
 type TestDependencyManager struct {
 	provider     *CycloidProvider
 	organization string
@@ -27,8 +28,12 @@ type cleanupItem struct {
 	cleanupFunc  func() error
 }
 
-// NewTestDependencyManager creates a new dependency manager for testing
+// NewTestDependencyManager creates a new dependency manager for testing.
+// Skips the test in -short mode via testAccPreCheck.
 func NewTestDependencyManager(t *testing.T) *TestDependencyManager {
+	t.Helper()
+	testAccPreCheck(t)
+
 	provider := &CycloidProvider{}
 
 	provider.APIKey = os.Getenv("CY_API_KEY")
@@ -42,7 +47,7 @@ func NewTestDependencyManager(t *testing.T) *TestDependencyManager {
 			common.WithToken(provider.APIKey),
 			common.WithInsecure(provider.Insecure),
 		)
-		provider.Middleware = middleware.NewMiddleware(provider.APIClient)
+		provider.Client = apiclient.NewAPIClient(provider.APIClient)
 	}
 
 	org := testAccGetOrganizationCanonical()
@@ -54,7 +59,7 @@ func NewTestDependencyManager(t *testing.T) *TestDependencyManager {
 	}
 }
 
-// CreateTestProject creates a test project using middleware and returns the full project model.
+// CreateTestProject creates a test project using apiclient and returns the full project model.
 // org must match the organization used by the resource under test so the project is in the same org.
 func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testing.T, org, name, description string) (*models.Project, error) {
 	if description == "" {
@@ -66,7 +71,7 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		return nil, fmt.Errorf("loading test config: %w", err)
 	}
 
-	project, _, err := dm.provider.Middleware.CreateProject(
+	project, _, err := dm.provider.Client.CreateProject(
 		org,
 		name,
 		name, // canonical same as name
@@ -82,7 +87,7 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 		resourceType: "project",
 		canonical:    ptr.Value(project.Canonical),
 		cleanupFunc: func() error {
-			_, err := dm.provider.Middleware.DeleteProject(org, ptr.Value(project.Canonical), middleware.DeleteOptions{})
+			_, err := dm.provider.Client.DeleteProject(org, ptr.Value(project.Canonical), apiclient.DeleteOptions{})
 			return err
 		},
 	})
@@ -93,14 +98,14 @@ func (dm *TestDependencyManager) CreateTestProject(ctx context.Context, t *testi
 
 // EnsureTestProject creates a project if it doesn't exist, or returns the existing one.
 // org must match the organization used by the resource under test.
-// Skips the test when credentials are not configured (middleware is nil).
+// Skips the test when credentials are not configured (apiclient is nil).
 func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testing.T, org, name, description string) (*models.Project, error) {
 	t.Helper()
-	if dm.provider.Middleware == nil {
-		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
+	if dm.provider.Client == nil {
+		t.Fatal("provider client is nil: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
-	projects, _, err := dm.provider.Middleware.ListProjects(org)
+	projects, _, err := dm.provider.Client.ListProjects(org)
 	if err != nil {
 		t.Logf("Warning: failed to list projects, will attempt to create: %v", err)
 	}
@@ -115,9 +120,9 @@ func (dm *TestDependencyManager) EnsureTestProject(ctx context.Context, t *testi
 	return dm.CreateTestProject(ctx, t, org, name, description)
 }
 
-// CreateTestEnvironment creates a test environment inside a project using middleware and returns the full environment model.
+// CreateTestEnvironment creates a test environment inside a project using apiclient and returns the full environment model.
 func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
-	env, _, err := dm.provider.Middleware.CreateOrgEnv(org, &models.NewEnvironment{
+	env, _, err := dm.provider.Client.CreateOrgEnv(org, &models.NewEnvironment{
 		Canonical: name,
 		Name:      ptr.Ptr(name),
 	})
@@ -125,7 +130,7 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		return nil, fmt.Errorf("failed to create test environment: %w", err)
 	}
 
-	if _, err := dm.provider.Middleware.LinkEnvToProject(org, project, name); err != nil {
+	if _, err := dm.provider.Client.LinkEnvToProject(org, project, name); err != nil {
 		return nil, fmt.Errorf("failed to link test environment to project: %w", err)
 	}
 
@@ -134,10 +139,10 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 		resourceType: "environment",
 		canonical:    canonical,
 		cleanupFunc: func() error {
-			if _, err := dm.provider.Middleware.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{}); err != nil {
+			if _, err := dm.provider.Client.UnlinkEnvFromProject(org, project, canonical, apiclient.DeleteOptions{}); err != nil {
 				return err
 			}
-			_, err := dm.provider.Middleware.DeleteOrgEnv(org, canonical)
+			_, err := dm.provider.Client.DeleteOrgEnv(org, canonical)
 			return err
 		},
 	})
@@ -147,14 +152,14 @@ func (dm *TestDependencyManager) CreateTestEnvironment(ctx context.Context, t *t
 }
 
 // EnsureTestEnvironment creates the environment if it doesn't already exist, returning the full environment model.
-// Skips the test when credentials are not configured (middleware is nil).
+// Skips the test when credentials are not configured (apiclient is nil).
 func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *testing.T, org, project, name string) (*models.Environment, error) {
 	t.Helper()
-	if dm.provider.Middleware == nil {
-		t.Skip("skipping acceptance test: CY_API_URL, CY_API_KEY and CY_ORG must be set")
+	if dm.provider.Client == nil {
+		t.Fatal("provider client is nil: CY_API_URL, CY_API_KEY and CY_ORG must be set")
 	}
 
-	envs, _, err := dm.provider.Middleware.ListProjectEnvs(org, project)
+	envs, _, err := dm.provider.Client.ListProjectEnvs(org, project)
 	if err != nil {
 		t.Logf("Warning: failed to list environments, will attempt to create: %v", err)
 	}
@@ -162,7 +167,7 @@ func (dm *TestDependencyManager) EnsureTestEnvironment(ctx context.Context, t *t
 	for _, e := range envs {
 		if ptr.Value(e.Canonical) == name {
 			t.Logf("Test environment already exists: %s in project %s", name, project)
-			env, _, err := dm.provider.Middleware.GetOrgEnv(org, name)
+			env, _, err := dm.provider.Client.GetOrgEnv(org, name)
 			return env, err
 		}
 	}

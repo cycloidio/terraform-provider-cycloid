@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_catalog_repository"
 )
 
@@ -150,7 +150,7 @@ func (r *catalogRepositoryResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Read API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
@@ -247,7 +247,7 @@ func (r *catalogRepositoryResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	// Delete API call logic
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 
 	can := data.Canonical.ValueString()
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
@@ -328,7 +328,7 @@ func configuredCatalogRepositoryOwner(owner types.String) (string, bool) {
 }
 
 func (r *catalogRepositoryResource) createCatalogRepository(org, name, url, branch, cred, visibility, teamCanonical, owner string) (*models.ServiceCatalogSource, error) {
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 	var body *models.NewServiceCatalogSource
 	if len(cred) != 0 {
 		body = &models.NewServiceCatalogSource{
@@ -359,7 +359,7 @@ func (r *catalogRepositoryResource) createCatalogRepository(org, name, url, bran
 		body.TeamCanonical = teamCanonical
 	}
 	var result *models.ServiceCatalogSource
-	_, err := mid.GenericRequest(cycloidmiddleware.Request{
+	_, err := mid.GenericRequest(cycloidapiclient.Request{
 		Method:       "POST",
 		Organization: &org,
 		Route:        []string{"organizations", org, "service_catalog_sources"},
@@ -372,7 +372,7 @@ func (r *catalogRepositoryResource) createCatalogRepository(org, name, url, bran
 }
 
 func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, name, url, branch, cred, owner string) (*models.ServiceCatalogSource, error) {
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 	body := &models.UpdateServiceCatalogSource{
 		Branch:              branch,
 		CredentialCanonical: cred,
@@ -383,7 +383,7 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 		body.Owner = owner
 	}
 	var result *models.ServiceCatalogSource
-	_, err := mid.GenericRequest(cycloidmiddleware.Request{
+	_, err := mid.GenericRequest(cycloidapiclient.Request{
 		Method:       "PUT",
 		Organization: &org,
 		Route:        []string{"organizations", org, "service_catalog_sources", catalogRepo},
@@ -400,7 +400,7 @@ func (r *catalogRepositoryResource) updateCatalogRepository(org, catalogRepo, na
 // created catalog repository has no version rows yet (the background cron that populates them
 // runs every ~10 minutes by default).
 func (r *catalogRepositoryResource) refreshCatalogRepositoryVersions(org, catalogRepo string) error {
-	mid := r.provider.Middleware
+	mid := r.provider.Client
 	_, _, err := mid.RefreshCatalogRepositoryVersions(org, catalogRepo)
 	return err
 }
@@ -431,6 +431,7 @@ func crStacksToListValue(ctx context.Context, stacks []*models.ServiceCatalog) (
 			AttrTypes: map[string]attr.Type{
 				"canonical": types.StringType,
 				"ref":       types.StringType,
-			}},
+			},
+		},
 	}, stackElements)
 }

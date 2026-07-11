@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_project"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_project"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = (*projectResource)(nil)
@@ -61,7 +62,7 @@ func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	canonical := data.Canonical.ValueString()
 
 	org := getOrganizationCanonical(*p.provider, data.Organization)
@@ -161,11 +162,11 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	_, err := m.DeleteProject(org, canonical, middleware.DeleteOptions{})
+	_, err := m.DeleteProject(org, canonical, apiclient.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
 		return
@@ -181,7 +182,7 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 func projectToValue(ctx context.Context, org string, project *models.Project, data *projectResourceModel) diag.Diagnostics {
 	if project == nil {
-		return diag.Diagnostics{diag.NewErrorDiagnostic("project is nil for convertion", "This should not happend, please contact the plugin maintainer.")}
+		return diag.Diagnostics{diag.NewErrorDiagnostic("project is nil for conversion", "This should not happen, please contact the plugin maintainer.")}
 	}
 	data.Canonical = types.StringPointerValue(project.Canonical)
 	data.Name = types.StringPointerValue(project.Name)
@@ -206,7 +207,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 	}
 
 	if configRepository == "" {
-		configRepositories, _, err := p.provider.Middleware.ListConfigRepositories(org)
+		configRepositories, _, err := p.provider.Client.ListConfigRepositories(org)
 		if err != nil {
 			diags.AddError("failed to fetch list of current config repositories to infer default config repository", err.Error())
 			return data, diags
@@ -222,7 +223,7 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 		}
 	}
 
-	projects, _, err := p.provider.Middleware.ListProjects(org)
+	projects, _, err := p.provider.Client.ListProjects(org)
 	if err != nil {
 		diags.AddError("failed to fetch projects from API", err.Error())
 		return data, diags
@@ -236,13 +237,13 @@ func (p *projectResource) createOrUpdateProject(ctx context.Context, org, name, 
 			tflog.Info(ctx, "did not found current project, assuming it had been deleted outside the provider, re-creating...", nil)
 		}
 
-		project, _, err = p.provider.Middleware.CreateProject(org, name, canonical, description, configRepository, owner, owner, color, icon)
+		project, _, err = p.provider.Client.CreateProject(org, name, canonical, description, configRepository, owner, owner, color, icon)
 		if err != nil {
 			diags.AddError("failed to create project from API", err.Error())
 			return data, diags
 		}
 	} else {
-		project, _, err = p.provider.Middleware.UpdateProject(org, name, canonical, description, configRepository, owner, owner, color, icon, "")
+		project, _, err = p.provider.Client.UpdateProject(org, name, canonical, description, configRepository, owner, owner, color, icon, "")
 		if err != nil {
 			diags.AddError("failed to update project from API", err.Error())
 			return data, diags

@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_type"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_type"
 )
 
 var _ datasource.DataSource = &environmentTypeDataSource{}
@@ -53,7 +54,7 @@ func (s *environmentTypeDataSource) Read(ctx context.Context, req datasource.Rea
 	org := getOrganizationCanonical(*s.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	et, _, err := s.provider.Middleware.GetEnvironmentType(org, canonical)
+	et, _, err := s.provider.Client.GetEnvironmentType(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read environment type '"+canonical+"'", err.Error())
 		return

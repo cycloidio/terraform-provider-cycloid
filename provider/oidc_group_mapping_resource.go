@@ -6,14 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_oidc_group_mapping"
 )
 
-var _ resource.Resource = (*oidcGroupMappingResource)(nil)
-var _ resource.ResourceWithImportState = (*oidcGroupMappingResource)(nil)
+var (
+	_ resource.Resource                = (*oidcGroupMappingResource)(nil)
+	_ resource.ResourceWithImportState = (*oidcGroupMappingResource)(nil)
+)
 
 func NewOIDCGroupMappingResource() resource.Resource {
 	return &oidcGroupMappingResource{}
@@ -62,7 +65,7 @@ func (r *oidcGroupMappingResource) Create(ctx context.Context, req resource.Crea
 	groupName := data.GroupName.ValueString()
 	teamCanonical := data.TeamCanonical.ValueString()
 
-	mapping, _, err := r.provider.Middleware.CreateOIDCGroupMapping(org, groupName, teamCanonical)
+	mapping, _, err := r.provider.Client.CreateOIDCGroupMapping(org, groupName, teamCanonical)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create OIDC group mapping for group %q in org %q", groupName, org), err.Error())
 		return
@@ -83,7 +86,7 @@ func (r *oidcGroupMappingResource) Read(ctx context.Context, req resource.ReadRe
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	id := uint32(data.ID.ValueInt64())
 
-	mappings, _, err := r.provider.Middleware.ListOIDCGroupMappings(org)
+	mappings, _, err := r.provider.Client.ListOIDCGroupMappings(org)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -93,7 +96,7 @@ func (r *oidcGroupMappingResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	var found *cycloidmiddleware.OIDCGroupMapping
+	var found *cycloidapiclient.OIDCGroupMapping
 	for _, m := range mappings {
 		if m.ID == id {
 			found = m
@@ -125,7 +128,7 @@ func (r *oidcGroupMappingResource) Delete(ctx context.Context, req resource.Dele
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	id := uint32(data.ID.ValueInt64())
 
-	_, err := r.provider.Middleware.DeleteOIDCGroupMapping(org, id)
+	_, err := r.provider.Client.DeleteOIDCGroupMapping(org, id)
 	if err != nil {
 		if isNotFoundError(err) {
 			return
@@ -158,7 +161,7 @@ func (r *oidcGroupMappingResource) ImportState(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func oidcGroupMappingToData(org string, mapping *cycloidmiddleware.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
+func oidcGroupMappingToData(org string, mapping *cycloidapiclient.OIDCGroupMapping, data *oidcGroupMappingResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.GroupName = types.StringValue(mapping.GroupName)
 	data.ID = types.Int64Value(int64(mapping.ID))

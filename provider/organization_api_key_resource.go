@@ -4,18 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	cycloidmiddleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_api_key"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	cycloidapiclient "github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_api_key"
 )
 
-var _ resource.Resource = (*organizationAPIKeyResource)(nil)
-var _ resource.ResourceWithImportState = (*organizationAPIKeyResource)(nil)
+var (
+	_ resource.Resource                = (*organizationAPIKeyResource)(nil)
+	_ resource.ResourceWithImportState = (*organizationAPIKeyResource)(nil)
+)
 
 func NewOrganizationAPIKeyResource() resource.Resource {
 	return &organizationAPIKeyResource{}
@@ -72,7 +75,7 @@ func (r *organizationAPIKeyResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	apiKey, _, err := r.provider.Middleware.CreateAPIKey(org, canonical, description, owner, &name, rules)
+	apiKey, _, err := r.provider.Client.CreateAPIKey(org, canonical, description, owner, &name, rules)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create organization API key", err.Error())
 		return
@@ -97,7 +100,7 @@ func (r *organizationAPIKeyResource) Read(ctx context.Context, req resource.Read
 	org := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	canonical := data.Canonical.ValueString()
 
-	apiKey, _, err := r.provider.Middleware.GetAPIKey(org, canonical)
+	apiKey, _, err := r.provider.Client.GetAPIKey(org, canonical)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -143,7 +146,7 @@ func (r *organizationAPIKeyResource) Update(ctx context.Context, req resource.Up
 	}
 
 	var apiKey *models.APIKey
-	_, err := r.provider.Middleware.GenericRequest(cycloidmiddleware.Request{
+	_, err := r.provider.Client.GenericRequest(cycloidapiclient.Request{
 		Method:       "PUT",
 		Organization: &org,
 		Route:        []string{"organizations", org, "api_keys", canonical},
@@ -173,7 +176,7 @@ func (r *organizationAPIKeyResource) Delete(ctx context.Context, req resource.De
 	org := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 	canonical := data.Canonical.ValueString()
 
-	_, err := r.provider.Middleware.DeleteAPIKey(org, canonical)
+	_, err := r.provider.Client.DeleteAPIKey(org, canonical)
 	if err != nil {
 		if isNotFoundError(err) {
 			return

@@ -6,23 +6,26 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_environment"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_organization_environment"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 // defaultOrgEnvType is applied when the practitioner does not set `type`.
 // The Cycloid API requires a non-empty environment type on create/update.
 const defaultOrgEnvType = "production"
 
-var _ resource.Resource = (*organizationEnvironmentResource)(nil)
-var _ resource.ResourceWithImportState = (*organizationEnvironmentResource)(nil)
+var (
+	_ resource.Resource                = (*organizationEnvironmentResource)(nil)
+	_ resource.ResourceWithImportState = (*organizationEnvironmentResource)(nil)
+)
 
 func NewOrganizationEnvironmentResource() resource.Resource {
 	return &organizationEnvironmentResource{}
@@ -67,7 +70,7 @@ func (p *organizationEnvironmentResource) Read(ctx context.Context, req resource
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
@@ -131,7 +134,7 @@ func (p *organizationEnvironmentResource) Delete(ctx context.Context, req resour
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
@@ -238,7 +241,7 @@ func (p *organizationEnvironmentResource) createOrUpdateOrgEnvironment(ctx conte
 		}
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	current, _, err := m.GetOrgEnv(org, canonical)
 	if err == nil {
 		updateBody := &models.UpdateEnvironment{
@@ -256,7 +259,7 @@ func (p *organizationEnvironmentResource) createOrUpdateOrgEnvironment(ctx conte
 			return data, diags
 		}
 	} else {
-		var apiErr *middleware.APIResponseError
+		var apiErr *apiclient.APIResponseError
 		if !stderrors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
 			diags.AddError("failed to fetch organization environment from API while updating resource", err.Error())
 			return data, diags

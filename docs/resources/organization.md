@@ -60,6 +60,7 @@ resource "cycloid_organization" "some_organization" {
 ### Optional
 
 - `allow_destroy` (Boolean) Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.
+- `can_children_manage_oidc_mapping` (Boolean) Whether child organizations are allowed to manage their own OIDC group mappings.
 - `canonical` (String) The canonical of an organization, fill either this or name at creation.
 - `licence` (Attributes) Attributes related to the org licence, [docs here](https://docs.cycloid.io/reference/organizations/concepts/licencing). (see [below for nested schema](#nestedatt--licence))
 - `name` (String) The name of an organization, fill either this or canonical at creation.
@@ -69,6 +70,7 @@ resource "cycloid_organization" "some_organization" {
 
 ### Read-Only
 
+- `can_manage_oidc_mapping` (Boolean) Whether this organization can manage OIDC group mappings (derived from parent's `can_children_manage_oidc_mapping`). Read-only.
 - `concourse` (Attributes) Data related to concourse (see [below for nested schema](#nestedatt--concourse))
 - `has_children` (Boolean) `true` if the organization has child organizations.
 - `id` (Number) The id of the organization.

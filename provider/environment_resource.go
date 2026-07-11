@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_environment"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/icons"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_environment"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = (*environmentResource)(nil)
@@ -62,7 +63,7 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	canonical := data.Canonical.ValueString()
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
@@ -142,7 +143,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 	canonical := data.Canonical.ValueString()
@@ -151,7 +152,7 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	// must remove the environment itself, not only unlink it from the project. The
 	// unlink has to come first: the org-level delete is rejected while the environment
 	// is still attached to a project.
-	_, err := m.UnlinkEnvFromProject(org, project, canonical, middleware.DeleteOptions{})
+	_, err := m.UnlinkEnvFromProject(org, project, canonical, apiclient.DeleteOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("failed to unlink environment from project while deleting resource", err.Error())
 		return
@@ -281,7 +282,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 		}
 	}
 
-	m := p.provider.Middleware
+	m := p.provider.Client
 	current, _, err := m.GetOrgEnv(org, canonical)
 	if err == nil {
 		updateBody := &models.UpdateEnvironment{
@@ -303,7 +304,7 @@ func (p *environmentResource) createOrUpdateEnvironment(ctx context.Context, inc
 			return data, diags
 		}
 	} else {
-		var apiErr *middleware.APIResponseError
+		var apiErr *apiclient.APIResponseError
 		if !stderrors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
 			diags.AddError("failed to fetch environment from API while updating resource", err.Error())
 			return data, diags

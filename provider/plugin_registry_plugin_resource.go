@@ -6,15 +6,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry_plugin"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_registry_plugin"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
-var _ resource.Resource = &pluginRegistryPluginResource{}
-var _ resource.ResourceWithImportState = &pluginRegistryPluginResource{}
+var (
+	_ resource.Resource                = &pluginRegistryPluginResource{}
+	_ resource.ResourceWithImportState = &pluginRegistryPluginResource{}
+)
 
 type pluginRegistryPluginResourceModel resource_plugin_registry_plugin.PluginRegistryPluginModel
 
@@ -57,7 +60,7 @@ func (r *pluginRegistryPluginResource) Create(ctx context.Context, req resource.
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	plugin, _, err := m.CreateRegistryPlugin(org, registryID, data.Name.ValueString())
@@ -72,7 +75,7 @@ func (r *pluginRegistryPluginResource) Create(ctx context.Context, req resource.
 	// The create echo populates read-only fields (e.g. owned) inconsistently with
 	// the read path, which breaks ImportStateVerify and causes post-apply drift.
 	// Re-read so state matches exactly what Read/import returns.
-	if fresh, _, rerr := m.GetRegistryPlugin(org, registryID, uint32(ptr.Value(plugin.ID))); rerr == nil && fresh != nil {
+	if fresh, _, rerr := m.GetRegistryPlugin(org, registryID, ptr.Value(plugin.ID)); rerr == nil && fresh != nil {
 		plugin = fresh
 	}
 
@@ -88,7 +91,7 @@ func (r *pluginRegistryPluginResource) Read(ctx context.Context, req resource.Re
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(data.ID.ValueInt64())
@@ -124,7 +127,7 @@ func (r *pluginRegistryPluginResource) Update(ctx context.Context, req resource.
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(state.ID.ValueInt64())
@@ -154,7 +157,7 @@ func (r *pluginRegistryPluginResource) Delete(ctx context.Context, req resource.
 	}
 
 	org := getOrganizationCanonical(*r.provider, data.Organization)
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	registryID := uint32(data.RegistryID.ValueInt64())
 	pluginID := uint32(data.ID.ValueInt64())
@@ -189,7 +192,7 @@ func (r *pluginRegistryPluginResource) ImportState(ctx context.Context, req reso
 	}
 
 	org := r.provider.DefaultOrganization
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	plugin, _, err := m.GetRegistryPlugin(org, uint32(registryID), uint32(pluginID))
 	if err != nil {

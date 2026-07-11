@@ -36,12 +36,12 @@ func testAccGetOrganizationCanonical() string {
 	return org
 }
 
-// testAccGetTestConfig returns the centralised test config (dependencies). Skips the test if config cannot be loaded.
+// testAccGetTestConfig returns the centralized test config (dependencies). Skips the test if config cannot be loaded.
 func testAccGetTestConfig(t *testing.T) *TestConfig {
 	t.Helper()
 	cfg, err := LoadTestConfig()
 	if err != nil {
-		t.Skipf("skipping: %v", err)
+		t.Fatalf("test config required: %v", err)
 	}
 	return cfg
 }

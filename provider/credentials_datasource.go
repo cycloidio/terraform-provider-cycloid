@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/sanity-io/litter"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_credentials"
 )
 
 var _ datasource.DataSource = &credentialsDataSource{}
@@ -37,7 +38,7 @@ func (s *credentialsDataSource) Schema(ctx context.Context, req datasource.Schem
 	// description in a json file.
 	description := fmt.Sprintln(
 		"This datasource allows you to list the credentials of the designated cycloid organization.",
-		"\nYou can define a specific organiztion with the `organization` attribute or it will default the the",
+		"\nYou can define a specific organization with the `organization` attribute or it will default the the",
 		"provider's organization settings.\n",
 		"\nCredentials types can be filtered using the `credentials_types` attribute, you can fill more than one.",
 		"\nThis datasource will only return the credentials metadata, if you need the credentials values, you will need to use",
@@ -102,7 +103,7 @@ func (s *credentialsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	var credentials []*CredentialSimple
-	_, err := s.provider.Middleware.GenericRequest(middleware.Request{
+	_, err := s.provider.Client.GenericRequest(apiclient.Request{
 		Method:       "GET",
 		Organization: &organization,
 		Route:        []string{"organizations", organization, "credentials"},

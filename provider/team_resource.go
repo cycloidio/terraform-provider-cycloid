@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_team"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_team"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &teamResource{}
@@ -57,7 +58,7 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
 	var name, _ string
@@ -108,7 +109,7 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
 	var name, canonical string
@@ -138,7 +139,7 @@ func (r *teamResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
-	var roles = []string{}
+	roles := []string{}
 	resp.Diagnostics.Append(teamState.Roles.ElementsAs(ctx, &roles, true)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -182,7 +183,7 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, teamPlan.Organization)
 	var name, canonical string
@@ -214,7 +215,7 @@ func (r *teamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
-	var roles = []string{}
+	roles := []string{}
 	resp.Diagnostics.Append(teamPlan.Roles.ElementsAs(ctx, &roles, true)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -252,7 +253,7 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, teamState.Organization)
 	var canonical string
@@ -314,7 +315,7 @@ func TeamToModel(ctx context.Context, org string, team *models.Team, teamState *
 		teamState.Owner = types.StringPointerValue(ptr.Value(team.Owner).Username)
 		teamState.Organization = types.StringValue(org)
 
-		var roles = make([]string, len(team.Roles))
+		roles := make([]string, len(team.Roles))
 		for i, role := range team.Roles {
 			roles[i] = ptr.Value(role.Canonical)
 		}

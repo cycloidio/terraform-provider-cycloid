@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_cloud_account"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_cloud_account"
 )
 
-var _ resource.Resource = (*cloudAccountResource)(nil)
-var _ resource.ResourceWithImportState = (*cloudAccountResource)(nil)
+var (
+	_ resource.Resource                = (*cloudAccountResource)(nil)
+	_ resource.ResourceWithImportState = (*cloudAccountResource)(nil)
+)
 
 func NewCloudAccountResource() resource.Resource {
 	return &cloudAccountResource{}
@@ -75,7 +78,7 @@ func (r *cloudAccountResource) Create(ctx context.Context, req resource.CreateRe
 		Owner:               data.Owner.ValueString(),
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 	_, _, err = m.CreateCloudAccount(org, body)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to create cloud account", err.Error())
@@ -104,7 +107,7 @@ func (r *cloudAccountResource) Read(ctx context.Context, req resource.ReadReques
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	ca, _, err := r.provider.Middleware.GetCloudAccount(org, canonical)
+	ca, _, err := r.provider.Client.GetCloudAccount(org, canonical)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -143,7 +146,7 @@ func (r *cloudAccountResource) Update(ctx context.Context, req resource.UpdateRe
 		Owner:               data.Owner.ValueString(),
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 	_, _, err := m.UpdateCloudAccount(org, canonical, body)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to update cloud account", err.Error())
@@ -171,7 +174,7 @@ func (r *cloudAccountResource) Delete(ctx context.Context, req resource.DeleteRe
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	_, err := r.provider.Middleware.DeleteCloudAccount(org, canonical)
+	_, err := r.provider.Client.DeleteCloudAccount(org, canonical)
 	if err != nil && !isNotFoundError(err) {
 		resp.Diagnostics.AddError("failed to delete cloud account", err.Error())
 	}

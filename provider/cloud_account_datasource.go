@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_account"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_cloud_account"
 )
 
 var _ datasource.DataSource = &cloudAccountDataSource{}
@@ -53,7 +54,7 @@ func (s *cloudAccountDataSource) Read(ctx context.Context, req datasource.ReadRe
 	org := getOrganizationCanonical(*s.provider, data.Organization)
 	canonical := data.Canonical.ValueString()
 
-	ca, _, err := s.provider.Middleware.GetCloudAccount(org, canonical)
+	ca, _, err := s.provider.Client.GetCloudAccount(org, canonical)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read cloud account '"+canonical+"'", err.Error())
 		return

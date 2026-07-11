@@ -8,13 +8,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 )
 
 func TerraformOutputsDataSourceSchema(ctx context.Context) schema.Schema {
@@ -362,14 +361,12 @@ func (t FiltersType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (
 	val := map[string]tftypes.Value{}
 
 	err := in.As(&val)
-
 	if err != nil {
 		return nil, err
 	}
 
 	for k, v := range val {
 		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
-
 		if err != nil {
 			return nil, err
 		}
@@ -410,7 +407,6 @@ func (v FiltersValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		vals := make(map[string]tftypes.Value, 3)
 
 		val, err = v.Attribute.ToTerraformValue(ctx)
-
 		if err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
 		}
@@ -418,7 +414,6 @@ func (v FiltersValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		vals["attribute"] = val
 
 		val, err = v.Condition.ToTerraformValue(ctx)
-
 		if err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
 		}
@@ -426,7 +421,6 @@ func (v FiltersValue) ToTerraformValue(ctx context.Context) (tftypes.Value, erro
 		vals["condition"] = val
 
 		val, err = v.Value.ToTerraformValue(ctx)
-
 		if err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
 		}

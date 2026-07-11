@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_types"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/terraform-provider-cycloid/datasource_environment_types"
 )
 
 var _ datasource.DataSource = &environmentTypesDataSource{}
@@ -62,7 +63,7 @@ func (s *environmentTypesDataSource) Read(ctx context.Context, req datasource.Re
 
 	org := getOrganizationCanonical(*s.provider, data.Organization)
 
-	ets, _, err := s.provider.Middleware.ListEnvironmentTypes(org)
+	ets, _, err := s.provider.Client.ListEnvironmentTypes(org)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to list environment types", err.Error())
 		return

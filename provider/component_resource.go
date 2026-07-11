@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cycloidio/cycloid-cli/client/models"
-	middleware "github.com/cycloidio/cycloid-cli/cmd/cycloid/middleware"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
-	"github.com/cycloidio/terraform-provider-cycloid/internal/ptr"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_component"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
+	"github.com/cycloidio/cycloid-cli/gen/models"
+	"github.com/cycloidio/terraform-provider-cycloid/internal/dynamic"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_component"
+	"github.com/cycloidio/cycloid-cli/utils/ptr"
 )
 
 var _ resource.Resource = &ComponentResource{}
@@ -62,7 +63,7 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, componentState.Organization)
 	project := componentState.Project.ValueString()
@@ -141,7 +142,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, componentPlan.Organization)
 	project := componentPlan.Project.ValueString()
@@ -229,7 +230,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, componentPlan.Organization)
 	project := componentPlan.Project.ValueString()
@@ -322,7 +323,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	m := r.provider.Middleware
+	m := r.provider.Client
 
 	org := getOrganizationCanonical(*r.provider, componentState.Organization)
 	project := componentState.Project.ValueString()
@@ -355,7 +356,7 @@ func (r *ComponentResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	if component != nil {
-		_, err = m.DeleteComponent(org, project, environment, canonical, middleware.DeleteOptions{})
+		_, err = m.DeleteComponent(org, project, environment, canonical, apiclient.DeleteOptions{})
 		if err != nil {
 			if isComponentNotFoundError(err) {
 				resp.Diagnostics.Append(
@@ -505,7 +506,7 @@ func variableValuesEqual(a, b any) bool {
 	return string(ja) == string(jb)
 }
 
-func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables map[string]map[string]map[string]any, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel, refreshInputVariables bool) diag.Diagnostics {
+func ComponentToModel(ctx context.Context, org string, component *models.Component, inputVariables, currentConfig map[string]map[string]map[string]any, componentState *componentResourceModel, refreshInputVariables bool) diag.Diagnostics {
 	if component == nil {
 		componentState.Organization = types.StringValue(org)
 		componentState.Project = types.StringNull()
@@ -578,7 +579,7 @@ func ComponentToModel(ctx context.Context, org string, component *models.Compone
 }
 
 func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (map[string]map[string]map[string]any, diag.Diagnostics) {
-	var output = make(map[string]map[string]map[string]any)
+	output := make(map[string]map[string]map[string]any)
 	var diags diag.Diagnostics
 
 	if dynamicValue.IsNull() || dynamicValue.IsUnknown() {
@@ -640,7 +641,7 @@ func dynamicValueToVariables(ctx context.Context, dynamicValue types.Dynamic) (m
 	return output, nil
 }
 
-func matchStackVersion(versions []*middleware.StackVersion, stackVersion *string) (tag, branch, commit string) {
+func matchStackVersion(versions []*apiclient.StackVersion, stackVersion *string) (tag, branch, commit string) {
 	if stackVersion == nil {
 		return "", "", ""
 	}
