@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/cycloidio/youdeploy-http-api/tf_provider/provider"
+	"github.com/cycloidio/terraform-provider-cycloid/provider"
 )
 
 func main() {
