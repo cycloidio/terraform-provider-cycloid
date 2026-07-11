@@ -13,8 +13,8 @@ import (
 
 	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/cycloid-cli/gen/models"
-	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
 	"github.com/cycloidio/cycloid-cli/utils/ptr"
+	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
 )
 
 var (
@@ -83,7 +83,13 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// InstallPluginVersion is async (pending → running). Poll ListPlugins until
 	// the install for this registry+plugin pair appears with a terminal status.
-	install, err := pollPluginInstall(m, org, registryID, pluginID, versionID, 5*time.Minute)
+	createTimeout, diags := data.Timeouts.Create(ctx, defaultPluginInstallTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	install, err := pollPluginInstall(m, org, registryID, pluginID, versionID, createTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin install did not reach running status in org %q", org), err.Error())
 		return
@@ -94,6 +100,10 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	pluginInstallToModel(org, install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
+
+// defaultPluginInstallTimeout is how long Create/Update wait for an async plugin
+// install to reach "running" when the `timeouts` block does not override it.
+const defaultPluginInstallTimeout = 5 * time.Minute
 
 // pollPluginInstall polls ListPlugins until the install for the given registry+plugin
 // appears with status "running", then returns the PluginInstall. Returns an error on
@@ -198,7 +208,13 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	install, err := pollPluginInstall(m, org, uint32(plan.RegistryID.ValueInt64()), uint32(plan.PluginID.ValueInt64()), versionID, 5*time.Minute)
+	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultPluginInstallTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	install, err := pollPluginInstall(m, org, uint32(plan.RegistryID.ValueInt64()), uint32(plan.PluginID.ValueInt64()), versionID, updateTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin update did not reach running status in org %q", org), err.Error())
 		return

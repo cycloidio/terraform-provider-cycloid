@@ -6,6 +6,7 @@ require (
 	github.com/cycloidio/cycloid-cli v1.0.98-0.20260702100455-2645bbbef257
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
+	github.com/hashicorp/terraform-plugin-framework-timeouts v0.5.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.16.0
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
