@@ -185,15 +185,20 @@ func dataStackTechnologiesToListValue(ctx context.Context, techs []*models.Servi
 	}, stackTechnologies)
 }
 
-func dataStackDependenciesToListValue(ctx context.Context, dependencies []*models.ServiceCatalogDependency) (basetypes.ListValue, diag.Diagnostics) {
+// dataStackDependenciesToListValue maps the API's dependency canonicals onto the
+// generated {ref, required} schema. The API no longer has a concept of optional
+// dependencies or of a full ref for them: "ref" here actually holds the dependency
+// stack's canonical (not an org:stack ref), and "required" is always true since
+// every declared dependency must be met.
+func dataStackDependenciesToListValue(ctx context.Context, dependencies []string) (basetypes.ListValue, diag.Diagnostics) {
 	dependencyType := datasource_stacks.DependenciesValue{}.AttributeTypes(ctx)
 	stackDependencies := make([]attr.Value, len(dependencies))
 	for index, dependency := range dependencies {
 		depValue, diag := datasource_stacks.NewDependenciesValue(
 			dependencyType,
 			map[string]attr.Value{
-				"ref":      types.StringValue(dependency.Ref),
-				"required": types.BoolValue(dependency.Required),
+				"ref":      types.StringValue(dependency),
+				"required": types.BoolValue(true),
 			},
 		)
 		if diag.HasError() {

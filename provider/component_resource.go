@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -200,7 +201,7 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", ptr.Value(component.Version.ID))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to fetch created config of create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -265,11 +266,11 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 		}
 	}
 
-	var inputs models.FormVariables
-	if allowVariableUpdate {
-		inputs = variables
-	}
-
+	// Resolve the exact version to target. When version management is
+	// disabled, keep pointing at the component's own current version instead
+	// of leaving tag/branch/commit empty: an empty selector below resolves to
+	// the stack's default version, which would silently move the component
+	// off the version it is pinned to.
 	var tag, branch, commit string
 	if stackVersion != nil && allowVersionUpdate {
 		versions, _, err := m.ListStackVersions(org, stackRef)
@@ -282,6 +283,26 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 			return
 		}
 		tag, branch, commit = matchStackVersion(versions, stackVersion)
+	} else {
+		existingComponent, _, err := m.GetComponent(org, project, environment, canonical)
+		if err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("failed to get component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
+			return
+		}
+		tag, branch = currentVersionSelector(existingComponent.Version)
+	}
+
+	// Fetch the configuration the component would have with tag/branch/commit
+	// applied; previously configured values are preserved.
+	baseVars, _, err := m.GetComponentConfig(org, project, environment, canonical, tag, branch, commit, 0)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
+		return
+	}
+
+	inputs := baseVars
+	if allowVariableUpdate {
+		inputs = mergeFormVariables(baseVars, variables)
 	}
 
 	component, _, err := m.CreateOrUpdateComponent(org, project, environment, canonical, ptr.Value(description), name, stackRef, tag, branch, commit, useCase, "", inputs)
@@ -290,7 +311,7 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
+	currentConfig, _, err := m.GetComponentConfig(org, project, environment, canonical, "", "", "", ptr.Value(component.Version.ID))
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
@@ -673,6 +694,53 @@ func matchStackVersion(versions []*apiclient.StackVersion, stackVersion *string)
 	}
 
 	return tag, branch, commit
+}
+
+// currentVersionSelector returns the tag or branch identifying v, so it can be
+// passed back to the API to resolve to the exact same version rather than
+// falling through to the stack's default version.
+func currentVersionSelector(v *models.ServiceCatalogSourceVersion) (tag, branch string) {
+	if v == nil {
+		return "", ""
+	}
+
+	switch ptr.Value(v.Type) {
+	case "tag":
+		tag = ptr.Value(v.Name)
+	case "branch":
+		branch = ptr.Value(v.Name)
+	}
+
+	return tag, branch
+}
+
+// mergeFormVariables overlays overlay's values onto base, so a partial
+// variables map only changes the keys it explicitly sets. base is only
+// shallow-cloned at the top level, so touched sections/groups are mutated in
+// place — callers must not reuse base afterward.
+func mergeFormVariables(base, overlay models.FormVariables) models.FormVariables {
+	merged := maps.Clone(base)
+	if merged == nil {
+		merged = make(models.FormVariables, len(overlay))
+	}
+
+	for section, groups := range overlay {
+		g, ok := merged[section]
+		if !ok {
+			g = make(map[string]map[string]interface{})
+			merged[section] = g
+		}
+		for group, entities := range groups {
+			e, ok := g[group]
+			if !ok {
+				e = make(map[string]interface{})
+				g[group] = e
+			}
+			maps.Insert(e, maps.All(entities))
+		}
+	}
+
+	return merged
 }
 
 func isComponentNotFoundError(err error) bool {

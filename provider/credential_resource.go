@@ -267,7 +267,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if err == nil {
 			return
 		}
-		if !isCredentialInUseError(err) {
+		if !isConflictError(err) {
 			break
 		}
 		delay := time.Duration(attempt+1) * 3 * time.Second

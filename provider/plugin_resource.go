@@ -77,8 +77,24 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	_, err = m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to install plugin version %d in org %q", versionID, org), err.Error())
-		return
+		if !isConflictError(err) {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("failed to install plugin version %d in org %q", versionID, org),
+				err.Error(),
+			)
+			return
+		}
+		// 409 Conflict: plugin already installed (e.g. after a transient 502/504
+		// on a previous apply). Retry the install so the plugin manager
+		// re-deploys it and we can adopt it into state.
+		_, err = m.RetryPluginVersion(org, registryID, pluginID, versionID)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("failed to retry plugin version %d in org %q", versionID, org),
+				err.Error(),
+			)
+			return
+		}
 	}
 
 	// InstallPluginVersion is async (pending → running). Poll ListPlugins until

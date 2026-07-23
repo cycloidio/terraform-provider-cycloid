@@ -27,11 +27,10 @@ func isNotFoundError(err error) bool {
 		(strings.Contains(errMessage, "404") && strings.Contains(errMessage, "returned"))
 }
 
-// isCredentialInUseError returns true when the Cycloid API refuses a credential
-// deletion because the credential is still referenced by another resource
-// (e.g. a config repository that was just deleted but whose deletion has not
-// yet propagated). A 409 Conflict status is used as the canonical signal.
-func isCredentialInUseError(err error) bool {
+// isConflictError returns true when the Cycloid API responds with a
+// 409 Conflict status (e.g. resource already exists or still in use).
+// Only matches typed *APIResponseError; plain errors are not matched
+func isConflictError(err error) bool {
 	if err == nil {
 		return false
 	}
