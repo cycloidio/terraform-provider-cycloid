@@ -3,6 +3,7 @@ package resource_plugin
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -89,19 +90,30 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 			},
 		},
+		Blocks: map[string]schema.Block{
+			// Installing/updating a plugin version is asynchronous: the provider
+			// polls until the install reaches `running`. `create` and `update`
+			// bound that wait (default 5m). `delete` needs no timeout — it is a
+			// synchronous API call with no polling.
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Update: true,
+			}),
+		},
 	}
 }
 
 type PluginModel struct {
-	Organization           types.String `tfsdk:"organization"`
-	RegistryID             types.Int64  `tfsdk:"registry_id"`
-	PluginID               types.Int64  `tfsdk:"plugin_id"`
-	PluginVersionID        types.Int64  `tfsdk:"plugin_version_id"`
-	Configuration          types.Map    `tfsdk:"configuration"`
-	ConfigurationSensitive types.Map    `tfsdk:"configuration_sensitive"`
-	ID                     types.Int64  `tfsdk:"id"`
-	UUID                   types.String `tfsdk:"uuid"`
-	Status                 types.String `tfsdk:"status"`
-	CreatedAt              types.Int64  `tfsdk:"created_at"`
-	UpdatedAt              types.Int64  `tfsdk:"updated_at"`
+	Organization           types.String   `tfsdk:"organization"`
+	RegistryID             types.Int64    `tfsdk:"registry_id"`
+	PluginID               types.Int64    `tfsdk:"plugin_id"`
+	PluginVersionID        types.Int64    `tfsdk:"plugin_version_id"`
+	Configuration          types.Map      `tfsdk:"configuration"`
+	ConfigurationSensitive types.Map      `tfsdk:"configuration_sensitive"`
+	ID                     types.Int64    `tfsdk:"id"`
+	UUID                   types.String   `tfsdk:"uuid"`
+	Status                 types.String   `tfsdk:"status"`
+	CreatedAt              types.Int64    `tfsdk:"created_at"`
+	UpdatedAt              types.Int64    `tfsdk:"updated_at"`
+	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }

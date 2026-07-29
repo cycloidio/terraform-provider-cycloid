@@ -54,4 +54,11 @@ resource "cycloid_plugin" "hello_world" {
   configuration_sensitive = {
     api_token = "my-secret-token"
   }
+
+  # Optional: bound how long Terraform waits for the async install to reach
+  # "running". Defaults to 5m for both operations when omitted.
+  timeouts {
+    create = "10m"
+    update = "10m"
+  }
 }

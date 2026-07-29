@@ -1,7 +1,8 @@
 # cycloid_plugin (Resource)
 
 Installs a plugin version into an organization. Terraform polls until the installation reaches
-`running` status (up to 10 minutes); a `failed` status fails the apply.
+`running` status; a `failed` status fails the apply. The wait defaults to 5 minutes and can be
+tuned per operation with the `timeouts` block (`create` and `update`).
 
 **All attributes trigger replacement on change.** The API does not support upgrading an installed
 plugin in-place — changing the version, registry, or configuration requires uninstall + reinstall.
@@ -78,6 +79,13 @@ resource "cycloid_plugin" "hello_world" {
 
   configuration_sensitive = {
     api_token = "my-secret-token"
+  }
+
+  # Optional: bound how long Terraform waits for the async install to reach
+  # "running". Defaults to 5m for both operations when omitted.
+  timeouts {
+    create = "10m"
+    update = "10m"
   }
 }
 ```
@@ -164,6 +172,7 @@ resource "cycloid_plugin" "hello" {
 - `configuration` (Map of String) Visible key-value configuration for the plugin (Stack Forms syntax). Values appear in plan output. Can be updated in-place.
 - `configuration_sensitive` (Map of String, Sensitive) Sensitive key-value configuration for the plugin (Stack Forms syntax). Values are hidden in plan output. Can be updated in-place. Keys must not overlap with `configuration`.
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
@@ -172,6 +181,14 @@ resource "cycloid_plugin" "hello" {
 - `status` (String) Installation status: `pending`, `running`, or `failed`.
 - `updated_at` (Number) Unix timestamp of last install update.
 - `uuid` (String) The UUID of the installed plugin.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+- `update` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 
 ## Import
 

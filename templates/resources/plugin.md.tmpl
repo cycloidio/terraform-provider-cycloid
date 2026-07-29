@@ -1,7 +1,8 @@
 # {{ .Name }} ({{ .Type }})
 
 Installs a plugin version into an organization. Terraform polls until the installation reaches
-`running` status (up to 10 minutes); a `failed` status fails the apply.
+`running` status; a `failed` status fails the apply. The wait defaults to 5 minutes and can be
+tuned per operation with the `timeouts` block (`create` and `update`).
 
 **All attributes trigger replacement on change.** The API does not support upgrading an installed
 plugin in-place — changing the version, registry, or configuration requires uninstall + reinstall.
