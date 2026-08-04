@@ -1,0 +1,29 @@
+# {{ .Name }} ({{ .Type }})
+
+Manages the sharing configuration of an installed plugin. Controls whether the plugin is visible
+to child organizations and which organizations are included or excluded.
+
+When `visibility` is `"shared"`, child organizations inherit the plugin and can enable its
+widget views locally. When `"local"`, only the owning organization can see it.
+
+The `mode` attribute controls how the `organizations` list is interpreted:
+- `"include"` — only the listed orgs can see the shared plugin (empty list = all children).
+- `"exclude"` — all children except the listed orgs can see it.
+
+Destroying this resource resets the plugin to `local` visibility.
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by plugin install ID:
+
+```shell
+terraform import cycloid_plugin_sharing.example 42
+```

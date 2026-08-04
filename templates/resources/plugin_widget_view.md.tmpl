@@ -1,0 +1,25 @@
+# {{ .Name }} ({{ .Type }})
+
+Manages the enabled state and URL slug of a plugin widget view in an organization.
+
+For inherited widgets (shared from a parent organization), this creates a local override
+without modifying the parent's configuration. This allows child organizations to selectively
+enable or disable widgets and customize their URL slugs.
+
+Destroying this resource disables the widget view (sets `enabled = false`).
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by composite ID `<plugin_install_id>:<widget_view_id>`:
+
+```shell
+terraform import cycloid_plugin_widget_view.example 36:1
+```

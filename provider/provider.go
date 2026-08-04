@@ -173,6 +173,8 @@ func (p *CycloidProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewOIDCIntegrationResource,
 		NewOrganizationAPIKeyResource,
 		NewOrganizationNavOrderResource,
+		NewPluginSharingResource,
+		NewPluginWidgetViewResource,
 	}
 }
 
