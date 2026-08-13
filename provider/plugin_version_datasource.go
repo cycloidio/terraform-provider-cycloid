@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -98,6 +100,33 @@ func (s *pluginVersionDataSource) Read(ctx context.Context, req datasource.ReadR
 		data.URL = types.StringValue(v.URL.String())
 		data.Status = types.StringPointerValue(v.Status)
 		data.Description = types.StringValue(v.Description)
+		data.Icon = types.StringValue(string(v.Icon))
+
+		images := make([]attr.Value, 0, len(v.Images))
+		for _, img := range v.Images {
+			images = append(images, types.StringValue(string(img)))
+		}
+		data.Images, _ = types.ListValue(types.StringType, images)
+
+		scope := make([]attr.Value, 0, len(v.Scope))
+		for _, s := range v.Scope {
+			scope = append(scope, types.StringValue(s))
+		}
+		data.Scope, _ = types.ListValue(types.StringType, scope)
+
+		if v.Schema != nil {
+			b, _ := json.Marshal(v.Schema)
+			data.Schema = types.StringValue(string(b))
+		} else {
+			data.Schema = types.StringValue("{}")
+		}
+		if v.Widgets != nil {
+			b, _ := json.Marshal(v.Widgets)
+			data.Widgets = types.StringValue(string(b))
+		} else {
+			data.Widgets = types.StringValue("[]")
+		}
+
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}

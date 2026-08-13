@@ -66,22 +66,13 @@ func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	canonical := data.Canonical.ValueString()
 
 	org := getOrganizationCanonical(*p.provider, data.Organization)
-	projects, _, err := m.ListProjects(org)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to fetch project from API", err.Error())
-		return
-	}
-
-	i := slices.IndexFunc(projects, func(p *models.Project) bool {
-		return ptr.Value(p.Canonical) == canonical
-	})
-	if i == -1 {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(projectToValue(ctx, org, projects[i], &data)...)
+	notFound, diags := projectRead(ctx, m, org, canonical, &data)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -178,6 +169,28 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// projectRead fetches the project list and locates the project by canonical, populating data.
+// Returns (notFound bool, diags). notFound=true means the org or project is gone.
+func projectRead(ctx context.Context, m apiclient.APIClient, org, canonical string, data *projectResourceModel) (bool, diag.Diagnostics) {
+	projects, _, err := m.ListProjects(org)
+	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
+		var diags diag.Diagnostics
+		diags.AddError("failed to fetch project from API", err.Error())
+		return false, diags
+	}
+	i := slices.IndexFunc(projects, func(p *models.Project) bool {
+		return ptr.Value(p.Canonical) == canonical
+	})
+	if i == -1 {
+		return true, nil
+	}
+	diags := projectToValue(ctx, org, projects[i], data)
+	return false, diags
 }
 
 func projectToValue(ctx context.Context, org string, project *models.Project, data *projectResourceModel) diag.Diagnostics {

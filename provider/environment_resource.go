@@ -68,33 +68,13 @@ func (p *environmentResource) Read(ctx context.Context, req resource.ReadRequest
 	org := getOrganizationCanonical(*p.provider, data.Organization)
 	project := data.Project.ValueString()
 
-	projectEnvs, _, err := m.ListProjectEnvs(org, project)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to fetch environment from API while reading state", err.Error())
-		return
-	}
-
-	found := false
-	for _, e := range projectEnvs {
-		if ptr.Value(e.Canonical) == canonical {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	environment, _, err := m.GetOrgEnv(org, canonical)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to fetch org environment from API while reading state", err.Error())
-		return
-	}
-
-	resp.Diagnostics.Append(environmentToValue(ctx, org, project, environment, &data)...)
+	notFound, diags := environmentRead(ctx, m, org, project, canonical, &data)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -169,6 +149,38 @@ func (p *environmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// environmentRead checks if the environment exists in the project and fetches its details,
+// populating data. Returns (notFound bool, diags). notFound=true means the org, project,
+// or environment is gone.
+func environmentRead(ctx context.Context, m apiclient.APIClient, org, project, canonical string, data *environmentResourceModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	projectEnvs, _, err := m.ListProjectEnvs(org, project)
+	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
+		diags.AddError("failed to fetch environment from API while reading state", err.Error())
+		return false, diags
+	}
+	found := false
+	for _, e := range projectEnvs {
+		if ptr.Value(e.Canonical) == canonical {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return true, nil
+	}
+	environment, _, err := m.GetOrgEnv(org, canonical)
+	if err != nil {
+		diags.AddError("failed to fetch org environment from API while reading state", err.Error())
+		return false, diags
+	}
+	diags.Append(environmentToValue(ctx, org, project, environment, data)...)
+	return false, diags
 }
 
 func environmentColor(environment *models.Environment) *string {

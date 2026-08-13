@@ -55,6 +55,33 @@ func PluginVersionDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Description of the plugin version.",
 				Computed:            true,
 			},
+			"icon": schema.StringAttribute{
+				Description:         "Icon URL of the plugin version.",
+				MarkdownDescription: "Icon URL of the plugin version.",
+				Computed:            true,
+			},
+			"images": schema.ListAttribute{
+				Description:         "Image URLs for the plugin version.",
+				MarkdownDescription: "Image URLs for the plugin version.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"scope": schema.ListAttribute{
+				Description:         "Policies in which the plugin version is scoped.",
+				MarkdownDescription: "Policies in which the plugin version is scoped.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"schema": schema.StringAttribute{
+				Description:         "SQLite schema definition as JSON.",
+				MarkdownDescription: "SQLite schema definition as JSON.",
+				Computed:            true,
+			},
+			"widgets": schema.StringAttribute{
+				Description:         "Default widget configuration as JSON.",
+				MarkdownDescription: "Default widget configuration as JSON.",
+				Computed:            true,
+			},
 		},
 	}
 }
@@ -68,4 +95,9 @@ type PluginVersionModel struct {
 	ID           types.Int64  `tfsdk:"id"`
 	Status       types.String `tfsdk:"status"`
 	Description  types.String `tfsdk:"description"`
+	Icon         types.String `tfsdk:"icon"`
+	Images       types.List   `tfsdk:"images"`
+	Scope        types.List   `tfsdk:"scope"`
+	Schema       types.String `tfsdk:"schema"`
+	Widgets      types.String `tfsdk:"widgets"`
 }

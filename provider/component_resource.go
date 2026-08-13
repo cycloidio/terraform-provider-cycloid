@@ -82,27 +82,18 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		_, canonical = componentState.Name.ValueString(), componentState.Canonical.ValueString()
 	}
 
-	components, _, err := m.ListComponents(org, project, environment)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
+	component, notFound, diags := componentFetch(m, org, project, environment, canonical)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	var component *models.Component
-	for _, c := range components {
-		if ptr.Value(c.Canonical) == canonical {
-			component = c
-			break
-		}
-	}
-	if component == nil {
+	if notFound {
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
 	var inputVariables map[string]map[string]map[string]any
 	var currentConfig map[string]map[string]map[string]any
-	var diags diag.Diagnostics
 	currentConfig, _, err = m.GetComponentConfig(org, project, environment, canonical, "", "", "", 0)
 	if err != nil {
 		if isComponentNotFoundError(err) {
@@ -119,8 +110,9 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	inputVariables, diags = getInputVariablesForRead(ctx, componentState, currentConfig)
-	resp.Diagnostics.Append(diags...)
+	var inputDiags diag.Diagnostics
+	inputVariables, inputDiags = getInputVariablesForRead(ctx, componentState, currentConfig)
+	resp.Diagnostics.Append(inputDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -741,6 +733,27 @@ func mergeFormVariables(base, overlay models.FormVariables) models.FormVariables
 	}
 
 	return merged
+}
+
+// componentFetch lists components and returns the one matching canonical.
+// Returns (component, notFound bool, diags). notFound=true means the org, project,
+// environment, or component is gone.
+func componentFetch(m apiclient.APIClient, org, project, environment, canonical string) (*models.Component, bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	components, _, err := m.ListComponents(org, project, environment)
+	if err != nil {
+		if isNotFoundError(err) {
+			return nil, true, nil
+		}
+		diags.AddError(fmt.Sprintf("failed to list components in org %q, project %q, environment %q", org, project, environment), err.Error())
+		return nil, false, diags
+	}
+	for _, c := range components {
+		if ptr.Value(c.Canonical) == canonical {
+			return c, false, nil
+		}
+	}
+	return nil, true, nil
 }
 
 func isComponentNotFoundError(err error) bool {

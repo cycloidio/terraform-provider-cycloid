@@ -3,6 +3,7 @@ package provider
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -53,6 +54,19 @@ func nilIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// parseTimeout parses a Go duration string from a Terraform string attribute.
+// Falls back to defaultDur if the attribute is null, unknown, empty, or unparseable.
+func parseTimeout(s types.String, defaultDur time.Duration) time.Duration {
+	if s.IsNull() || s.IsUnknown() || s.ValueString() == "" {
+		return defaultDur
+	}
+	d, err := time.ParseDuration(s.ValueString())
+	if err != nil || d <= 0 {
+		return defaultDur
+	}
+	return d
 }
 
 // Coalesce will return the first non empty value, or empty if all are empty

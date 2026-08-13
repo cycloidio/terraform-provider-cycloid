@@ -38,6 +38,11 @@ func PluginManagerDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Connection status: `offline` or `connected`.",
 				Computed:            true,
 			},
+			"invite_status": schema.StringAttribute{
+				Description:         "Status of the plugin manager invitation: `pending` or `accepted`.",
+				MarkdownDescription: "Status of the plugin manager invitation: `pending` or `accepted`.",
+				Computed:            true,
+			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of plugin manager creation.",
 				MarkdownDescription: "Unix timestamp of plugin manager creation.",
@@ -58,6 +63,7 @@ type PluginManagerModel struct {
 	ID           types.Int64  `tfsdk:"id"`
 	URL          types.String `tfsdk:"url"`
 	Status       types.String `tfsdk:"status"`
+	InviteStatus types.String `tfsdk:"invite_status"`
 	CreatedAt    types.Int64  `tfsdk:"created_at"`
 	UpdatedAt    types.Int64  `tfsdk:"updated_at"`
 }

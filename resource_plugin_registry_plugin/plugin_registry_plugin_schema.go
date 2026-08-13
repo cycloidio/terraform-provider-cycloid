@@ -3,11 +3,13 @@ package resource_plugin_registry_plugin
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -28,6 +30,7 @@ func PluginRegistryPluginResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The ID of the plugin registry this plugin belongs to.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"name": schema.StringAttribute{
 				Description:         "The display name of the plugin.",
@@ -46,6 +49,11 @@ func PluginRegistryPluginResourceSchema(ctx context.Context) schema.Schema {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
+			"orphaned": schema.BoolAttribute{
+				Description:         "Whether the plugin's registry entry has been deleted.",
+				MarkdownDescription: "Whether the plugin's registry entry has been deleted.",
+				Computed:            true,
+			},
 		},
 	}
 }
@@ -56,4 +64,5 @@ type PluginRegistryPluginModel struct {
 	Name         types.String `tfsdk:"name"`
 	ID           types.Int64  `tfsdk:"id"`
 	Owned        types.Bool   `tfsdk:"owned"`
+	Orphaned     types.Bool   `tfsdk:"orphaned"`
 }

@@ -105,22 +105,14 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Client
 
-	// GET /plugin_registries/{id} is not supported (405); use list + filter.
 	id := uint32(data.ID.ValueInt64())
-	registries, _, err := m.ListPluginRegistries(org)
+	registry, _, err := m.GetPluginRegistry(org, id)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugin registries in org %q", org), err.Error())
-		return
-	}
-	var registry *models.PluginRegistry
-	for _, reg := range registries {
-		if reg.ID != nil && *reg.ID == id {
-			registry = reg
-			break
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
 		}
-	}
-	if registry == nil {
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin registry %d in org %q", id, org), err.Error())
 		return
 	}
 
@@ -128,12 +120,10 @@ func (r *pluginRegistryResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// Update is reached whenever wait_until_connected changes — it's the only
-// attribute without a RequiresReplace plan modifier. It must call
-// resp.State.Set with the plan's WaitUntilConnected value preserved (the API
-// doesn't return this client-side flag, so pluginRegistryToModel never
-// touches it); leaving it unset here is what caused TFPRO-51's "produced
-// inconsistent result after apply" on wait_until_connected.
+// Update handles name changes and wait_until_connected changes.
+// name has no RequiresReplace so an in-place rename is performed via UpdatePluginRegistry.
+// wait_until_connected is a client-side flag not returned by the API; it is preserved from
+// the plan to avoid "produced inconsistent result after apply" (TFPRO-51).
 func (r *pluginRegistryResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data pluginRegistryResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -155,20 +145,9 @@ func (r *pluginRegistryResource) Update(ctx context.Context, req resource.Update
 		}
 	}
 
-	registries, _, err := m.ListPluginRegistries(org)
+	registry, _, err := m.UpdatePluginRegistry(org, id, data.Name.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugin registries in org %q", org), err.Error())
-		return
-	}
-	var registry *models.PluginRegistry
-	for _, reg := range registries {
-		if reg.ID != nil && *reg.ID == id {
-			registry = reg
-			break
-		}
-	}
-	if registry == nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to update plugin registry %d in org %q", id, org), "registry not found")
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to update plugin registry %d in org %q", id, org), err.Error())
 		return
 	}
 
@@ -234,8 +213,18 @@ func pollPluginRegistryConnected(m apiclient.APIClient, org string, id uint32, t
 			return err
 		}
 		for _, reg := range registries {
-			if reg.ID != nil && *reg.ID == id && ptr.Value(reg.Status) == "connected" {
+			if reg.ID == nil || *reg.ID != id {
+				continue
+			}
+			status := ptr.Value(reg.Status)
+			switch status {
+			case "connected":
 				return nil
+			case "offline":
+				// Expected intermediate state — keep polling.
+			default:
+				// Unknown status — keep polling; forward-compatible with new statuses.
+				// The overall timeout still applies.
 			}
 		}
 		time.Sleep(5 * time.Second)

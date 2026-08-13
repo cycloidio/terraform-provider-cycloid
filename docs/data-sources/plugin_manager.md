@@ -51,6 +51,7 @@ resource "cycloid_plugin" "hello" {
 
 - `created_at` (Number) Unix timestamp of plugin manager creation.
 - `id` (Number) The numeric ID of the plugin manager.
+- `invite_status` (String) Status of the plugin manager invitation: `pending` or `accepted`.
 - `status` (String) Connection status: `offline` or `connected`.
 - `updated_at` (Number) Unix timestamp of last plugin manager update.
 - `url` (String) The URL of the plugin manager instance.

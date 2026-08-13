@@ -27,7 +27,6 @@ func PluginRegistryResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The display name of the plugin registry.",
 				MarkdownDescription: "The display name of the plugin registry.",
 				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"url": schema.StringAttribute{
 				Description:         "The URL of the plugin registry.",

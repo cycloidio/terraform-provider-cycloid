@@ -72,6 +72,7 @@ func (s *pluginManagerDataSource) Read(ctx context.Context, req datasource.ReadR
 		data.Name = types.StringPointerValue(pm.Name)
 		data.URL = types.StringValue(pm.URL.String())
 		data.Status = types.StringPointerValue(pm.Status)
+		data.InviteStatus = types.StringPointerValue(pm.InviteStatus)
 		data.CreatedAt = types.Int64Value(int64(ptr.Value(pm.CreatedAt)))
 		data.UpdatedAt = types.Int64Value(int64(ptr.Value(pm.UpdatedAt)))
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

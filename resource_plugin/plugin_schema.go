@@ -3,14 +3,16 @@ package resource_plugin
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func PluginResourceSchema(ctx context.Context) schema.Schema {
+func PluginResourceSchema(_ context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Install a plugin in an organization. " +
 			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
@@ -29,17 +31,20 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The ID of the plugin registry containing the plugin to install.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"plugin_id": schema.Int64Attribute{
 				Description:         "The ID of the plugin within the registry.",
 				MarkdownDescription: "The ID of the plugin within the registry.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"plugin_version_id": schema.Int64Attribute{
 				Description:         "The ID of the plugin version to install. Can be updated in-place.",
 				MarkdownDescription: "The ID of the plugin version to install. Can be updated in-place.",
 				Required:            true,
+				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"configuration": schema.MapAttribute{
 				Description: "Visible key-value configuration for the plugin (Stack Forms syntax). " +
@@ -88,6 +93,27 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Unix timestamp of last install update.",
 				Computed:            true,
 			},
+			"pm_secret": schema.StringAttribute{
+				Description:         "Webhook secret for the plugin install.",
+				MarkdownDescription: "Webhook secret for the plugin install.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"version_name": schema.StringAttribute{
+				Description:         "Name of the installed plugin version.",
+				MarkdownDescription: "Name of the installed plugin version.",
+				Computed:            true,
+			},
+			"version_status": schema.StringAttribute{
+				Description:         "Processing status of the installed plugin version.",
+				MarkdownDescription: "Processing status of the installed plugin version.",
+				Computed:            true,
+			},
+			"create_timeout": schema.StringAttribute{
+				Description:         `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "5m".`,
+				MarkdownDescription: `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "5m".`,
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -104,4 +130,8 @@ type PluginModel struct {
 	Status                 types.String `tfsdk:"status"`
 	CreatedAt              types.Int64  `tfsdk:"created_at"`
 	UpdatedAt              types.Int64  `tfsdk:"updated_at"`
+	PmSecret               types.String `tfsdk:"pm_secret"`
+	VersionName            types.String `tfsdk:"version_name"`
+	VersionStatus          types.String `tfsdk:"version_status"`
+	CreateTimeout          types.String `tfsdk:"create_timeout"`
 }

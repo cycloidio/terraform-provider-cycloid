@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_team"
 	"github.com/cycloidio/cycloid-cli/utils/ptr"
@@ -73,28 +74,13 @@ func (r *teamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		name, _ = teamState.Name.ValueString(), teamState.Canonical.ValueString()
 	}
 
-	teams, _, err := m.ListTeams(org, &name, nil, nil, nil)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
-		return
-	}
-
-	var team *models.Team
-	for _, t := range teams {
-		if ptr.Value(t.Name) == name {
-			team = t
-		}
-	}
-
-	if team == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(
-		TeamToModel(ctx, org, team, &teamState)...,
-	)
+	notFound, diags := teamRead(ctx, m, org, name, &teamState)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -271,6 +257,9 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// We need to check if the team exists before delete
 	teams, _, err := m.ListTeams(org, nil, nil, nil, nil)
 	if err != nil {
+		if isNotFoundError(err) {
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
 		return
 	}
@@ -300,6 +289,33 @@ func (r *teamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &teamState)...)
+}
+
+// teamRead fetches the team list and locates the team by name, populating data.
+// Returns (notFound bool, diags). notFound=true means the org or team is gone.
+func teamRead(ctx context.Context, m apiclient.APIClient, org, name string, data *teamResourceModel) (bool, diag.Diagnostics) {
+	teams, _, err := m.ListTeams(org, &name, nil, nil, nil)
+	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
+		var diags diag.Diagnostics
+		diags.AddError(fmt.Sprintf("failed to list current team in org %q", org), err.Error())
+		return false, diags
+	}
+
+	var team *models.Team
+	for _, t := range teams {
+		if ptr.Value(t.Name) == name {
+			team = t
+		}
+	}
+	if team == nil {
+		return true, nil
+	}
+
+	diags := TeamToModel(ctx, org, team, data)
+	return false, diags
 }
 
 func TeamToModel(ctx context.Context, org string, team *models.Team, teamState *teamResourceModel) diag.Diagnostics {

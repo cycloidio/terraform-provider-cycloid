@@ -38,6 +38,11 @@ func PluginRegistryPluginDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Whether this plugin is owned by the organization.",
 				Computed:            true,
 			},
+			"orphaned": schema.BoolAttribute{
+				Description:         "Whether the plugin's registry entry has been deleted.",
+				MarkdownDescription: "Whether the plugin's registry entry has been deleted.",
+				Computed:            true,
+			},
 		},
 	}
 }
@@ -48,4 +53,5 @@ type PluginRegistryPluginModel struct {
 	Name         types.String `tfsdk:"name"`
 	ID           types.Int64  `tfsdk:"id"`
 	Owned        types.Bool   `tfsdk:"owned"`
+	Orphaned     types.Bool   `tfsdk:"orphaned"`
 }

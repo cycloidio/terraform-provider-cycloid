@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_team_member"
 	"github.com/cycloidio/cycloid-cli/utils/ptr"
@@ -65,22 +66,13 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 	username := teamMemberState.Username.ValueString()
 	email := teamMemberState.Email.ValueString()
 
-	teamMembers, _, err := m.ListTeamMembers(org, team)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
-		return
-	}
-
-	teamMember := findTeamMember(teamMembers, username, email)
-	if teamMember == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(
-		TeamMemberToModel(ctx, org, team, teamMember, &teamMemberState)...,
-	)
+	notFound, diags := teamMemberRead(ctx, m, org, team, username, email, &teamMemberState)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -191,6 +183,9 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// We need to check if the team_member exists before delete
 	teamMembers, _, err := m.ListTeamMembers(org, team)
 	if err != nil {
+		if isNotFoundError(err) {
+			return
+		}
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
 		return
 	}
@@ -213,6 +208,26 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &teamMemberState)...)
+}
+
+// teamMemberRead fetches team members and locates the member by username/email, populating data.
+// Returns (notFound bool, diags). notFound=true means the org, team, or member is gone.
+func teamMemberRead(ctx context.Context, m apiclient.APIClient, org, team, username, email string, data *teamMemberResourceModel) (bool, diag.Diagnostics) {
+	teamMembers, _, err := m.ListTeamMembers(org, team)
+	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
+		var diags diag.Diagnostics
+		diags.AddError(fmt.Sprintf("failed to list current team_member in org %q", org), err.Error())
+		return false, diags
+	}
+	teamMember := findTeamMember(teamMembers, username, email)
+	if teamMember == nil {
+		return true, nil
+	}
+	diags := TeamMemberToModel(ctx, org, team, teamMember, data)
+	return false, diags
 }
 
 func TeamMemberToModel(ctx context.Context, org, team string, teamMember *models.MemberTeam, teamMemberState *teamMemberResourceModel) diag.Diagnostics {

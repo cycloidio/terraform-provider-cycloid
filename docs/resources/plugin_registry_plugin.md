@@ -41,6 +41,7 @@ resource "cycloid_plugin_registry_plugin" "hello_world" {
 ### Read-Only
 
 - `id` (Number) The numeric ID of the plugin.
+- `orphaned` (Boolean) Whether the plugin's registry entry has been deleted.
 - `owned` (Boolean) Whether this plugin is owned by the organization.
 
 ## Import

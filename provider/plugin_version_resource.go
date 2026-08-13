@@ -2,13 +2,16 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin_version"
@@ -16,8 +19,8 @@ import (
 )
 
 const (
-	pluginVersionPollInterval = 5 * time.Second
-	pluginVersionPollTimeout  = 10 * time.Minute
+	pluginVersionPollInterval         = 5 * time.Second
+	defaultPluginVersionCreateTimeout = 10 * time.Minute
 )
 
 var (
@@ -82,6 +85,8 @@ func (r *pluginVersionResource) Create(ctx context.Context, req resource.CreateR
 
 	versionID := ptr.Value(version.ID)
 
+	createTimeout := parseTimeout(data.CreateTimeout, defaultPluginVersionCreateTimeout)
+
 	// Save state early so the resource exists even if polling fails.
 	pluginVersionToModel(org, version, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -90,42 +95,73 @@ func (r *pluginVersionResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Poll until success or failure.
-	deadline := time.Now().Add(pluginVersionPollTimeout)
-	for time.Now().Before(deadline) {
-		version, _, err = m.GetPluginVersion(org, registryID, pluginID, versionID)
-		if err != nil {
+	deadline := time.Now().Add(createTimeout)
+	ticker := time.NewTicker(pluginVersionPollInterval)
+	defer ticker.Stop()
+
+	for {
+		v, _, pollErr := m.GetPluginVersion(org, registryID, pluginID, versionID)
+		if pollErr != nil {
+			// Treat network/5xx errors as transient; log and retry on the next tick.
+			tflog.Warn(ctx, "transient error polling plugin version status; will retry", map[string]any{
+				"version_id": versionID,
+				"error":      pollErr.Error(),
+			})
+		} else {
+			version = v
+			status := ptr.Value(version.Status)
+			switch status {
+			case models.PluginVersionStatusSuccess:
+				pluginVersionToModel(org, version, &data)
+				resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+				return
+			case models.PluginVersionStatusFailed:
+				// Taint: mark the resource as needing recreation by writing the
+				// failed state and then adding an error so Terraform marks it tainted.
+				pluginVersionToModel(org, version, &data)
+				resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+				resp.Diagnostics.AddError(
+					fmt.Sprintf("plugin version %d processing failed", versionID),
+					fmt.Sprintf("The plugin version entered status %q. Run `terraform apply` again to retry.", status),
+				)
+				return
+			case models.PluginVersionStatusPending, models.PluginVersionStatusProcessing:
+				// Expected intermediate states — keep polling.
+			default:
+				// Unknown intermediate status — log once per occurrence and continue.
+				// Using tflog.Warn rather than resp.Diagnostics.AddWarning avoids
+				// accumulating duplicate diagnostics on every tick.
+				tflog.Warn(ctx, "unexpected plugin version status — continuing to poll", map[string]any{
+					"version_id": versionID,
+					"status":     status,
+				})
+			}
+		}
+
+		if time.Now().After(deadline) {
+			// Persist the last-known status so state reflects the most recent poll.
+			pluginVersionToModel(org, version, &data)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("failed to poll plugin version %d status", versionID),
-				err.Error(),
+				fmt.Sprintf("timed out waiting for plugin version %d to finish processing", versionID),
+				fmt.Sprintf("Last status: %q. The resource has been saved; run `terraform apply` again to continue.", ptr.Value(version.Status)),
 			)
 			return
 		}
 
-		status := ptr.Value(version.Status)
-		switch status {
-		case "success":
-			pluginVersionToModel(org, version, &data)
-			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-			return
-		case "failed":
-			// Taint: mark the resource as needing recreation by writing the
-			// failed state and then adding an error so Terraform marks it tainted.
+		select {
+		case <-ctx.Done():
+			// Persist the last-known status so state reflects the most recent poll.
 			pluginVersionToModel(org, version, &data)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("plugin version %d processing failed", versionID),
-				fmt.Sprintf("The plugin version entered status %q. Run `terraform apply` again to retry.", status),
+				fmt.Sprintf("context cancelled while waiting for plugin version %d to finish processing", versionID),
+				fmt.Sprintf("Last status: %q. The resource has been saved; run `terraform apply` again to continue.", ptr.Value(version.Status)),
 			)
 			return
+		case <-ticker.C:
 		}
-
-		time.Sleep(pluginVersionPollInterval)
 	}
-
-	resp.Diagnostics.AddError(
-		fmt.Sprintf("timed out waiting for plugin version %d to finish processing", versionID),
-		fmt.Sprintf("Last status: %q. The resource has been saved; run `terraform apply` again to continue.", ptr.Value(version.Status)),
-	)
 }
 
 func (r *pluginVersionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -238,4 +274,39 @@ func pluginVersionToModel(org string, v *models.PluginVersion, data *pluginVersi
 	data.URL = types.StringValue(v.URL.String())
 	data.Status = types.StringPointerValue(v.Status)
 	data.Description = types.StringValue(v.Description)
+	data.Icon = types.StringValue(string(v.Icon))
+	data.Error = types.StringValue(v.Error)
+
+	images := make([]attr.Value, 0, len(v.Images))
+	for _, img := range v.Images {
+		images = append(images, types.StringValue(string(img)))
+	}
+	data.Images, _ = types.ListValue(types.StringType, images)
+
+	scope := make([]attr.Value, 0, len(v.Scope))
+	for _, s := range v.Scope {
+		scope = append(scope, types.StringValue(s))
+	}
+	data.Scope, _ = types.ListValue(types.StringType, scope)
+
+	if v.Configuration != nil {
+		b, _ := json.Marshal(v.Configuration)
+		data.ConfigurationSchema = types.StringValue(string(b))
+	} else {
+		data.ConfigurationSchema = types.StringValue("[]")
+	}
+
+	if v.Schema != nil {
+		b, _ := json.Marshal(v.Schema)
+		data.Schema = types.StringValue(string(b))
+	} else {
+		data.Schema = types.StringValue("{}")
+	}
+
+	if v.Widgets != nil {
+		b, _ := json.Marshal(v.Widgets)
+		data.Widgets = types.StringValue(string(b))
+	} else {
+		data.Widgets = types.StringValue("[]")
+	}
 }

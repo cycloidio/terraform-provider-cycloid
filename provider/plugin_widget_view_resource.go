@@ -78,7 +78,7 @@ func (r *pluginWidgetViewResource) Create(ctx context.Context, req resource.Crea
 
 	pluginInstallID := uint32(data.PluginInstallID.ValueInt64())
 
-	diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
+	_, diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -100,9 +100,13 @@ func (r *pluginWidgetViewResource) Read(ctx context.Context, req resource.ReadRe
 	pluginInstallID := uint32(data.PluginInstallID.ValueInt64())
 	widgetViewID := uint32(data.WidgetViewID.ValueInt64())
 
-	diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
+	notFound, diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -134,7 +138,7 @@ func (r *pluginWidgetViewResource) Update(ctx context.Context, req resource.Upda
 
 	pluginInstallID := uint32(data.PluginInstallID.ValueInt64())
 
-	diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
+	_, diags := pluginWidgetViewRead(ctx, m, org, pluginInstallID, widgetViewID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -193,7 +197,7 @@ func (r *pluginWidgetViewResource) ImportState(ctx context.Context, req resource
 	data.PluginInstallID = types.Int64Value(pluginInstallID)
 	data.WidgetViewID = types.Int64Value(widgetViewID)
 
-	diags := pluginWidgetViewRead(ctx, m, org, uint32(pluginInstallID), uint32(widgetViewID), &data)
+	_, diags := pluginWidgetViewRead(ctx, m, org, uint32(pluginInstallID), uint32(widgetViewID), &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,16 +208,20 @@ func (r *pluginWidgetViewResource) ImportState(ctx context.Context, req resource
 
 // pluginWidgetViewRead fetches widget views for the given plugin install and finds the one
 // matching widgetViewID, populating the model.
-func pluginWidgetViewRead(_ context.Context, m apiclient.APIClient, org string, pluginInstallID, widgetViewID uint32, data *pluginWidgetViewResourceModel) diag.Diagnostics {
+// Returns (notFound bool, diags Diagnostics). notFound is true when the org or install is gone.
+func pluginWidgetViewRead(_ context.Context, m apiclient.APIClient, org string, pluginInstallID, widgetViewID uint32, data *pluginWidgetViewResourceModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	views, _, err := m.ListPluginWidgetViews(org, pluginInstallID)
 	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
 		diags.AddError(
 			fmt.Sprintf("failed to list widget views for install %d in org %q", pluginInstallID, org),
 			err.Error(),
 		)
-		return diags
+		return false, diags
 	}
 
 	for _, v := range views {
@@ -227,7 +235,7 @@ func pluginWidgetViewRead(_ context.Context, m apiclient.APIClient, org string, 
 			data.EffectiveSlug = types.StringPointerValue(v.EffectiveSlug)
 			data.IsInherited = types.BoolValue(v.IsInherited)
 			data.HasOverride = types.BoolValue(v.HasOverride)
-			return diags
+			return false, diags
 		}
 	}
 
@@ -235,5 +243,5 @@ func pluginWidgetViewRead(_ context.Context, m apiclient.APIClient, org string, 
 		fmt.Sprintf("widget view %d not found for install %d in org %q", widgetViewID, pluginInstallID, org),
 		"The widget view may have been removed.",
 	)
-	return diags
+	return false, diags
 }

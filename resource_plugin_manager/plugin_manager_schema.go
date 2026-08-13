@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -47,6 +48,17 @@ func PluginManagerResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Connection status of the plugin manager: `offline` or `connected`.",
 				Computed:            true,
 			},
+			"auto_register": schema.BoolAttribute{
+				Description:         "If true, auto-register the plugin manager. Defaults to true.",
+				MarkdownDescription: "If true, auto-register the plugin manager. Defaults to `true`.",
+				Optional:            true,
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
+			"invite_status": schema.StringAttribute{
+				Description:         "Status of the plugin manager invitation: `pending` or `accepted`.",
+				MarkdownDescription: "Status of the plugin manager invitation: `pending` or `accepted`.",
+				Computed:            true,
+			},
 			"wait_until_connected": schema.BoolAttribute{
 				Description:         "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
 				MarkdownDescription: "If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.",
@@ -73,6 +85,8 @@ type PluginManagerModel struct {
 	URL                types.String `tfsdk:"url"`
 	ID                 types.Int64  `tfsdk:"id"`
 	Status             types.String `tfsdk:"status"`
+	AutoRegister       types.Bool   `tfsdk:"auto_register"`
+	InviteStatus       types.String `tfsdk:"invite_status"`
 	WaitUntilConnected types.Bool   `tfsdk:"wait_until_connected"`
 	CreatedAt          types.Int64  `tfsdk:"created_at"`
 	UpdatedAt          types.Int64  `tfsdk:"updated_at"`

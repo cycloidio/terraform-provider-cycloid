@@ -59,5 +59,10 @@ resource "cycloid_plugin" "hello" {
 ### Read-Only
 
 - `description` (String) Description of the plugin version.
+- `icon` (String) Icon URL of the plugin version.
 - `id` (Number) The numeric ID of the plugin version.
+- `images` (List of String) Image URLs for the plugin version.
+- `schema` (String) SQLite schema definition as JSON.
+- `scope` (List of String) Policies in which the plugin version is scoped.
 - `status` (String) Processing status: `pending`, `processing`, `success`, or `failed`.
+- `widgets` (String) Default widget configuration as JSON.

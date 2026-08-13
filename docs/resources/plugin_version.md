@@ -46,14 +46,22 @@ resource "cycloid_plugin_version" "hello_world_v1" {
 
 ### Optional
 
+- `create_timeout` (String) Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "10m".
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
 
 ### Read-Only
 
+- `configuration_schema` (String) Stack Forms configuration schema as JSON.
 - `description` (String) Description of the plugin version.
+- `error` (String) Error message if version processing failed.
+- `icon` (String) Icon URL of the plugin version.
 - `id` (Number) The numeric ID of the plugin version.
+- `images` (List of String) Image URLs for the plugin version.
 - `name` (String) The version name assigned by the registry.
+- `schema` (String) SQLite schema definition as JSON.
+- `scope` (List of String) Policies in which the plugin version is scoped.
 - `status` (String) Processing status: `pending`, `processing`, `success`, or `failed`.
+- `widgets` (String) Default widget configuration as JSON.
 
 ## Import
 

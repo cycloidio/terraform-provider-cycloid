@@ -63,7 +63,12 @@ func (r *pluginManagerResource) Create(ctx context.Context, req resource.CreateR
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Client
 
-	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), true)
+	autoRegister := true
+	if !data.AutoRegister.IsNull() && !data.AutoRegister.IsUnknown() {
+		autoRegister = data.AutoRegister.ValueBool()
+	}
+
+	pm, _, err := m.CreatePluginManager(org, data.Name.ValueString(), data.URL.ValueString(), autoRegister)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to create plugin manager in org %q", org), err.Error())
 		return
@@ -164,8 +169,15 @@ func pollPluginManagerConnected(m apiclient.APIClient, org string, id uint32, ti
 		if err != nil {
 			return err
 		}
-		if ptr.Value(pm.Status) == "connected" {
+		status := ptr.Value(pm.Status)
+		switch status {
+		case "connected":
 			return nil
+		case "offline":
+			// Expected intermediate state — keep polling.
+		default:
+			// Unknown status — keep polling; forward-compatible with new statuses.
+			// The overall timeout still applies.
 		}
 		time.Sleep(5 * time.Second)
 	}
@@ -178,6 +190,7 @@ func pluginManagerToModel(org string, pm *models.PluginManager, data *pluginMana
 	data.Name = types.StringPointerValue(pm.Name)
 	data.URL = types.StringValue(pm.URL.String())
 	data.Status = types.StringPointerValue(pm.Status)
+	data.InviteStatus = types.StringPointerValue(pm.InviteStatus)
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(pm.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(pm.UpdatedAt)))
 }

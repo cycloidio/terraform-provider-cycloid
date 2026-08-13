@@ -35,6 +35,7 @@ resource "cycloid_plugin_manager" "default" {
 
 ### Optional
 
+- `auto_register` (Boolean) If true, auto-register the plugin manager. Defaults to `true`.
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
 - `wait_until_connected` (Boolean) If true, block until the plugin manager status is `connected` or a 5-minute timeout expires. Default false.
 
@@ -42,6 +43,7 @@ resource "cycloid_plugin_manager" "default" {
 
 - `created_at` (Number) Unix timestamp of plugin manager creation.
 - `id` (Number) The numeric ID of the plugin manager.
+- `invite_status` (String) Status of the plugin manager invitation: `pending` or `accepted`.
 - `status` (String) Connection status of the plugin manager: `offline` or `connected`.
 - `updated_at` (Number) Unix timestamp of last plugin manager update.
 

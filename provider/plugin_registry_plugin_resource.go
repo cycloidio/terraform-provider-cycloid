@@ -211,4 +211,5 @@ func pluginRegistryPluginToModel(org string, p *models.Plugin, data *pluginRegis
 	data.ID = types.Int64Value(int64(ptr.Value(p.ID)))
 	data.Name = types.StringPointerValue(p.Name)
 	data.Owned = types.BoolPointerValue(p.Owned)
+	data.Orphaned = types.BoolValue(p.Orphaned)
 }

@@ -45,4 +45,5 @@ resource "cycloid_plugin_version" "hello_v2" {
 ### Read-Only
 
 - `id` (Number) The numeric ID of the plugin.
+- `orphaned` (Boolean) Whether the plugin's registry entry has been deleted.
 - `owned` (Boolean) Whether this plugin is owned by the organization.

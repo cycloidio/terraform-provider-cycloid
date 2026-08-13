@@ -3,18 +3,24 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_plugin"
 	"github.com/cycloidio/cycloid-cli/utils/ptr"
+)
+
+const (
+	defaultPluginInstallTimeout = 5 * time.Minute
+	pluginInstallPollInterval   = 5 * time.Second
 )
 
 var (
@@ -75,7 +81,9 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	_, err = m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
+	var installID uint32
+
+	install, _, err := m.InstallPluginVersion(org, registryID, pluginID, versionID, config)
 	if err != nil {
 		if !isConflictError(err) {
 			resp.Diagnostics.AddError(
@@ -95,11 +103,47 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 			)
 			return
 		}
+		// Find the existing install ID via ListPlugins.
+		plugins, _, listErr := m.ListPlugins(org)
+		if listErr != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins after conflict in org %q", org), listErr.Error())
+			return
+		}
+		installID = findInstallIDInPluginList(plugins, registryID, pluginID)
+		if installID == 0 {
+			resp.Diagnostics.AddError(fmt.Sprintf("plugin install not found after conflict retry in org %q", org), "")
+			return
+		}
+	} else {
+		if install == nil || install.ID == nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("install response for plugin version %d in org %q missing ID", versionID, org),
+				"The API returned a successful install response but no install ID. This is unexpected; please report this issue.",
+			)
+			return
+		}
+		installID = ptr.Value(install.ID)
 	}
 
-	// InstallPluginVersion is async (pending → running). Poll ListPlugins until
-	// the install for this registry+plugin pair appears with a terminal status.
-	install, err := pollPluginInstall(m, org, registryID, pluginID, versionID, 5*time.Minute)
+	createTimeout := parseTimeout(data.CreateTimeout, defaultPluginInstallTimeout)
+
+	// Save the install ID to state before polling so the resource survives a
+	// timeout or context cancellation. Without this, a failed poll would leave
+	// the backend install orphaned with no Terraform state entry, causing a
+	// 409 conflict on the next apply with no recovery path via import.
+	// This mirrors the pattern used in pluginVersionResource.Create.
+	data.Organization = types.StringValue(org)
+	data.RegistryID = types.Int64Value(int64(registryID))
+	data.PluginID = types.Int64Value(int64(pluginID))
+	data.ID = types.Int64Value(int64(installID))
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// InstallPluginVersion is async (pending → running). Poll using RefreshPluginInstallStatus
+	// until the install reaches a terminal status.
+	polledInstall, err := pollPluginInstall(ctx, m, org, installID, createTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin install did not reach running status in org %q", org), err.Error())
 		return
@@ -107,41 +151,67 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.RegistryID = types.Int64Value(int64(registryID))
 	data.PluginID = types.Int64Value(int64(pluginID))
-	pluginInstallToModel(org, install, &data)
+	pluginInstallToModel(org, polledInstall, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// pollPluginInstall polls ListPlugins until the install for the given registry+plugin
-// appears with status "running", then returns the PluginInstall. Returns an error on
-// timeout or when the install status is "failed".
-func pollPluginInstall(m apiclient.APIClient, org string, registryID, pluginID, versionID uint32, timeout time.Duration) (*models.PluginInstall, error) {
+// pollPluginInstall polls RefreshPluginInstallStatus until the install reaches
+// status "running", then returns the PluginInstall. Returns an error on timeout,
+// context cancellation, or when the install status is "failed".
+//
+// The first poll happens immediately on entry (before waiting for a tick) because
+// installs occasionally complete quickly and skipping the initial delay gives a
+// faster happy-path. Subsequent polls are spaced by pluginInstallPollInterval.
+//
+// Transient API errors (network glitches, 5xx) are logged and retried; only
+// terminal status values ("failed") or expiry cause a permanent error.
+//
+// Note: ctx cancellation is checked between polls (in the select), but an
+// in-flight RefreshPluginInstallStatus HTTP call cannot be interrupted because
+// the apiclient interface does not accept a context. Cancellation takes effect
+// at the next inter-poll sleep, not mid-request.
+func pollPluginInstall(ctx context.Context, m apiclient.APIClient, org string, installID uint32, timeout time.Duration) (*models.PluginInstall, error) {
 	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		plugins, _, err := m.ListPlugins(org)
+	ticker := time.NewTicker(pluginInstallPollInterval)
+	defer ticker.Stop()
+
+	for {
+		pi, _, err := m.RefreshPluginInstallStatus(org, installID)
 		if err != nil {
-			return nil, err
+			tflog.Warn(ctx, "transient error refreshing plugin install status; will retry", map[string]any{
+				"install_id": installID,
+				"org":        org,
+				"error":      err.Error(),
+			})
+		} else if pi != nil {
+			switch ptr.Value(pi.Status) {
+			case models.PluginInstallStatusRunning:
+				return pi, nil
+			case models.PluginInstallStatusFailed:
+				return nil, fmt.Errorf("plugin install %d in org %q failed", installID, org)
+			case models.PluginInstallStatusPending:
+				// Expected intermediate state — keep polling.
+			default:
+				// Unknown intermediate status — continue polling rather than failing.
+				// The overall timeout still applies.
+				tflog.Warn(ctx, "unexpected plugin install status — continuing to poll", map[string]any{
+					"install_id": installID,
+					"org":        org,
+					"status":     ptr.Value(pi.Status),
+				})
+			}
 		}
-		for _, p := range plugins {
-			if p.Install == nil || p.Registry == nil {
-				continue
-			}
-			if ptr.Value(p.Registry.ID) != registryID || ptr.Value(p.ID) != pluginID {
-				continue
-			}
-			if p.Install.Version != nil && ptr.Value(p.Install.Version.ID) != versionID {
-				continue
-			}
-			status := ptr.Value(p.Install.Status)
-			if status == "running" {
-				return p.Install, nil
-			}
-			if status == "failed" {
-				return nil, fmt.Errorf("plugin install failed")
-			}
+
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("timeout waiting for plugin install %d in org %q to reach running status", installID, org)
 		}
-		time.Sleep(5 * time.Second)
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context cancelled while waiting for plugin install %d in org %q", installID, org)
+		case <-ticker.C:
+		}
 	}
-	return nil, fmt.Errorf("timeout waiting for plugin install to reach running status")
 }
 
 func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -154,32 +224,71 @@ func (r *pluginResource) Read(ctx context.Context, req resource.ReadRequest, res
 	org := getOrganizationCanonical(*r.provider, data.Organization)
 	m := r.provider.Client
 
-	id := uint32(data.ID.ValueInt64())
-
-	// m.GetPlugin deserializes models.Plugin JSON into *models.PluginInstall, mapping
-	// Plugin.ID (registry plugin ID) → PluginInstall.ID. Use ListPlugins instead and
-	// locate the install by its actual ID so we get the correctly-typed PluginInstall.
-	plugins, _, err := m.ListPlugins(org)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins in org %q", org), err.Error())
+	notFound, diags := pluginRead(ctx, m, org, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	idx := slices.IndexFunc(plugins, func(p *models.Plugin) bool {
-		return p.Install != nil && ptr.Value(p.Install.ID) == id
-	})
-	var install *models.Plugin
-	if idx >= 0 {
-		install = plugins[idx]
-	}
-	if install == nil {
+	if notFound {
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	// configuration and configuration_sensitive are RequiresReplace and never
-	// readable back from the API as split maps — preserve their values from state.
-	pluginInstallToModel(org, install.Install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// pluginRead fetches a plugin install by ID and populates data.
+// Returns (notFound bool, diags). notFound=true means the install is gone.
+func pluginRead(ctx context.Context, m apiclient.APIClient, org string, data *pluginResourceModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	id := uint32(data.ID.ValueInt64())
+
+	p, _, err := m.GetPlugin(org, id)
+	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
+		diags.AddError(fmt.Sprintf("failed to get plugin install %d in org %q", id, org), err.Error())
+		return false, diags
+	}
+	if p == nil || p.Install == nil {
+		return true, nil
+	}
+
+	pluginInstallToModel(org, p.Install, data)
+
+	// Recover visible configuration from the API's merged map.
+	// The API returns all config keys in one map — we subtract the sensitive
+	// key set (preserved from state) to reconstruct the visible portion.
+	if p.Install.Configuration != nil {
+		sensitiveKeys := map[string]struct{}{}
+		if !data.ConfigurationSensitive.IsNull() && !data.ConfigurationSensitive.IsUnknown() {
+			var sensitive map[string]string
+			if sensitiveDialgs := data.ConfigurationSensitive.ElementsAs(ctx, &sensitive, false); !sensitiveDialgs.HasError() {
+				for k := range sensitive {
+					sensitiveKeys[k] = struct{}{}
+				}
+			}
+		}
+		visible := map[string]string{}
+		for k, v := range p.Install.Configuration {
+			if _, isSensitive := sensitiveKeys[k]; !isSensitive {
+				visible[k] = v
+			}
+		}
+		if len(visible) > 0 {
+			visibleMap, mapDiags := types.MapValueFrom(ctx, types.StringType, visible)
+			if !mapDiags.HasError() {
+				data.Configuration = visibleMap
+			}
+		} else if !data.Configuration.IsNull() {
+			data.Configuration = types.MapNull(types.StringType)
+		}
+	} else if !data.Configuration.IsNull() {
+		data.Configuration = types.MapNull(types.StringType)
+	}
+
+	return false, diags
 }
 
 func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -208,13 +317,18 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	// UpdatePlugin is async — the returned install reflects the pre-update state.
+	// We discard it and poll RefreshPluginInstallStatus below to get the
+	// post-update running state.
 	_, _, err = m.UpdatePlugin(org, id, versionID, config)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to update plugin install %d in org %q", id, org), err.Error())
 		return
 	}
 
-	install, err := pollPluginInstall(m, org, uint32(plan.RegistryID.ValueInt64()), uint32(plan.PluginID.ValueInt64()), versionID, 5*time.Minute)
+	updateTimeout := parseTimeout(plan.CreateTimeout, defaultPluginInstallTimeout)
+
+	install, err := pollPluginInstall(ctx, m, org, id, updateTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin update did not reach running status in org %q", org), err.Error())
 		return
@@ -272,21 +386,12 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	org := r.provider.DefaultOrganization
 	m := r.provider.Client
 
-	// m.GetPlugin deserializes models.Plugin into *models.PluginInstall (wrong type).
-	// Use ListPlugins and locate by install ID for a correctly-typed result.
-	plugins, _, err := m.ListPlugins(org)
+	p, _, err := m.GetPlugin(org, uint32(installID))
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("failed to list plugins in org %q for import", org), err.Error())
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to get plugin install %d for import in org %q", installID, org), err.Error())
 		return
 	}
-	var importPlugin *models.Plugin
-	for _, p := range plugins {
-		if p.Install != nil && ptr.Value(p.Install.ID) == uint32(installID) {
-			importPlugin = p
-			break
-		}
-	}
-	if importPlugin == nil {
+	if p == nil || p.Install == nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin install %d not found in org %q", installID, org), "")
 		return
 	}
@@ -298,7 +403,7 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	// they will be null in imported state — user must add them to config after import.
 	data.Configuration = types.MapNull(types.StringType)
 	data.ConfigurationSensitive = types.MapNull(types.StringType)
-	pluginInstallToModel(org, importPlugin.Install, &data)
+	pluginInstallToModel(org, p.Install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -330,6 +435,17 @@ func mergePluginConfiguration(ctx context.Context, data pluginResourceModel) (ma
 	return config, nil
 }
 
+// findInstallIDInPluginList searches for the install whose registry matches registryID
+// and whose plugin (catalog entry) matches pluginID, returning the install ID, or 0 if not found.
+func findInstallIDInPluginList(plugins []*models.Plugin, registryID, pluginID uint32) uint32 {
+	for _, p := range plugins {
+		if p.Install != nil && p.Registry != nil && ptr.Value(p.Registry.ID) == registryID && ptr.Value(p.ID) == pluginID {
+			return ptr.Value(p.Install.ID)
+		}
+	}
+	return 0
+}
+
 func pluginInstallToModel(org string, install *models.PluginInstall, data *pluginResourceModel) {
 	data.Organization = types.StringValue(org)
 	data.ID = types.Int64Value(int64(ptr.Value(install.ID)))
@@ -342,7 +458,11 @@ func pluginInstallToModel(org string, install *models.PluginInstall, data *plugi
 	data.CreatedAt = types.Int64Value(int64(ptr.Value(install.CreatedAt)))
 	data.UpdatedAt = types.Int64Value(int64(ptr.Value(install.UpdatedAt)))
 
+	data.PmSecret = types.StringPointerValue(install.PmSecret)
+
 	if install.Version != nil {
 		data.PluginVersionID = types.Int64Value(int64(ptr.Value(install.Version.ID)))
+		data.VersionName = types.StringPointerValue(install.Version.Name)
+		data.VersionStatus = types.StringPointerValue(install.Version.Status)
 	}
 }

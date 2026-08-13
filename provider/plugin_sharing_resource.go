@@ -77,7 +77,7 @@ func (r *pluginSharingResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Read back sharing config.
-	diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
+	_, diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,9 +98,13 @@ func (r *pluginSharingResource) Read(ctx context.Context, req resource.ReadReque
 
 	pluginInstallID := uint32(data.PluginInstallID.ValueInt64())
 
-	diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
+	notFound, diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if notFound {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -132,7 +136,7 @@ func (r *pluginSharingResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Read back sharing config.
-	diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
+	_, diags := pluginSharingRead(ctx, m, org, pluginInstallID, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,7 +183,7 @@ func (r *pluginSharingResource) ImportState(ctx context.Context, req resource.Im
 	var data pluginSharingResourceModel
 	data.PluginInstallID = types.Int64Value(pluginInstallID)
 
-	diags := pluginSharingRead(ctx, m, org, uint32(pluginInstallID), &data)
+	_, diags := pluginSharingRead(ctx, m, org, uint32(pluginInstallID), &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -189,16 +193,20 @@ func (r *pluginSharingResource) ImportState(ctx context.Context, req resource.Im
 }
 
 // pluginSharingRead fetches the sharing config from the API and populates the model.
-func pluginSharingRead(ctx context.Context, m apiclient.APIClient, org string, pluginInstallID uint32, data *pluginSharingResourceModel) diag.Diagnostics {
+// Returns (notFound bool, diags Diagnostics). notFound is true when the org or install is gone.
+func pluginSharingRead(ctx context.Context, m apiclient.APIClient, org string, pluginInstallID uint32, data *pluginSharingResourceModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	sharing, _, err := m.GetPluginInstallSharing(org, pluginInstallID)
 	if err != nil {
+		if isNotFoundError(err) {
+			return true, nil
+		}
 		diags.AddError(
 			fmt.Sprintf("failed to read plugin sharing for install %d in org %q", pluginInstallID, org),
 			err.Error(),
 		)
-		return diags
+		return false, diags
 	}
 
 	data.Organization = types.StringValue(org)
@@ -210,14 +218,14 @@ func pluginSharingRead(ctx context.Context, m apiclient.APIClient, org string, p
 		listVal, listDiags := types.ListValueFrom(ctx, types.StringType, sharing.Organizations)
 		diags.Append(listDiags...)
 		if diags.HasError() {
-			return diags
+			return false, diags
 		}
 		data.Organizations = listVal
 	} else {
 		data.Organizations = types.ListNull(types.StringType)
 	}
 
-	return diags
+	return false, diags
 }
 
 // pluginSharingOrgsFromData extracts the organizations list from the model.

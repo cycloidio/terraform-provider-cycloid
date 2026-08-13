@@ -75,6 +75,7 @@ func (s *pluginRegistryPluginDataSource) Read(ctx context.Context, req datasourc
 		data.ID = types.Int64Value(int64(ptr.Value(p.ID)))
 		data.Name = types.StringPointerValue(p.Name)
 		data.Owned = types.BoolPointerValue(p.Owned)
+		data.Orphaned = types.BoolValue(p.Orphaned)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
