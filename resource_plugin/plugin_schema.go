@@ -3,6 +3,7 @@ package resource_plugin
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -12,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func PluginResourceSchema(_ context.Context) schema.Schema {
+func PluginResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Install a plugin in an organization. " +
 			"Version and configuration can be updated in-place; registry, plugin ID, and organization require replacement.",
@@ -109,29 +110,37 @@ func PluginResourceSchema(_ context.Context) schema.Schema {
 				MarkdownDescription: "Processing status of the installed plugin version.",
 				Computed:            true,
 			},
-			"create_timeout": schema.StringAttribute{
-				Description:         `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "5m".`,
-				MarkdownDescription: `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "5m".`,
-				Optional:            true,
+			"enable_all_widgets": schema.BoolAttribute{
+				Description: "When true, enables all widget views for this plugin install after a successful install or update. " +
+					"This flag is intent-only: it is not read back from the API, so changing it will not cause drift. " +
+					"Use the cycloid_plugin_widget_views data source to inspect the current enabled state.",
+				MarkdownDescription: "When true, enables all widget views for this plugin install after a successful install or update. " +
+					"This flag is intent-only: it is not read back from the API, so changing it will not cause drift. " +
+					"Use the `cycloid_plugin_widget_views` data source to inspect the current enabled state.",
+				Optional: true,
 			},
+		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Update: true}),
 		},
 	}
 }
 
 type PluginModel struct {
-	Organization           types.String `tfsdk:"organization"`
-	RegistryID             types.Int64  `tfsdk:"registry_id"`
-	PluginID               types.Int64  `tfsdk:"plugin_id"`
-	PluginVersionID        types.Int64  `tfsdk:"plugin_version_id"`
-	Configuration          types.Map    `tfsdk:"configuration"`
-	ConfigurationSensitive types.Map    `tfsdk:"configuration_sensitive"`
-	ID                     types.Int64  `tfsdk:"id"`
-	UUID                   types.String `tfsdk:"uuid"`
-	Status                 types.String `tfsdk:"status"`
-	CreatedAt              types.Int64  `tfsdk:"created_at"`
-	UpdatedAt              types.Int64  `tfsdk:"updated_at"`
-	PmSecret               types.String `tfsdk:"pm_secret"`
-	VersionName            types.String `tfsdk:"version_name"`
-	VersionStatus          types.String `tfsdk:"version_status"`
-	CreateTimeout          types.String `tfsdk:"create_timeout"`
+	Organization           types.String   `tfsdk:"organization"`
+	RegistryID             types.Int64    `tfsdk:"registry_id"`
+	PluginID               types.Int64    `tfsdk:"plugin_id"`
+	PluginVersionID        types.Int64    `tfsdk:"plugin_version_id"`
+	Configuration          types.Map      `tfsdk:"configuration"`
+	ConfigurationSensitive types.Map      `tfsdk:"configuration_sensitive"`
+	ID                     types.Int64    `tfsdk:"id"`
+	UUID                   types.String   `tfsdk:"uuid"`
+	Status                 types.String   `tfsdk:"status"`
+	CreatedAt              types.Int64    `tfsdk:"created_at"`
+	UpdatedAt              types.Int64    `tfsdk:"updated_at"`
+	PmSecret               types.String   `tfsdk:"pm_secret"`
+	VersionName            types.String   `tfsdk:"version_name"`
+	VersionStatus          types.String   `tfsdk:"version_status"`
+	Timeouts               timeouts.Value `tfsdk:"timeouts"`
+	EnableAllWidgets       types.Bool     `tfsdk:"enable_all_widgets"`
 }

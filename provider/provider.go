@@ -136,6 +136,7 @@ func (p *CycloidProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewPluginDataSource,
 		NewPluginManagerDataSource,
 		NewPluginWidgetsDataSource,
+		NewPluginWidgetViewsDataSource,
 		NewOrganizationMembersDataSource,
 		NewEnvironmentTypeDataSource,
 		NewEnvironmentTypesDataSource,

@@ -163,8 +163,9 @@ resource "cycloid_plugin" "hello" {
 
 - `configuration` (Map of String) Visible key-value configuration for the plugin (Stack Forms syntax). Values appear in plan output. Can be updated in-place.
 - `configuration_sensitive` (Map of String, Sensitive) Sensitive key-value configuration for the plugin (Stack Forms syntax). Values are hidden in plan output. Can be updated in-place. Keys must not overlap with `configuration`.
-- `create_timeout` (String) Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "5m".
+- `enable_all_widgets` (Boolean) When true, enables all widget views for this plugin install after a successful install or update. This flag is intent-only: it is not read back from the API, so changing it will not cause drift. Use the `cycloid_plugin_widget_views` data source to inspect the current enabled state.
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
@@ -176,6 +177,14 @@ resource "cycloid_plugin" "hello" {
 - `uuid` (String) The UUID of the installed plugin.
 - `version_name` (String) Name of the installed plugin version.
 - `version_status` (String) Processing status of the installed plugin version.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+- `update` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 
 ## Import
 

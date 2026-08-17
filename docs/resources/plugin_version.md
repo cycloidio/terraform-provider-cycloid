@@ -46,8 +46,8 @@ resource "cycloid_plugin_version" "hello_world_v1" {
 
 ### Optional
 
-- `create_timeout` (String) Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "10m".
 - `organization` (String) The organization canonical, defaults to the provider `default_organization`.
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
@@ -62,6 +62,13 @@ resource "cycloid_plugin_version" "hello_world_v1" {
 - `scope` (List of String) Policies in which the plugin version is scoped.
 - `status` (String) Processing status: `pending`, `processing`, `success`, or `failed`.
 - `widgets` (String) Default widget configuration as JSON.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 
 ## Import
 

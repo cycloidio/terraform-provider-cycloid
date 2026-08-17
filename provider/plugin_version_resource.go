@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -85,9 +86,12 @@ func (r *pluginVersionResource) Create(ctx context.Context, req resource.CreateR
 
 	versionID := ptr.Value(version.ID)
 
-	createTimeout := parseTimeout(data.CreateTimeout, defaultPluginVersionCreateTimeout)
+	createTimeout, diags := data.Timeouts.Create(ctx, defaultPluginVersionCreateTimeout)
+	resp.Diagnostics.Append(diags...)
 
 	// Save state early so the resource exists even if polling fails.
+	// The state write happens before the diagnostics HasError check so that
+	// an invalid timeout value does not orphan an already-created version.
 	pluginVersionToModel(org, version, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -264,6 +268,14 @@ func (r *pluginVersionResource) ImportState(ctx context.Context, req resource.Im
 	// post-import refresh reads /plugin_registries/0/... (API 422).
 	data.RegistryID = types.Int64Value(registryID)
 	data.PluginID = types.Int64Value(pluginID)
+	// Seed Timeouts with a correctly-typed null so State.Set does not fail with a
+	// Value Conversion Error. The zero timeouts.Value has no attribute types and
+	// does not conform to the schema block.
+	data.Timeouts = timeouts.Value{
+		Object: types.ObjectNull(map[string]attr.Type{
+			"create": types.StringType,
+		}),
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

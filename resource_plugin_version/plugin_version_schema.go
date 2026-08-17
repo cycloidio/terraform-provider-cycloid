@@ -3,6 +3,7 @@ package resource_plugin_version
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -12,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func PluginVersionResourceSchema(_ context.Context) schema.Schema {
+func PluginVersionResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Description: "Publish a version for a plugin in a registry. " +
 			"The URL typically references a Docker image (e.g. `docker.io/org/plugin:1.0.0`). " +
@@ -109,30 +110,28 @@ func PluginVersionResourceSchema(_ context.Context) schema.Schema {
 				MarkdownDescription: "Error message if version processing failed.",
 				Computed:            true,
 			},
-			"create_timeout": schema.StringAttribute{
-				Description:         `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "10m".`,
-				MarkdownDescription: `Maximum wait time as a Go duration string (e.g. "5m", "10m"). Defaults to "10m".`,
-				Optional:            true,
-			},
+		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true}),
 		},
 	}
 }
 
 type PluginVersionModel struct {
-	Organization        types.String `tfsdk:"organization"`
-	RegistryID          types.Int64  `tfsdk:"registry_id"`
-	PluginID            types.Int64  `tfsdk:"plugin_id"`
-	URL                 types.String `tfsdk:"url"`
-	ID                  types.Int64  `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Status              types.String `tfsdk:"status"`
-	Description         types.String `tfsdk:"description"`
-	Icon                types.String `tfsdk:"icon"`
-	Images              types.List   `tfsdk:"images"`
-	Scope               types.List   `tfsdk:"scope"`
-	ConfigurationSchema types.String `tfsdk:"configuration_schema"`
-	Schema              types.String `tfsdk:"schema"`
-	Widgets             types.String `tfsdk:"widgets"`
-	Error               types.String `tfsdk:"error"`
-	CreateTimeout       types.String `tfsdk:"create_timeout"`
+	Organization        types.String   `tfsdk:"organization"`
+	RegistryID          types.Int64    `tfsdk:"registry_id"`
+	PluginID            types.Int64    `tfsdk:"plugin_id"`
+	URL                 types.String   `tfsdk:"url"`
+	ID                  types.Int64    `tfsdk:"id"`
+	Name                types.String   `tfsdk:"name"`
+	Status              types.String   `tfsdk:"status"`
+	Description         types.String   `tfsdk:"description"`
+	Icon                types.String   `tfsdk:"icon"`
+	Images              types.List     `tfsdk:"images"`
+	Scope               types.List     `tfsdk:"scope"`
+	ConfigurationSchema types.String   `tfsdk:"configuration_schema"`
+	Schema              types.String   `tfsdk:"schema"`
+	Widgets             types.String   `tfsdk:"widgets"`
+	Error               types.String   `tfsdk:"error"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }

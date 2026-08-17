@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -125,13 +127,16 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 		installID = ptr.Value(install.ID)
 	}
 
-	createTimeout := parseTimeout(data.CreateTimeout, defaultPluginInstallTimeout)
+	createTimeout, diags := data.Timeouts.Create(ctx, defaultPluginInstallTimeout)
+	resp.Diagnostics.Append(diags...)
 
 	// Save the install ID to state before polling so the resource survives a
 	// timeout or context cancellation. Without this, a failed poll would leave
 	// the backend install orphaned with no Terraform state entry, causing a
 	// 409 conflict on the next apply with no recovery path via import.
 	// This mirrors the pattern used in pluginVersionResource.Create.
+	// The state write happens before the diagnostics HasError check so that
+	// an invalid timeout value does not orphan an already-created install.
 	data.Organization = types.StringValue(org)
 	data.RegistryID = types.Int64Value(int64(registryID))
 	data.PluginID = types.Int64Value(int64(pluginID))
@@ -152,6 +157,12 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	data.RegistryID = types.Int64Value(int64(registryID))
 	data.PluginID = types.Int64Value(int64(pluginID))
 	pluginInstallToModel(org, polledInstall, &data)
+	if data.EnableAllWidgets.ValueBool() {
+		enableAllPluginWidgetViews(ctx, m, org, installID, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -326,7 +337,11 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	updateTimeout := parseTimeout(plan.CreateTimeout, defaultPluginInstallTimeout)
+	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultPluginInstallTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	install, err := pollPluginInstall(ctx, m, org, id, updateTimeout)
 	if err != nil {
@@ -337,6 +352,12 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 	plan.RegistryID = types.Int64Value(plan.RegistryID.ValueInt64())
 	plan.PluginID = types.Int64Value(plan.PluginID.ValueInt64())
 	pluginInstallToModel(org, install, &plan)
+	if plan.EnableAllWidgets.ValueBool() {
+		enableAllPluginWidgetViews(ctx, m, org, id, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -403,6 +424,16 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	// they will be null in imported state — user must add them to config after import.
 	data.Configuration = types.MapNull(types.StringType)
 	data.ConfigurationSensitive = types.MapNull(types.StringType)
+	// Seed Timeouts with a correctly-typed null so State.Set does not fail with a
+	// Value Conversion Error. The zero timeouts.Value has no attribute types and
+	// does not conform to the schema block.
+	data.Timeouts = timeouts.Value{
+		Object: types.ObjectNull(map[string]attr.Type{
+			"create": types.StringType,
+			"update": types.StringType,
+		}),
+	}
+	data.EnableAllWidgets = types.BoolNull()
 	pluginInstallToModel(org, p.Install, &data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -444,6 +475,27 @@ func findInstallIDInPluginList(plugins []*models.Plugin, registryID, pluginID ui
 		}
 	}
 	return 0
+}
+
+func enableAllPluginWidgetViews(ctx context.Context, m apiclient.APIClient, org string, installID uint32, diags *diag.Diagnostics) {
+	views, _, err := m.ListPluginWidgetViews(org, installID)
+	if err != nil {
+		diags.AddError(fmt.Sprintf("failed to list widget views for install %d in org %q", installID, org), err.Error())
+		return
+	}
+	if len(views) == 0 {
+		tflog.Warn(ctx, "enable_all_widgets is true but plugin install has no widget views", map[string]any{
+			"install_id": installID,
+			"org":        org,
+		})
+	}
+	for _, v := range views {
+		_, err := m.UpdatePluginWidgetView(org, ptr.Value(v.ID), true, ptr.Value(v.URLSlug))
+		if err != nil {
+			diags.AddError(fmt.Sprintf("failed to enable widget view %d in org %q", ptr.Value(v.ID), org), err.Error())
+			return
+		}
+	}
 }
 
 func pluginInstallToModel(org string, install *models.PluginInstall, data *pluginResourceModel) {
