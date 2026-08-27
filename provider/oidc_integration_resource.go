@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -176,6 +177,18 @@ func oidcIntegrationConfig(data *oidcIntegrationResourceModel) map[string]interf
 	if !data.GroupsClaimName.IsNull() && !data.GroupsClaimName.IsUnknown() {
 		cfg["oidc_groups_claim_name"] = data.GroupsClaimName.ValueString()
 	}
+	if !data.GroupsClaimSubkey.IsNull() && !data.GroupsClaimSubkey.IsUnknown() {
+		cfg["oidc_groups_claim_subkey"] = data.GroupsClaimSubkey.ValueString()
+	}
+	if !data.Scopes.IsNull() && !data.Scopes.IsUnknown() {
+		scopes := make([]string, 0, len(data.Scopes.Elements()))
+		for _, e := range data.Scopes.Elements() {
+			if s, ok := e.(types.String); ok && !s.IsNull() && !s.IsUnknown() {
+				scopes = append(scopes, s.ValueString())
+			}
+		}
+		cfg["oidc_scopes"] = scopes
+	}
 	if !data.DiscoveryURL.IsNull() && !data.DiscoveryURL.IsUnknown() {
 		cfg["oidc_discovery_url"] = data.DiscoveryURL.ValueString()
 	}
@@ -247,6 +260,27 @@ func oidcIntegrationToData(org string, i *cycloidapiclient.OIDCIntegration, data
 		data.GroupsClaimName = types.StringValue(i.OidcGroupsClaimName)
 	} else {
 		data.GroupsClaimName = types.StringNull()
+	}
+
+	if i.OidcGroupsClaimSubkey != "" {
+		data.GroupsClaimSubkey = types.StringValue(i.OidcGroupsClaimSubkey)
+	} else {
+		data.GroupsClaimSubkey = types.StringNull()
+	}
+
+	// scopes is Optional and NOT Computed, so the post-apply state has to equal the
+	// configuration exactly. Mapping an empty array to ListNull would make
+	// `scopes = []` in HCL fail with "Provider produced inconsistent result after
+	// apply", so distinguish absent (null) from present-but-empty ([]).
+	switch {
+	case i.OidcScopes == nil:
+		data.Scopes = types.ListNull(types.StringType)
+	default:
+		elems := make([]attr.Value, 0, len(i.OidcScopes))
+		for _, s := range i.OidcScopes {
+			elems = append(elems, types.StringValue(s))
+		}
+		data.Scopes = types.ListValueMust(types.StringType, elems)
 	}
 
 	if i.OidcDiscoveryURL != nil {

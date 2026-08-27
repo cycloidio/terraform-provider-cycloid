@@ -174,7 +174,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`attribute is missing from object`)
+			`attribute is missing from object`,
+		)
 
 		return nil, diags
 	}
@@ -184,7 +185,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`attribute expected to be basetypes.StringValue, was: %T`, attributeAttribute))
+			fmt.Sprintf(`attribute expected to be basetypes.StringValue, was: %T`, attributeAttribute),
+		)
 	}
 
 	conditionAttribute, ok := attributes["condition"]
@@ -192,7 +194,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`condition is missing from object`)
+			`condition is missing from object`,
+		)
 
 		return nil, diags
 	}
@@ -202,7 +205,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`condition expected to be basetypes.StringValue, was: %T`, conditionAttribute))
+			fmt.Sprintf(`condition expected to be basetypes.StringValue, was: %T`, conditionAttribute),
+		)
 	}
 
 	valueAttribute, ok := attributes["value"]
@@ -210,7 +214,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`value is missing from object`)
+			`value is missing from object`,
+		)
 
 		return nil, diags
 	}
@@ -220,7 +225,8 @@ func (t FiltersType) ValueFromObject(ctx context.Context, in basetypes.ObjectVal
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute),
+		)
 	}
 
 	if diags.HasError() {
@@ -303,7 +309,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`attribute is missing from object`)
+			`attribute is missing from object`,
+		)
 
 		return NewFiltersValueUnknown(), diags
 	}
@@ -313,7 +320,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`attribute expected to be basetypes.StringValue, was: %T`, attributeAttribute))
+			fmt.Sprintf(`attribute expected to be basetypes.StringValue, was: %T`, attributeAttribute),
+		)
 	}
 
 	conditionAttribute, ok := attributes["condition"]
@@ -321,7 +329,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`condition is missing from object`)
+			`condition is missing from object`,
+		)
 
 		return NewFiltersValueUnknown(), diags
 	}
@@ -331,7 +340,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`condition expected to be basetypes.StringValue, was: %T`, conditionAttribute))
+			fmt.Sprintf(`condition expected to be basetypes.StringValue, was: %T`, conditionAttribute),
+		)
 	}
 
 	valueAttribute, ok := attributes["value"]
@@ -339,7 +349,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`value is missing from object`)
+			`value is missing from object`,
+		)
 
 		return NewFiltersValueUnknown(), diags
 	}
@@ -349,7 +360,8 @@ func NewFiltersValue(attributeTypes map[string]attr.Type, attributes map[string]
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute))
+			fmt.Sprintf(`value expected to be basetypes.StringValue, was: %T`, valueAttribute),
+		)
 	}
 
 	if diags.HasError() {
@@ -376,7 +388,8 @@ func NewFiltersValueMust(attributeTypes map[string]attr.Type, attributes map[str
 				"%s | %s | %s",
 				diagnostic.Severity(),
 				diagnostic.Summary(),
-				diagnostic.Detail()))
+				diagnostic.Detail(),
+			))
 		}
 
 		panic("NewFiltersValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
@@ -522,7 +535,8 @@ func (v FiltersValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue,
 			"attribute": v.Attribute,
 			"condition": v.Condition,
 			"value":     v.Value,
-		})
+		},
+	)
 
 	return objVal, diags
 }

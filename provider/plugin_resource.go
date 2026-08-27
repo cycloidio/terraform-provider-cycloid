@@ -151,12 +151,36 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	polledInstall, err := pollPluginInstall(ctx, m, org, installID, createTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin install did not reach running status in org %q", org), err.Error())
+		// Best-effort: populate computed state so fields are not left Unknown.
+		// The PM's RefreshPluginInstallStatus response may not include Version info
+		// when the container hasn't started yet; use GetPlugin (backend) instead.
+		if _, readDiags := pluginRead(ctx, m, org, &data); !readDiags.HasError() {
+			// Null out any computed fields still Unknown (PM hasn't processed the
+			// install yet — UUID and version come from the PM callback).
+			if data.UUID.IsUnknown() {
+				data.UUID = types.StringNull()
+			}
+			if data.VersionName.IsUnknown() {
+				data.VersionName = types.StringNull()
+				data.VersionStatus = types.StringNull()
+			}
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		}
 		return
 	}
 
 	data.RegistryID = types.Int64Value(int64(registryID))
 	data.PluginID = types.Int64Value(int64(pluginID))
 	pluginInstallToModel(org, polledInstall, &data)
+	// RefreshPluginInstallStatus (PM) may not include Version info; fall back to
+	// GetPlugin (backend) when VersionName is still Unknown after pluginInstallToModel.
+	if data.VersionName.IsUnknown() {
+		if p, _, getErr := m.GetPlugin(org, installID); getErr == nil && p != nil && p.Install != nil && p.Install.Version != nil {
+			data.PluginVersionID = types.Int64Value(int64(ptr.Value(p.Install.Version.ID)))
+			data.VersionName = types.StringPointerValue(p.Install.Version.Name)
+			data.VersionStatus = types.StringPointerValue(p.Install.Version.Status)
+		}
+	}
 	if data.EnableAllWidgets.ValueBool() {
 		enableAllPluginWidgetViews(ctx, m, org, installID, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
@@ -187,6 +211,14 @@ func pollPluginInstall(ctx context.Context, m apiclient.APIClient, org string, i
 	defer ticker.Stop()
 
 	for {
+		// Check deadline before each poll so a short timeout (e.g. "1s" in tests)
+		// fires even when the install reaches "running" on a subsequent poll cycle.
+		// Without this check at the top, the status check runs first and returns
+		// success before the deadline is evaluated, defeating any short timeout.
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("timeout waiting for plugin install %d in org %q to reach running status", installID, org)
+		}
+
 		pi, _, err := m.RefreshPluginInstallStatus(org, installID)
 		if err != nil {
 			tflog.Warn(ctx, "transient error refreshing plugin install status; will retry", map[string]any{
@@ -211,10 +243,6 @@ func pollPluginInstall(ctx context.Context, m apiclient.APIClient, org string, i
 					"status":     ptr.Value(pi.Status),
 				})
 			}
-		}
-
-		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("timeout waiting for plugin install %d in org %q to reach running status", installID, org)
 		}
 
 		select {
@@ -269,8 +297,10 @@ func pluginRead(ctx context.Context, m apiclient.APIClient, org string, data *pl
 	pluginInstallToModel(org, p.Install, data)
 
 	// Recover visible configuration from the API's merged map.
-	// The API returns all config keys in one map — we subtract the sensitive
-	// key set (preserved from state) to reconstruct the visible portion.
+	// The API returns all config keys in one map — we intersect with the keys
+	// the user explicitly set (data.Configuration) and subtract sensitive keys.
+	// API-injected defaults (e.g. CY_STORAGE_ENABLED=false) must not be written
+	// into state because they would show as drift on every subsequent refresh.
 	if p.Install.Configuration != nil {
 		sensitiveKeys := map[string]struct{}{}
 		if !data.ConfigurationSensitive.IsNull() && !data.ConfigurationSensitive.IsUnknown() {
@@ -281,9 +311,21 @@ func pluginRead(ctx context.Context, m apiclient.APIClient, org string, data *pl
 				}
 			}
 		}
+		configKeys := map[string]struct{}{}
+		if !data.Configuration.IsNull() && !data.Configuration.IsUnknown() {
+			var cfg map[string]string
+			if cfgDiags := data.Configuration.ElementsAs(ctx, &cfg, false); !cfgDiags.HasError() {
+				for k := range cfg {
+					configKeys[k] = struct{}{}
+				}
+			}
+		}
 		visible := map[string]string{}
 		for k, v := range p.Install.Configuration {
-			if _, isSensitive := sensitiveKeys[k]; !isSensitive {
+			if _, isSensitive := sensitiveKeys[k]; isSensitive {
+				continue
+			}
+			if _, inConfig := configKeys[k]; inConfig {
 				visible[k] = v
 			}
 		}
@@ -343,7 +385,7 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	install, err := pollPluginInstall(ctx, m, org, id, updateTimeout)
+	updatedInstall, err := pollPluginInstall(ctx, m, org, id, updateTimeout)
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("plugin update did not reach running status in org %q", org), err.Error())
 		return
@@ -351,7 +393,16 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	plan.RegistryID = types.Int64Value(plan.RegistryID.ValueInt64())
 	plan.PluginID = types.Int64Value(plan.PluginID.ValueInt64())
-	pluginInstallToModel(org, install, &plan)
+	pluginInstallToModel(org, updatedInstall, &plan)
+	// RefreshPluginInstallStatus (PM) may not include Version info; fall back to
+	// GetPlugin (backend) when VersionName is still Unknown after pluginInstallToModel.
+	if plan.VersionName.IsUnknown() {
+		if p, _, getErr := m.GetPlugin(org, id); getErr == nil && p != nil && p.Install != nil && p.Install.Version != nil {
+			plan.PluginVersionID = types.Int64Value(int64(ptr.Value(p.Install.Version.ID)))
+			plan.VersionName = types.StringPointerValue(p.Install.Version.Name)
+			plan.VersionStatus = types.StringPointerValue(p.Install.Version.Status)
+		}
+	}
 	if plan.EnableAllWidgets.ValueBool() {
 		enableAllPluginWidgetViews(ctx, m, org, id, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {

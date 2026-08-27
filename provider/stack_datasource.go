@@ -243,5 +243,6 @@ func dataStackCloudProvidersToListValue(ctx context.Context, cloudProviders []*m
 		datasource_stacks.CloudProvidersType{
 			ObjectType: types.ObjectType{AttrTypes: cloudProviderType},
 		},
-		stackCloudProviders)
+		stackCloudProviders,
+	)
 }

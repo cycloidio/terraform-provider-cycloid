@@ -58,9 +58,11 @@ resource "cycloid_oidc_integration" "this" {
 - `discovery_url` (String) Override URL for the OIDC discovery document (`.well-known/openid-configuration`). When set, `issuer` may be omitted.
 - `display_name` (String) Human-readable label shown on the login page for this OIDC provider.
 - `groups_claim_name` (String) Name of the claim in the OIDC token that carries the user's group memberships.
+- `groups_claim_subkey` (String) Key to read inside `groups_claim_name` when the IdP nests the group list in an object. Taken literally, dots included.
 - `icon` (String) URL or name of the icon displayed on the login button.
 - `issuer` (String) OIDC issuer URL of the identity provider.
 - `organization` (String) Organization canonical where to manage the OIDC integration. Defaults to provider `default_organization`.
+- `scopes` (List of String) Extra OAuth2 scopes to request on top of the always-requested `openid`, `profile` and `email`.
 - `session_ttl_seconds` (Number) Session duration in seconds for OIDC-authenticated users. Leave unset to use the provider default.
 - `skip_tls_verify` (Boolean) When true, TLS certificate verification is skipped for the identity provider endpoints. Use only in non-production environments.
 - `use_ca_cert` (Boolean) When true, the custom CA certificate (see `ca_cert`) is used to verify the identity provider's TLS certificate.

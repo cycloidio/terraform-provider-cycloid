@@ -72,6 +72,17 @@ func OidcIntegrationResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Name of the claim in the OIDC token that carries the user's group memberships.",
 				Optional:            true,
 			},
+			"groups_claim_subkey": schema.StringAttribute{
+				Description:         "Key to read inside `groups_claim_name` when the IdP nests the group list in an object. Taken literally, dots included.",
+				MarkdownDescription: "Key to read inside `groups_claim_name` when the IdP nests the group list in an object. Taken literally, dots included.",
+				Optional:            true,
+			},
+			"scopes": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Description:         "Extra OAuth2 scopes to request on top of the always-requested `openid`, `profile` and `email`.",
+				MarkdownDescription: "Extra OAuth2 scopes to request on top of the always-requested `openid`, `profile` and `email`.",
+				Optional:            true,
+			},
 			"discovery_url": schema.StringAttribute{
 				Description:         "Override URL for the OIDC discovery document (`.well-known/openid-configuration`). When set, `issuer` may be omitted.",
 				MarkdownDescription: "Override URL for the OIDC discovery document (`.well-known/openid-configuration`). When set, `issuer` may be omitted.",
@@ -153,6 +164,8 @@ type OidcIntegrationModel struct {
 	Issuer                 types.String `tfsdk:"issuer"`
 	Icon                   types.String `tfsdk:"icon"`
 	GroupsClaimName        types.String `tfsdk:"groups_claim_name"`
+	GroupsClaimSubkey      types.String `tfsdk:"groups_claim_subkey"`
+	Scopes                 types.List   `tfsdk:"scopes"`
 	DiscoveryURL           types.String `tfsdk:"discovery_url"`
 	SessionTTLSeconds      types.Int64  `tfsdk:"session_ttl_seconds"`
 	ClientSecretJwt        types.Bool   `tfsdk:"client_secret_jwt"`

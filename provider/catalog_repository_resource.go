@@ -307,7 +307,8 @@ func catalogRepositoryCYModelToData(org string, cr *models.ServiceCatalogSource,
 			"stack_count":          types.Int64Value(stackCount),
 			"url":                  types.StringPointerValue(cr.URL),
 			"stacks":               stacksValue,
-		})
+		},
+	)
 	diags.Append(diagErr...)
 	data.Data = dataValue
 

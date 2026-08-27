@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/cycloidio/cycloid-cli/cmd/apiclient"
 	"github.com/cycloidio/cycloid-cli/gen/models"
 	"github.com/cycloidio/terraform-provider-cycloid/resource_external_backend"
 )
@@ -332,7 +333,7 @@ func (r *externalBackendResource) Delete(ctx context.Context, req resource.Delet
 	orgCan := getOrganizationCanonical(*r.provider, data.OrganizationCanonical)
 
 	id := data.ExternalBackendId.ValueInt64()
-	_, err := mid.DeleteExternalBackend(orgCan, uint32(id))
+	_, err := mid.DeleteExternalBackend(orgCan, uint32(id), apiclient.DeleteExternalBackendOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete external backend",
