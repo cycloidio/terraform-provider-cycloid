@@ -39,4 +39,22 @@ output "production_color" {
 - `environments_count` (Number) Number of environments currently using this type.
 - `id` (Number) Internal numeric ID assigned by the Cycloid API.
 - `is_default` (Boolean) True for built-in environment types that cannot be renamed or deleted.
+- `label_selector` (Attributes) Label selector constraining which stacks are offered in environments of this type. Null if no selector is configured. (see [below for nested schema](#nestedatt--label_selector))
 - `name` (String) Display name of the environment type.
+
+<a id="nestedatt--label_selector"></a>
+### Nested Schema for `label_selector`
+
+Read-Only:
+
+- `enforcement` (String) Enforcement mode: `soft` or `hard`.
+- `requirements` (Attributes List) Label requirements (AND semantics). (see [below for nested schema](#nestedatt--label_selector--requirements))
+
+<a id="nestedatt--label_selector--requirements"></a>
+### Nested Schema for `label_selector.requirements`
+
+Read-Only:
+
+- `key` (String) Label key.
+- `operator` (String) Matching operator: 'eq' or 'in'.
+- `values` (List of String) Values to match.

@@ -68,5 +68,13 @@ func (s *environmentTypeDataSource) Read(ctx context.Context, req datasource.Rea
 	data.EnvironmentsCount = ptrUint32ToInt64(et.EnvironmentsCount)
 	data.ID = ptrUint32ToInt64(et.ID)
 
+	if et.LabelSelector != nil {
+		lsObj, d := labelSelectorToState(ctx, et.LabelSelector)
+		resp.Diagnostics.Append(d...)
+		data.LabelSelector = lsObj
+	} else {
+		data.LabelSelector = types.ObjectNull(labelSelectorAttrTypes())
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

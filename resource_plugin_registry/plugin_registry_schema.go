@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -54,7 +53,6 @@ func PluginRegistryResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Whether you have access to create plugins in this registry.",
 				MarkdownDescription: "Whether you have access to create plugins in this registry.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of registry creation.",

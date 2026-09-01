@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -49,13 +48,11 @@ func PluginWidgetViewResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The effective enabled state after inheritance resolution.",
 				MarkdownDescription: "The effective enabled state after inheritance resolution.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"effective_slug": schema.StringAttribute{
 				Description:         "The effective URL slug after inheritance resolution.",
 				MarkdownDescription: "The effective URL slug after inheritance resolution.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"is_inherited": schema.BoolAttribute{
 				Description:         "Whether the widget view configuration is inherited.",

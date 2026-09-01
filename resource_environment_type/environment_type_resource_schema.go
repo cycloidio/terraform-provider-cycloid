@@ -79,8 +79,68 @@ func EnvironmentTypeResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Internal numeric ID assigned by the Cycloid API.",
 				Computed:            true,
 			},
+			"label_selector": schema.SingleNestedAttribute{
+				Description:         "Label selector constraining which stacks are offered in environments of this type. Omit to leave unconstrained.",
+				MarkdownDescription: "Label selector constraining which stacks are offered in environments of this type. Omit to leave unconstrained.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"enforcement": schema.StringAttribute{
+						Description:         "Enforcement mode: 'soft' only filters the stack list; 'hard' also rejects creating a component from a non-matching stack. Defaults to 'soft'.",
+						MarkdownDescription: "Enforcement mode: `soft` only filters the stack list; `hard` also rejects creating a component from a non-matching stack. Defaults to `soft`.",
+						Optional:            true,
+						Computed:            true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("soft", "hard"),
+						},
+					},
+					"requirements": schema.ListNestedAttribute{
+						Description:         "Label requirements. A stack must satisfy ALL requirements to match (AND semantics).",
+						MarkdownDescription: "Label requirements. A stack must satisfy ALL requirements to match (AND semantics).",
+						Required:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"key": schema.StringAttribute{
+									Description:         "Label key to match against.",
+									MarkdownDescription: "Label key to match against.",
+									Required:            true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 255),
+									},
+								},
+								"operator": schema.StringAttribute{
+									Description:         "Matching operator: 'eq' (exact single value) or 'in' (at least one value matches).",
+									MarkdownDescription: "Matching operator: `eq` (exact single value) or `in` (at least one value matches).",
+									Required:            true,
+									Validators: []validator.String{
+										stringvalidator.OneOf("eq", "in"),
+									},
+								},
+								"values": schema.ListAttribute{
+									Description:         "Values to match. For 'eq' operator, exactly one value must be provided.",
+									MarkdownDescription: "Values to match. For `eq` operator, exactly one value must be provided.",
+									Required:            true,
+									ElementType:         types.StringType,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
+}
+
+// LabelSelectorRequirementModel represents a single label requirement in TF state.
+type LabelSelectorRequirementModel struct {
+	Key      types.String `tfsdk:"key"`
+	Operator types.String `tfsdk:"operator"`
+	Values   types.List   `tfsdk:"values"`
+}
+
+// LabelSelectorModel represents the label selector in TF state.
+type LabelSelectorModel struct {
+	Enforcement  types.String `tfsdk:"enforcement"`
+	Requirements types.List   `tfsdk:"requirements"`
 }
 
 type EnvironmentTypeModel struct {
@@ -91,4 +151,5 @@ type EnvironmentTypeModel struct {
 	IsDefault         types.Bool   `tfsdk:"is_default"`
 	EnvironmentsCount types.Int64  `tfsdk:"environments_count"`
 	ID                types.Int64  `tfsdk:"id"`
+	LabelSelector     types.Object `tfsdk:"label_selector"`
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -47,7 +46,6 @@ func PluginRegistryPluginResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Whether this plugin is owned by the organization.",
 				MarkdownDescription: "Whether this plugin is owned by the organization.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"orphaned": schema.BoolAttribute{
 				Description:         "Whether the plugin's registry entry has been deleted.",

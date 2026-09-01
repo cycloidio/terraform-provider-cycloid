@@ -1,12 +1,12 @@
 # cycloid_plugin (Resource)
 
 Installs a plugin version into an organization. Terraform polls until the installation reaches
-`running` status (up to 10 minutes); a `failed` status fails the apply.
+`running` status (5 minutes by default, adjustable with the `timeouts` block); a `failed` status
+fails the apply.
 
-**All attributes trigger replacement on change.** The API does not support upgrading an installed
-plugin in-place — changing the version, registry, or configuration requires uninstall + reinstall.
-Note: `create_before_destroy` is not usable here because the API rejects two simultaneous installs
-of the same image URL.
+`plugin_version_id`, `configuration` and `configuration_sensitive` are updated in-place.
+`organization`, `registry_id` and `plugin_id` trigger replacement. Note: `create_before_destroy`
+is not usable here because the API rejects two simultaneous installs of the same image URL.
 
 `configuration` holds visible key-value pairs shown in plan output (Stack Forms syntax).
 `configuration_sensitive` holds secrets — values are masked in plan output. Keys must not overlap

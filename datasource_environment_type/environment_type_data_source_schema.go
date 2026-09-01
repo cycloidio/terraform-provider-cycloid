@@ -48,6 +48,40 @@ func EnvironmentTypeDataSourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Internal numeric ID assigned by the Cycloid API.",
 				Computed:            true,
 			},
+			"label_selector": schema.SingleNestedAttribute{
+				Description:         "Label selector constraining which stacks are offered in environments of this type. Null if no selector is configured.",
+				MarkdownDescription: "Label selector constraining which stacks are offered in environments of this type. Null if no selector is configured.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"enforcement": schema.StringAttribute{
+						Description:         "Enforcement mode: 'soft' or 'hard'.",
+						MarkdownDescription: "Enforcement mode: `soft` or `hard`.",
+						Computed:            true,
+					},
+					"requirements": schema.ListNestedAttribute{
+						Description:         "Label requirements (AND semantics).",
+						MarkdownDescription: "Label requirements (AND semantics).",
+						Computed:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"key": schema.StringAttribute{
+									Description: "Label key.",
+									Computed:    true,
+								},
+								"operator": schema.StringAttribute{
+									Description: "Matching operator: 'eq' or 'in'.",
+									Computed:    true,
+								},
+								"values": schema.ListAttribute{
+									Description: "Values to match.",
+									Computed:    true,
+									ElementType: types.StringType,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -60,4 +94,5 @@ type EnvironmentTypeModel struct {
 	IsDefault         types.Bool   `tfsdk:"is_default"`
 	EnvironmentsCount types.Int64  `tfsdk:"environments_count"`
 	ID                types.Int64  `tfsdk:"id"`
+	LabelSelector     types.Object `tfsdk:"label_selector"`
 }

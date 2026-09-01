@@ -121,8 +121,38 @@ func (r *pluginManagerResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *pluginManagerResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
-	// All fields use RequiresReplace — Update is never called.
+// Update handles wait_until_connected changes; every other attribute uses
+// RequiresReplace. wait_until_connected is a client-side flag the API does not
+// return, so it is preserved from the plan (mirrors pluginRegistryResource, TFPRO-51).
+func (r *pluginManagerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data pluginManagerResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	org := getOrganizationCanonical(*r.provider, data.Organization)
+	m := r.provider.Client
+	id := uint32(data.ID.ValueInt64())
+
+	if data.WaitUntilConnected.ValueBool() {
+		if err := pollPluginManagerConnected(m, org, id, 5*time.Minute); err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("plugin manager %d did not reach connected status in org %q", id, org),
+				err.Error(),
+			)
+			return
+		}
+	}
+
+	pm, _, err := m.GetPluginManager(org, id)
+	if err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to read plugin manager %d in org %q", id, org), err.Error())
+		return
+	}
+
+	pluginManagerToModel(org, pm, &data)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *pluginManagerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -41,4 +41,22 @@ Read-Only:
 - `environments_count` (Number)
 - `id` (Number)
 - `is_default` (Boolean)
+- `label_selector` (Attributes) Label selector constraining which stacks are offered in environments of this type. (see [below for nested schema](#nestedatt--environment_types--label_selector))
 - `name` (String)
+
+<a id="nestedatt--environment_types--label_selector"></a>
+### Nested Schema for `environment_types.label_selector`
+
+Read-Only:
+
+- `enforcement` (String)
+- `requirements` (Attributes List) (see [below for nested schema](#nestedatt--environment_types--label_selector--requirements))
+
+<a id="nestedatt--environment_types--label_selector--requirements"></a>
+### Nested Schema for `environment_types.label_selector.requirements`
+
+Read-Only:
+
+- `key` (String)
+- `operator` (String)
+- `values` (List of String)

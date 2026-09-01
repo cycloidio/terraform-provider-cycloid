@@ -155,15 +155,7 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 		// The PM's RefreshPluginInstallStatus response may not include Version info
 		// when the container hasn't started yet; use GetPlugin (backend) instead.
 		if _, readDiags := pluginRead(ctx, m, org, &data); !readDiags.HasError() {
-			// Null out any computed fields still Unknown (PM hasn't processed the
-			// install yet — UUID and version come from the PM callback).
-			if data.UUID.IsUnknown() {
-				data.UUID = types.StringNull()
-			}
-			if data.VersionName.IsUnknown() {
-				data.VersionName = types.StringNull()
-				data.VersionStatus = types.StringNull()
-			}
+			nullUnknownPluginComputed(&data)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		}
 		return
@@ -176,17 +168,15 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 	// GetPlugin (backend) when VersionName is still Unknown after pluginInstallToModel.
 	if data.VersionName.IsUnknown() {
 		if p, _, getErr := m.GetPlugin(org, installID); getErr == nil && p != nil && p.Install != nil && p.Install.Version != nil {
-			data.PluginVersionID = types.Int64Value(int64(ptr.Value(p.Install.Version.ID)))
 			data.VersionName = types.StringPointerValue(p.Install.Version.Name)
 			data.VersionStatus = types.StringPointerValue(p.Install.Version.Status)
 		}
 	}
 	if data.EnableAllWidgets.ValueBool() {
 		enableAllPluginWidgetViews(ctx, m, org, installID, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 	}
+	data.PluginVersionID = types.Int64Value(int64(versionID))
+	nullUnknownPluginComputed(&data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -398,17 +388,15 @@ func (r *pluginResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// GetPlugin (backend) when VersionName is still Unknown after pluginInstallToModel.
 	if plan.VersionName.IsUnknown() {
 		if p, _, getErr := m.GetPlugin(org, id); getErr == nil && p != nil && p.Install != nil && p.Install.Version != nil {
-			plan.PluginVersionID = types.Int64Value(int64(ptr.Value(p.Install.Version.ID)))
 			plan.VersionName = types.StringPointerValue(p.Install.Version.Name)
 			plan.VersionStatus = types.StringPointerValue(p.Install.Version.Status)
 		}
 	}
 	if plan.EnableAllWidgets.ValueBool() {
 		enableAllPluginWidgetViews(ctx, m, org, id, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 	}
+	plan.PluginVersionID = types.Int64Value(int64(versionID))
+	nullUnknownPluginComputed(&plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -567,5 +555,32 @@ func pluginInstallToModel(org string, install *models.PluginInstall, data *plugi
 		data.PluginVersionID = types.Int64Value(int64(ptr.Value(install.Version.ID)))
 		data.VersionName = types.StringPointerValue(install.Version.Name)
 		data.VersionStatus = types.StringPointerValue(install.Version.Status)
+	}
+}
+
+// nullUnknownPluginComputed nulls computed attributes the API did not resolve.
+// Terraform rejects a final state that still holds unknown values, and version is
+// optional in the PluginInstall definition, so it can be missing from any response.
+func nullUnknownPluginComputed(data *pluginResourceModel) {
+	if data.UUID.IsUnknown() {
+		data.UUID = types.StringNull()
+	}
+	if data.Status.IsUnknown() {
+		data.Status = types.StringNull()
+	}
+	if data.CreatedAt.IsUnknown() {
+		data.CreatedAt = types.Int64Null()
+	}
+	if data.UpdatedAt.IsUnknown() {
+		data.UpdatedAt = types.Int64Null()
+	}
+	if data.PmSecret.IsUnknown() {
+		data.PmSecret = types.StringNull()
+	}
+	if data.VersionName.IsUnknown() {
+		data.VersionName = types.StringNull()
+	}
+	if data.VersionStatus.IsUnknown() {
+		data.VersionStatus = types.StringNull()
 	}
 }

@@ -19,7 +19,6 @@ Plugin resources (`cycloid_plugin`, `cycloid_plugin_*`) are the main exception
 | Provider version | Platform version at release |
 |-----------------|---------------------------|
 <!-- BEGIN COMPATIBILITY MATRIX -->
-| v0.10.5 | v6.20.0 |
 | v0.10.4 | v6.18.0 |
 | v0.10.3 | v6.17.0 |
 | v0.10.2 | v6.16.0 |

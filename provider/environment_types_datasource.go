@@ -51,6 +51,14 @@ var envTypeObjAttrTypes = map[string]attr.Type{
 	"is_default":         types.BoolType,
 	"environments_count": types.Int64Type,
 	"id":                 types.Int64Type,
+	"label_selector": types.ObjectType{AttrTypes: map[string]attr.Type{
+		"enforcement": types.StringType,
+		"requirements": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+			"key":      types.StringType,
+			"operator": types.StringType,
+			"values":   types.ListType{ElemType: types.StringType},
+		}}},
+	}},
 }
 
 func (s *environmentTypesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -71,6 +79,18 @@ func (s *environmentTypesDataSource) Read(ctx context.Context, req datasource.Re
 
 	items := make([]attr.Value, len(ets))
 	for i, et := range ets {
+		var lsVal attr.Value
+		if et.LabelSelector != nil {
+			lsObj, d := labelSelectorToState(ctx, et.LabelSelector)
+			resp.Diagnostics.Append(d...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			lsVal = lsObj
+		} else {
+			lsVal = types.ObjectNull(labelSelectorAttrTypes())
+		}
+
 		obj, objDiags := types.ObjectValue(envTypeObjAttrTypes, map[string]attr.Value{
 			"canonical":          types.StringPointerValue(et.Canonical),
 			"name":               types.StringPointerValue(et.Name),
@@ -78,6 +98,7 @@ func (s *environmentTypesDataSource) Read(ctx context.Context, req datasource.Re
 			"is_default":         types.BoolPointerValue(et.IsDefault),
 			"environments_count": ptrUint32ToInt64(et.EnvironmentsCount),
 			"id":                 ptrUint32ToInt64(et.ID),
+			"label_selector":     lsVal,
 		})
 		resp.Diagnostics.Append(objDiags...)
 		if resp.Diagnostics.HasError() {

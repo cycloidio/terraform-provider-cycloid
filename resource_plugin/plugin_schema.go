@@ -82,7 +82,6 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Installation status: `pending`, `running`, or `failed`.",
 				MarkdownDescription: "Installation status: `pending`, `running`, or `failed`.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.Int64Attribute{
 				Description:         "Unix timestamp of install creation.",
@@ -94,26 +93,22 @@ func PluginResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Unix timestamp of last install update.",
 				MarkdownDescription: "Unix timestamp of last install update.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"pm_secret": schema.StringAttribute{
 				Description:         "Webhook secret for the plugin install.",
 				MarkdownDescription: "Webhook secret for the plugin install.",
 				Computed:            true,
 				Sensitive:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"version_name": schema.StringAttribute{
 				Description:         "Name of the installed plugin version.",
 				MarkdownDescription: "Name of the installed plugin version.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"version_status": schema.StringAttribute{
 				Description:         "Processing status of the installed plugin version.",
 				MarkdownDescription: "Processing status of the installed plugin version.",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"enable_all_widgets": schema.BoolAttribute{
 				Description: "When true, enables all widget views for this plugin install after a successful install or update. " +
