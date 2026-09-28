@@ -4,14 +4,20 @@ page_title: "cycloid_environment Resource - cycloid"
 subcategory: ""
 description: |-
   Deprecated: cycloid_environment is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with cycloid_organization_environment ./organization_environment.md (full create/delete) and attach them to projects with cycloid_environment_link ./environment_link.md. cycloid_environment will be removed in a future major version.
-  This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required project attribute; use cycloid_environment_link ./environment_link.md to attach the same environment to additional projects. Docs https://docs.cycloid.io/reference/core-concepts/.
+  This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required project attribute; use cycloid_environment_link ./environment_link.md to attach the same environment to additional projects.
+  Destroy semantics. Destroying this resource does not only remove the project link. It unlinks the environment from the project and deletes the organization-level environment, so every other project linked to it loses it too. Use cycloid_environment_link ./environment_link.md when you want to detach an environment from one project and keep it.
+  Deleting an environment is refused while an external backend belonging to a component that now lives elsewhere still references it. Repoint or delete that backend first: the environment's delete cascades into external_backends, and it would otherwise take the Terraform state of a component that is still deployed. Docs https://docs.cycloid.io/reference/core-concepts/.
 ---
 
 # cycloid_environment (Resource)
 
 **Deprecated:** `cycloid_environment` is deprecated. Environments are now first-class organization-level entities. Manage their lifecycle with [`cycloid_organization_environment`](./organization_environment.md) (full create/delete) and attach them to projects with [`cycloid_environment_link`](./environment_link.md). `cycloid_environment` will be removed in a future major version.
 
-This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use [`cycloid_environment_link`](./environment_link.md) to attach the same environment to additional projects. [Docs](https://docs.cycloid.io/reference/core-concepts/).
+This resource manages Cycloid environments. With the org-scoped meta-gov-env API an environment is a first-class organization entity that can be linked to one or more projects. This resource owns one such link via the required `project` attribute; use [`cycloid_environment_link`](./environment_link.md) to attach the same environment to additional projects.
+
+**Destroy semantics.** Destroying this resource does **not** only remove the project link. It unlinks the environment from the project **and deletes the organization-level environment**, so every other project linked to it loses it too. Use [`cycloid_environment_link`](./environment_link.md) when you want to detach an environment from one project and keep it.
+
+Deleting an environment is refused while an external backend belonging to a component that now lives elsewhere still references it. Repoint or delete that backend first: the environment's delete cascades into `external_backends`, and it would otherwise take the Terraform state of a component that is still deployed. [Docs](https://docs.cycloid.io/reference/core-concepts/).
 
 ## Example Usage
 

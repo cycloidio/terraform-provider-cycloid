@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +16,31 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// stackVersionDescription documents stack_version, including that an unresolvable
+// value is rejected and what happens when a tag is re-cut on a new commit
+//
+// tfplugindocs renders an attribute description inline in a bullet list, so this
+// stays a single paragraph: a blank line in it would close the list and leave the
+// rest of the attributes in a second one
+const stackVersionDescription = "The stack version to use: a branch name, a tag, or a commit hash. " +
+	"Defaults to the catalog repository's default branch. " +
+	"The value must match a version the stack actually has — list them with `cy stack version list` — " +
+	"and one that does not is rejected rather than silently deployed as the stack's default version. " +
+	"A commit hash only resolves while a tag or a branch still points at it, so pinning one breaks as soon " +
+	"as that tag is moved to another commit; prefer pinning the tag or branch name. " +
+	"Moving a tag to a new commit does not change its name, so Terraform sees no difference and plans nothing: " +
+	"the component moves onto the tag's new commit the next time Terraform creates or updates it."
+
+// allowVersionUpdateDescription documents allow_version_update, spelling out that
+// it gates which version is selected rather than which commit that version
+// currently points at
+const allowVersionUpdateDescription = "Whether Terraform will manage stack versions on each update. " +
+	"When disabled, versions are only applied on component creation. " +
+	"This setting is useful to allow users to manage versions through the UI. " +
+	"It gates which version is selected, not which commit that version points at: an update always applies " +
+	"the current commit of the version the component is on, so a tag that was re-cut on a new commit is " +
+	"picked up either way."
 
 func ComponentResourceSchema(ctx context.Context) schema.Schema {
 	componentDescription := strings.Join([]string{
@@ -29,19 +55,23 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 		MarkdownDescription: componentDescription,
 		Attributes: map[string]schema.Attribute{
 			"organization": schema.StringAttribute{
-				Description:         "The organization canonical where to create the component, default to the provider's `default_organization`",
-				MarkdownDescription: "The organization canonical where to create the component, default to the provider's `default_organization`",
+				Description:         "The organization canonical where to create the component, default to the provider's `default_organization`. Changing it forces a replacement: a component cannot move across organizations.",
+				MarkdownDescription: "The organization canonical where to create the component, default to the provider's `default_organization`. Changing it forces a replacement: a component cannot move across organizations.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
 			},
 			"project": schema.StringAttribute{
-				Description:         "The project canonical where to create the component.",
-				MarkdownDescription: "The project canonical where to create the component.",
+				Description:         "The project canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend >= v6.26.0 (the PROD-855 migrate fixes), an older backend performs a partial move.",
+				MarkdownDescription: "The project canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend >= v6.26.0 (the PROD-855 migrate fixes), an older backend performs a partial move.",
 				Required:            true,
 			},
 			"environment": schema.StringAttribute{
-				Description:         "The environment canonical where to create the component.",
-				MarkdownDescription: "The environment canonical where to create the component.",
+				Description:         "The environment canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend >= v6.26.0 (the PROD-855 migrate fixes), an older backend performs a partial move.",
+				MarkdownDescription: "The environment canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend >= v6.26.0 (the PROD-855 migrate fixes), an older backend performs a partial move.",
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
@@ -104,15 +134,15 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 				},
 			},
 			"stack_version": schema.StringAttribute{
-				Description:         "The stack version to use, you can specify a branch name, a tag or a commit. Default to the catalog repository's default branch.",
-				MarkdownDescription: "The stack version to use, you can specify a branch name, a tag or a commit. Default to the catalog repository's default branch.",
+				Description:         stackVersionDescription,
+				MarkdownDescription: stackVersionDescription,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"allow_version_update": schema.BoolAttribute{
-				Description:         "Whether Terraform will manage stack versions on each update. When disabled, versions are only applied on component creation. This setting is useful to allow users to manage versions through the UI.",
-				MarkdownDescription: "Whether Terraform will manage stack versions on each update. When disabled, versions are only applied on component creation. This setting is useful to allow users to manage versions through the UI.",
+				Description:         allowVersionUpdateDescription,
+				MarkdownDescription: allowVersionUpdateDescription,
 				Optional:            true,
 			},
 			"allow_variable_update": schema.BoolAttribute{
@@ -177,22 +207,29 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The current configuration of the component as returned by the API. This is a read-only attribute that shows the full component configuration including all variables.",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			// delete bounds the wait for an on_delete hook: when a component
+			// has on_delete hooks, the API runs them and leaves the component
+			// in place until the hook job deletes it. Destroy waits for that.
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{Delete: true}),
+		},
 	}
 }
 
 type ComponentModel struct {
-	Organization        types.String  `tfsdk:"organization"`
-	Project             types.String  `tfsdk:"project"`
-	Environment         types.String  `tfsdk:"environment"`
-	Name                types.String  `tfsdk:"name"`
-	Canonical           types.String  `tfsdk:"canonical"`
-	Description         types.String  `tfsdk:"description"`
-	StackRef            types.String  `tfsdk:"stack_ref"`
-	StackVersion        types.String  `tfsdk:"stack_version"`
-	UseCase             types.String  `tfsdk:"use_case"`
-	AllowVersionUpdate  types.Bool    `tfsdk:"allow_version_update"`
-	AllowVariableUpdate types.Bool    `tfsdk:"allow_variable_update"`
-	AllowDestroy        types.Bool    `tfsdk:"allow_destroy"`
-	InputVariables      types.Dynamic `tfsdk:"input_variables"`
-	CurrentConfig       types.Dynamic `tfsdk:"current_config"`
+	Organization        types.String   `tfsdk:"organization"`
+	Project             types.String   `tfsdk:"project"`
+	Environment         types.String   `tfsdk:"environment"`
+	Name                types.String   `tfsdk:"name"`
+	Canonical           types.String   `tfsdk:"canonical"`
+	Description         types.String   `tfsdk:"description"`
+	StackRef            types.String   `tfsdk:"stack_ref"`
+	StackVersion        types.String   `tfsdk:"stack_version"`
+	UseCase             types.String   `tfsdk:"use_case"`
+	AllowVersionUpdate  types.Bool     `tfsdk:"allow_version_update"`
+	AllowVariableUpdate types.Bool     `tfsdk:"allow_variable_update"`
+	AllowDestroy        types.Bool     `tfsdk:"allow_destroy"`
+	InputVariables      types.Dynamic  `tfsdk:"input_variables"`
+	CurrentConfig       types.Dynamic  `tfsdk:"current_config"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }

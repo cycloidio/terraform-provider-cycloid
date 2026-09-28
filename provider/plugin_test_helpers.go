@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,12 +34,21 @@ const (
 // reads TFACC_REGISTRY_HOST (default "localhost:5000" for local dev). It does
 // NOT affect the in-network pull path — the manager still pulls via
 // clusterRegistryHost (docker-registry:5000) against the same registry instance.
-var localRegistryHost = func() string {
-	if h := os.Getenv("TFACC_REGISTRY_HOST"); h != "" {
-		return h
+var localRegistryHost = envOrDefault("TFACC_REGISTRY_HOST", "localhost:5000")
+
+// The htpasswd pair that registry expects. The defaults are the compose ones; a deployed
+// target keeps its own password in the cycloid-docker-registry secret.
+var (
+	localRegistryUser     = envOrDefault("TFACC_REGISTRY_USER", "cycloid")
+	localRegistryPassword = envOrDefault("TFACC_REGISTRY_PASSWORD", "cycloid123")
+)
+
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
-	return "localhost:5000"
-}()
+	return fallback
+}
 
 // pluginImageLocal is the host-side push tag, derived from the env-driven host.
 var pluginImageLocal = localRegistryHost + "/" + pluginImageName + ":" + pluginImageTag
@@ -84,7 +94,7 @@ func manifestExists() bool {
 	if err != nil {
 		return false
 	}
-	req.SetBasicAuth("cycloid", "cycloid123")
+	req.SetBasicAuth(localRegistryUser, localRegistryPassword)
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -105,7 +115,13 @@ func pushImage(t *testing.T) {
 		}
 	}
 
-	run("docker", "login", localRegistryHost, "-u", "cycloid", "-p", "cycloid123")
+	// Through stdin, not -p: run() reports the argv of whatever failed, which is how this
+	// password reached a job log, and the CI runner is shared.
+	login := exec.Command("docker", "login", localRegistryHost, "-u", localRegistryUser, "--password-stdin")
+	login.Stdin = strings.NewReader(localRegistryPassword)
+	if out, err := login.CombinedOutput(); err != nil {
+		t.Fatalf("docker login %s as %q failed: %s", localRegistryHost, localRegistryUser, string(out))
+	}
 	run("docker", "pull", pluginImageSource)
 	run("docker", "tag", pluginImageSource, pluginImageLocal)
 	run("docker", "push", pluginImageLocal)

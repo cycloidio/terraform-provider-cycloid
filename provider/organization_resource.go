@@ -60,11 +60,70 @@ func (r *organizationResource) Configure(ctx context.Context, req resource.Confi
 	r.provider = pv
 }
 
+// buildUpdateOrganizationOpts collects every organization setting the provider
+// manages from the plan, gated by the configuration.
+//
+// It must be used for ALL UpdateOrganization calls: models.UpdateOrganization
+// carries non-pointer booleans, so any field left out of the opts is sent as
+// false and silently resets the server-side value (a partial update of
+// hide_stack_version_out_of_sync used to wipe can_children_manage_oidc_mapping).
+//
+// impersonation_emails is sent only when present in the configuration. It is
+// Optional+Computed with UseStateForUnknown, so an unconfigured attribute still
+// carries the prior state ([] for every org the server holds no list for) into
+// the plan; sending that would 422 on child organizations and clear a root-org
+// list managed outside Terraform. `impersonation_emails = []` in the
+// configuration still clears it
+func buildUpdateOrganizationOpts(org, config *organizationResourceModel) apiclient.UpdateOrganizationOpts {
+	opts := apiclient.UpdateOrganizationOpts{}
+	if !org.CanChildrenManageOidcMapping.IsNull() && !org.CanChildrenManageOidcMapping.IsUnknown() {
+		v := org.CanChildrenManageOidcMapping.ValueBool()
+		opts.CanChildrenManageOidcMapping = &v
+	}
+	if !org.HideStackVersionOutOfSync.IsNull() && !org.HideStackVersionOutOfSync.IsUnknown() {
+		v := org.HideStackVersionOutOfSync.ValueBool()
+		opts.HideStackVersionOutOfSync = &v
+	}
+	if !config.ImpersonationEmails.IsNull() && !org.ImpersonationEmails.IsNull() && !org.ImpersonationEmails.IsUnknown() {
+		elems := org.ImpersonationEmails.Elements()
+		// non-nil even when empty: an empty list clears the server-side allowlist
+		emails := make([]string, 0, len(elems))
+		for _, e := range elems {
+			// a null or unknown element (`[null]` is valid HCL) is skipped rather than sent as ""
+			if s, ok := e.(types.String); ok && !s.IsNull() && !s.IsUnknown() {
+				emails = append(emails, s.ValueString())
+			}
+		}
+		opts.ImpersonationEmails = emails
+	}
+	return opts
+}
+
 func (r *organizationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var orgState organizationResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &orgState)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var orgConfig organizationResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &orgConfig)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Every organization this resource creates is a child of an existing one, and
+	// the API accepts an allowlist on the root organization only. Refuse here,
+	// before any API call, otherwise the org would be created server-side and the
+	// follow-up settings update would fail without the resource ever reaching
+	// state (an orphan the user has to import by hand)
+	if opts := buildUpdateOrganizationOpts(&orgState, &orgConfig); len(opts.ImpersonationEmails) > 0 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("impersonation_emails"),
+			"impersonation_emails can only be set on the root organization",
+			"Terraform cannot create the root organization. Import it (terraform import cycloid_organization.root <canonical>) to manage its allowlist.",
+		)
 		return
 	}
 
@@ -115,6 +174,18 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to create organization",
+				err.Error(),
+			)
+			return
+		}
+	}
+
+	opts := buildUpdateOrganizationOpts(&orgState, &orgConfig)
+	if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil {
+		org, _, err = m.UpdateOrganization(canonical, name, opts)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("Failed to set organization settings for org %s", canonical),
 				err.Error(),
 			)
 			return
@@ -278,6 +349,23 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	// The children listing is built from the shared entity, which deliberately
+	// omits impersonation_emails (it is only served to callers allowed to update
+	// the org). Only the root organization can hold a list, so only there is the
+	// extra GET /organizations/{canonical} worth its round-trip; without it the
+	// root org's list would never converge
+	if ptr.Value(org.IsRoot) {
+		org, _, err = m.GetOrganization(canonical)
+		if err != nil {
+			if isNotFoundError(err) {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+			resp.Diagnostics.AddError(fmt.Sprintf("Failed to read org %q from API", canonical), err.Error())
+			return
+		}
+	}
+
 	licence := &models.Licence{}
 	_, err = m.GenericRequest(apiclient.Request{
 		Method:       "GET",
@@ -314,6 +402,12 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var orgPlan organizationResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &orgPlan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var orgConfig organizationResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &orgConfig)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -378,18 +472,27 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 	} else {
-		opts := apiclient.UpdateOrganizationOpts{}
-		if !orgPlan.CanChildrenManageOidcMapping.IsNull() && !orgPlan.CanChildrenManageOidcMapping.IsUnknown() {
-			v := orgPlan.CanChildrenManageOidcMapping.ValueBool()
-			opts.CanChildrenManageOidcMapping = &v
-		}
-		org, _, err = m.UpdateOrganization(canonical, name, opts)
+		org, _, err = m.UpdateOrganization(canonical, name, buildUpdateOrganizationOpts(&orgPlan, &orgConfig))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Failed to update org %s", canonical),
 				err.Error(),
 			)
 			return
+		}
+	}
+
+	if currentOrg == nil {
+		opts := buildUpdateOrganizationOpts(&orgPlan, &orgConfig)
+		if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil {
+			org, _, err = m.UpdateOrganization(canonical, name, opts)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					fmt.Sprintf("Failed to set organization settings for org %s", canonical),
+					err.Error(),
+				)
+				return
+			}
 		}
 	}
 
@@ -643,6 +746,14 @@ func organizationCYModelToData(ctx context.Context, orgState *organizationResour
 	}
 	orgState.Concourse = concourseState
 	orgState.HasChildren = types.BoolPointerValue(org.HasChildren)
+	orgState.HideStackVersionOutOfSync = types.BoolValue(org.HideStackVersionOutOfSync)
+	// impersonation_emails is Computed, so a server-side nil maps to an empty list
+	// (never null) and `impersonation_emails = []` in HCL stays consistent after apply
+	emailElems := make([]attr.Value, 0, len(org.ImpersonationEmails))
+	for _, e := range org.ImpersonationEmails {
+		emailElems = append(emailElems, types.StringValue(e))
+	}
+	orgState.ImpersonationEmails = types.ListValueMust(types.StringType, emailElems)
 	orgState.ID = types.Int64Value(int64(ptr.Value(org.ID)))
 	orgState.IsRoot = types.BoolPointerValue(org.IsRoot)
 	orgState.Licence = licenceValue

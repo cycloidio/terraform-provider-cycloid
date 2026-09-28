@@ -44,7 +44,7 @@ terraform {
 ### Optional
 
 - `body` (Attributes, Sensitive) The credential values, use the fields related to the credential `type`. (see [below for nested schema](#nestedatt--body))
-- `canonical` (String) The canonical of the credential.
+- `canonical` (String) The canonical of the credential. Changing the canonical forces a replacement: the credential is destroyed and recreated, so resources referencing the old canonical must be updated in the same apply.
 - `description` (String) The description of the credential.
 - `organization_canonical` (String) A canonical of an organization.
 - `owner` (String) User canonical that owns this credential. If omitted then the person creating this

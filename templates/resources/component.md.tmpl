@@ -1,0 +1,27 @@
+# {{ .Name }} ({{ .Type }})
+
+Manage components in Cycloid projects.
+
+Components are instances of stacks that run in specific environments.
+
+More information about components: [Components Documentation](https://docs.cycloid.io/reference/projects/concepts/components)
+
+{{ if .HasExample }}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{ end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+The resource has no `id` attribute: a component is identified by its full address, so the import
+ID has to carry all four segments, `<organization>/<project>/<environment>/<canonical>`:
+
+```shell
+terraform import cycloid_component.example my-org/my-project/my-env/my-component
+```
+
+Only `organization`, `project`, `environment` and `canonical` are set by the import; every other
+attribute is filled in by the refresh that immediately follows.

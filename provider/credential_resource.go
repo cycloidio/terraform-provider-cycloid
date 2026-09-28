@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -37,6 +39,42 @@ func (r *credentialResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *credentialResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = resource_credential.CredentialResourceSchema(ctx)
+
+	// A credential's canonical is its immutable identity. The Cycloid API cannot
+	// cleanly rename it: a PUT that changes the canonical renames the credential
+	// server-side but responds 404. Without forcing replacement, changing an
+	// explicitly-configured canonical is planned as an in-place update that keeps
+	// the old canonical (see credentialCanonicalForUpdate) and writes it back,
+	// producing "Provider produced inconsistent result after apply" on
+	// `.canonical`. Force replacement instead.
+	//
+	// RequiresReplaceIfConfigured, not an unconditional RequiresReplace: canonical
+	// is Optional+Computed, so a credential that never set it holds an API-derived
+	// value that must not be treated as a rename.
+	//
+	// Other resources carry their replace modifiers inline because their schema
+	// files are hand-maintained (resource_cloud_account, resource_component,
+	// resource_environment, ...). resource_credential has only the generated
+	// credential_resource_gen.go, so the modifier is appended here instead: a
+	// regeneration of that "DO NOT EDIT" file cannot silently drop it.
+	canonical, ok := resp.Schema.Attributes["canonical"].(schema.StringAttribute)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected credential schema",
+			fmt.Sprintf("Expected `canonical` to be a schema.StringAttribute, got: %T. "+
+				"The RequiresReplaceIfConfigured plan modifier was not applied, so changing a "+
+				"configured canonical would fail with \"Provider produced inconsistent result "+
+				"after apply\". Please report this issue.", resp.Schema.Attributes["canonical"]),
+		)
+		return
+	}
+
+	canonical.PlanModifiers = append(canonical.PlanModifiers, stringplanmodifier.RequiresReplaceIfConfigured())
+	const replaceNote = " Changing the canonical forces a replacement: the credential is destroyed" +
+		" and recreated, so resources referencing the old canonical must be updated in the same apply."
+	canonical.Description += replaceNote
+	canonical.MarkdownDescription += replaceNote
+	resp.Schema.Attributes["canonical"] = canonical
 }
 
 func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -430,6 +468,15 @@ func dataRawToCredentialRawCYModel(ctx context.Context, data credentialResourceM
 	return rawCred, nil
 }
 
+// credentialCanonicalForUpdate resolves which canonical an update targets. It
+// prefers the state value so an update always addresses the credential that
+// actually exists.
+//
+// Since Schema() attaches RequiresReplaceIfConfigured to `canonical`, a changed
+// *configured* canonical is a replacement and never reaches Update, and an
+// unconfigured Optional+Computed canonical is planned from state. The
+// state-over-plan preference is therefore only observable when the plan value is
+// empty or unknown; it is not live rename handling.
 func credentialCanonicalForUpdate(planCanonical, stateCanonical string) string {
 	return Coalesce(stateCanonical, planCanonical)
 }

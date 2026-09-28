@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -243,6 +244,32 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Whether child organizations are allowed to manage their own OIDC group mappings.",
 				MarkdownDescription: "Whether child organizations are allowed to manage their own OIDC group mappings.",
 			},
+			"hide_stack_version_out_of_sync": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				// No static Default: TransformDefaults applies it whenever config is
+				// null regardless of prior state, which would revert a server-side
+				// change back to the default on the next apply with this omitted.
+				// UseStateForUnknown carries the prior value forward instead, so an
+				// omitted attribute produces no drift on a second plan.
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+				Description:         "Whether the component and project lists hide the indicator shown when a version's commit no longer matches its reference commit.",
+				MarkdownDescription: "Whether the component and project lists hide the indicator shown when a version's commit no longer matches its reference commit.",
+			},
+			"impersonation_emails": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+				// Same reasoning as hide_stack_version_out_of_sync: no static Default,
+				// UseStateForUnknown keeps a server-side value when the attribute is omitted
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				Description:         "Emails of the users allowed to impersonate other users. Only meaningful on the root organization.",
+				MarkdownDescription: "Emails of the users allowed to impersonate other users. Only meaningful on the root organization.",
+			},
 			"can_manage_oidc_mapping": schema.BoolAttribute{
 				Computed:            true,
 				Description:         "Whether this organization can manage OIDC group mappings (derived from parent's can_children_manage_oidc_mapping). Read-only.",
@@ -282,7 +309,9 @@ type OrganizationModel struct {
 	Canonical                    types.String `tfsdk:"canonical"`
 	Concourse                    types.Object `tfsdk:"concourse"`
 	HasChildren                  types.Bool   `tfsdk:"has_children"`
+	HideStackVersionOutOfSync    types.Bool   `tfsdk:"hide_stack_version_out_of_sync"`
 	ID                           types.Int64  `tfsdk:"id"`
+	ImpersonationEmails          types.List   `tfsdk:"impersonation_emails"`
 	IsRoot                       types.Bool   `tfsdk:"is_root"`
 	Licence                      types.Object `tfsdk:"licence"`
 	Name                         types.String `tfsdk:"name"`
