@@ -27,6 +27,24 @@ func isNotFoundError(err error) bool {
 		(strings.Contains(errMessage, "404") && strings.Contains(errMessage, "returned"))
 }
 
+// isStrictNotFoundError reports a typed 404 only, with no message fallback.
+// Use it where misreading an unrelated error as not-found would drop state,
+// e.g. the moved-component search in findComponentInProject.
+func isStrictNotFoundError(err error) bool {
+	var apiErr *cycloidapiclient.APIResponseError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
+}
+
+// isForbiddenError returns true when the Cycloid API responds with a
+// 403 Forbidden status. Only matches typed *APIResponseError.
+func isForbiddenError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var apiErr *cycloidapiclient.APIResponseError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden
+}
+
 // isConflictError returns true when the Cycloid API responds with a
 // 409 Conflict status (e.g. resource already exists or still in use).
 // Only matches typed *APIResponseError; plain errors are not matched

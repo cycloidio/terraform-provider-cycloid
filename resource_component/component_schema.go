@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,19 +30,23 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 		MarkdownDescription: componentDescription,
 		Attributes: map[string]schema.Attribute{
 			"organization": schema.StringAttribute{
-				Description:         "The organization canonical where to create the component, default to the provider's `default_organization`",
-				MarkdownDescription: "The organization canonical where to create the component, default to the provider's `default_organization`",
+				Description:         "The organization canonical where to create the component, default to the provider's `default_organization`. Changing it forces a replacement: a component cannot move across organizations.",
+				MarkdownDescription: "The organization canonical where to create the component, default to the provider's `default_organization`. Changing it forces a replacement: a component cannot move across organizations.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
 			},
 			"project": schema.StringAttribute{
-				Description:         "The project canonical where to create the component.",
-				MarkdownDescription: "The project canonical where to create the component.",
+				Description:         "The project canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend carrying the PROD-855 migrate fixes (on the 6.24 line: the first 6.24.x patch cut after the backport), an older backend performs a partial move.",
+				MarkdownDescription: "The project canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend carrying the PROD-855 migrate fixes (on the 6.24 line: the first 6.24.x patch cut after the backport), an older backend performs a partial move.",
 				Required:            true,
 			},
 			"environment": schema.StringAttribute{
-				Description:         "The environment canonical where to create the component.",
-				MarkdownDescription: "The environment canonical where to create the component.",
+				Description:         "The environment canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend carrying the PROD-855 migrate fixes (on the 6.24 line: the first 6.24.x patch cut after the backport), an older backend performs a partial move.",
+				MarkdownDescription: "The environment canonical where to create the component. Changing this on an existing component performs an in-place move through the backend migrate endpoint; it requires a backend carrying the PROD-855 migrate fixes (on the 6.24 line: the first 6.24.x patch cut after the backport), an older backend performs a partial move.",
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
@@ -177,22 +182,29 @@ func ComponentResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The current configuration of the component as returned by the API. This is a read-only attribute that shows the full component configuration including all variables.",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			// delete bounds the wait for an on_delete hook: when a component
+			// has on_delete hooks, the API runs them and leaves the component
+			// in place until the hook job deletes it. Destroy waits for that.
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{Delete: true}),
+		},
 	}
 }
 
 type ComponentModel struct {
-	Organization        types.String  `tfsdk:"organization"`
-	Project             types.String  `tfsdk:"project"`
-	Environment         types.String  `tfsdk:"environment"`
-	Name                types.String  `tfsdk:"name"`
-	Canonical           types.String  `tfsdk:"canonical"`
-	Description         types.String  `tfsdk:"description"`
-	StackRef            types.String  `tfsdk:"stack_ref"`
-	StackVersion        types.String  `tfsdk:"stack_version"`
-	UseCase             types.String  `tfsdk:"use_case"`
-	AllowVersionUpdate  types.Bool    `tfsdk:"allow_version_update"`
-	AllowVariableUpdate types.Bool    `tfsdk:"allow_variable_update"`
-	AllowDestroy        types.Bool    `tfsdk:"allow_destroy"`
-	InputVariables      types.Dynamic `tfsdk:"input_variables"`
-	CurrentConfig       types.Dynamic `tfsdk:"current_config"`
+	Organization        types.String   `tfsdk:"organization"`
+	Project             types.String   `tfsdk:"project"`
+	Environment         types.String   `tfsdk:"environment"`
+	Name                types.String   `tfsdk:"name"`
+	Canonical           types.String   `tfsdk:"canonical"`
+	Description         types.String   `tfsdk:"description"`
+	StackRef            types.String   `tfsdk:"stack_ref"`
+	StackVersion        types.String   `tfsdk:"stack_version"`
+	UseCase             types.String   `tfsdk:"use_case"`
+	AllowVersionUpdate  types.Bool     `tfsdk:"allow_version_update"`
+	AllowVariableUpdate types.Bool     `tfsdk:"allow_variable_update"`
+	AllowDestroy        types.Bool     `tfsdk:"allow_destroy"`
+	InputVariables      types.Dynamic  `tfsdk:"input_variables"`
+	CurrentConfig       types.Dynamic  `tfsdk:"current_config"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
