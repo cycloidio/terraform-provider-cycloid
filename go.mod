@@ -3,7 +3,7 @@ module github.com/cycloidio/terraform-provider-cycloid
 go 1.25.0
 
 require (
-	github.com/cycloidio/cycloid-cli v1.0.98-0.20260902165704-3af296189b41
+	github.com/cycloidio/cycloid-cli v1.0.98-0.20260921085748-349f99d21733
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-framework-timeouts v0.7.0
