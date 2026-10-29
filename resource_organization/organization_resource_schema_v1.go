@@ -63,8 +63,8 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"parent_organization": schema.StringAttribute{
@@ -73,8 +73,8 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of the parent organization if you want this org to be a child organization.",
 				MarkdownDescription: "The canonical of the parent organization if you want this org to be a child organization.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"concourse": schema.SingleNestedAttribute{
@@ -270,6 +270,28 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Emails of the users allowed to impersonate other users. Only meaningful on the root organization.",
 				MarkdownDescription: "Emails of the users allowed to impersonate other users. Only meaningful on the root organization.",
 			},
+			"disable_signup": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				// Same reasoning as hide_stack_version_out_of_sync: no static Default,
+				// UseStateForUnknown keeps a server-side value when the attribute is omitted
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+				Description:         "Whether signups are rejected everywhere on the platform (plain email/password, AWS Marketplace, and SSO sign-up) unless the email is already invited to the organization the account is created in. Accounts an OIDC integration with oidc_auto_create creates on a first login are not affected. Only settable on the root organization.",
+				MarkdownDescription: "Whether signups are rejected everywhere on the platform (plain email/password, AWS Marketplace, and SSO sign-up) unless the email is already invited to the organization the account is created in. Accounts an OIDC integration with oidc_auto_create creates on a first login are not affected. Only settable on the root organization.",
+			},
+			"allow_org_creation": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				// Same reasoning as disable_signup: no static Default, UseStateForUnknown
+				// keeps a server-side value when the attribute is omitted
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+				Description:         "Whether any user can create an organization; when false (the default), only users allowed to create children on the root organization can. Only settable on the root organization.",
+				MarkdownDescription: "Whether any user can create an organization; when false (the default), only users allowed to create children on the root organization can. Only settable on the root organization.",
+			},
 			"can_manage_oidc_mapping": schema.BoolAttribute{
 				Computed:            true,
 				Description:         "Whether this organization can manage OIDC group mappings (derived from parent's can_children_manage_oidc_mapping). Read-only.",
@@ -304,10 +326,12 @@ func OrganizationResourceSchema(ctx context.Context) schema.Schema {
 
 type OrganizationModel struct {
 	AllowDestroy                 types.Bool   `tfsdk:"allow_destroy"`
+	AllowOrgCreation             types.Bool   `tfsdk:"allow_org_creation"`
 	CanChildrenManageOidcMapping types.Bool   `tfsdk:"can_children_manage_oidc_mapping"`
 	CanManageOidcMapping         types.Bool   `tfsdk:"can_manage_oidc_mapping"`
 	Canonical                    types.String `tfsdk:"canonical"`
 	Concourse                    types.Object `tfsdk:"concourse"`
+	DisableSignup                types.Bool   `tfsdk:"disable_signup"`
 	HasChildren                  types.Bool   `tfsdk:"has_children"`
 	HideStackVersionOutOfSync    types.Bool   `tfsdk:"hide_stack_version_out_of_sync"`
 	ID                           types.Int64  `tfsdk:"id"`

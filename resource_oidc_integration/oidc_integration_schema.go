@@ -34,8 +34,8 @@ func OidcIntegrationResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 

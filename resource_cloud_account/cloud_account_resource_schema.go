@@ -47,10 +47,10 @@ func CloudAccountResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`),
-						"must match ^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$",
+						regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`),
+						"must match ^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$",
 					),
 				},
 			},
@@ -62,10 +62,10 @@ func CloudAccountResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`),
-						"must match ^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$",
+						regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`),
+						"must match ^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$",
 					),
 				},
 			},
@@ -74,7 +74,7 @@ func CloudAccountResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "Canonical of the [`cycloid_credential`](./credential.md) to wrap. The credential type must match the cloud provider for built-in providers; any credential type is accepted for custom providers (typically `custom`).",
 				Required:            true,
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 				},
 			},
 			"description": schema.StringAttribute{

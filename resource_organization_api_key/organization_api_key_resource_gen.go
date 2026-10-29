@@ -25,8 +25,8 @@ func OrganizationAPIKeyResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A canonical of an organization.",
 				MarkdownDescription: "A canonical of an organization.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"canonical": schema.StringAttribute{
@@ -35,8 +35,8 @@ func OrganizationAPIKeyResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A canonical of the API key. Auto-generated from the name if omitted.",
 				MarkdownDescription: "A canonical of the API key. Auto-generated from the name if omitted.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -47,7 +47,7 @@ func OrganizationAPIKeyResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A human-readable name for the API key.",
 				MarkdownDescription: "A human-readable name for the API key.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(3),
+					stringvalidator.LengthAtLeast(2),
 				},
 			},
 			"description": schema.StringAttribute{

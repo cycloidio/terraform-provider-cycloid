@@ -39,8 +39,8 @@ func CredentialsDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The canonical of the credential.",
 							MarkdownDescription: "The canonical of the credential.",
 							Validators: []validator.String{
-								stringvalidator.LengthBetween(3, 100),
-								stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+								stringvalidator.LengthBetween(2, 100),
+								stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 							},
 						},
 						"description": schema.StringAttribute{
@@ -106,8 +106,8 @@ func CredentialsDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of an organization, will default to the provider organization settings.",
 				MarkdownDescription: "The canonical of an organization, will default to the provider organization settings.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 		},

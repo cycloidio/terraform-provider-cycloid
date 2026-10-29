@@ -151,6 +151,16 @@ func (r *ComponentResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
+	// TFPRO-78: keep the prior value of variables the stack form does not
+	// declare, since the backend drops them and they would never converge.
+	priorInput, inputDiags := dynamicValueToVariables(ctx, componentState.InputVariables)
+	resp.Diagnostics.Append(inputDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	inputVariables, inputDiags = r.keepUndeclaredVariables(org, project, environment, canonical, ptr.Value(component).UseCase, priorInput, inputVariables)
+	resp.Diagnostics.Append(inputDiags...)
+
 	resp.Diagnostics.Append(
 		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentState, true)...,
 	)
@@ -238,6 +248,10 @@ func (r *ComponentResource) Create(ctx context.Context, req resource.CreateReque
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to fetch created config of create component %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
 	}
+
+	// TFPRO-78: warn about variables the stack form does not declare. State
+	// keeps the configured value, so nothing else is needed here.
+	resp.Diagnostics.Append(r.warnUndeclaredVariables(org, project, environment, canonical, component.UseCase, inputVariables, currentConfig)...)
 
 	resp.Diagnostics.Append(
 		ComponentToModel(ctx, org, component, inputVariables, currentConfig, &componentPlan, false)...,
@@ -382,6 +396,12 @@ func (r *ComponentResource) Update(ctx context.Context, req resource.UpdateReque
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("failed to get component config %q in org %q, project %q, environment %q", canonical, org, project, environment), err.Error())
 		return
+	}
+
+	// TFPRO-78: warn from the configuration, since Read warns from prior state
+	// and would miss the apply that first introduces an undeclared variable.
+	if allowVariableUpdate {
+		resp.Diagnostics.Append(r.warnUndeclaredVariables(org, project, environment, canonical, component.UseCase, variables, currentConfig)...)
 	}
 
 	resp.Diagnostics.Append(

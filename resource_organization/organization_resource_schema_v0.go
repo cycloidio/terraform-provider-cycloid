@@ -21,8 +21,8 @@ var OrganizationSchemaV0 = schema.Schema{
 			Description:         "The canonical of an entity",
 			MarkdownDescription: "The canonical of an entity",
 			Validators: []validator.String{
-				stringvalidator.LengthBetween(3, 100),
-				stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+				stringvalidator.LengthBetween(2, 100),
+				stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 			},
 		},
 		"data": schema.SingleNestedAttribute{
@@ -207,7 +207,7 @@ var OrganizationSchemaV0 = schema.Schema{
 		"name": schema.StringAttribute{
 			Required: true,
 			Validators: []validator.String{
-				stringvalidator.LengthAtLeast(3),
+				stringvalidator.LengthAtLeast(2),
 			},
 		},
 		"organization_canonical": schema.StringAttribute{
@@ -216,8 +216,8 @@ var OrganizationSchemaV0 = schema.Schema{
 			Description:         "A canonical of an organization.",
 			MarkdownDescription: "A canonical of an organization.",
 			Validators: []validator.String{
-				stringvalidator.LengthBetween(3, 100),
-				stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+				stringvalidator.LengthBetween(2, 100),
+				stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 			},
 		},
 	},

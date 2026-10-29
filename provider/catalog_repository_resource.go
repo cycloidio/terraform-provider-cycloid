@@ -47,8 +47,8 @@ func (r *catalogRepositoryResource) Schema(ctx context.Context, req resource.Sch
 		Description:         "Team responsible for the maintenance of the underlying service catalogs\n",
 		MarkdownDescription: "Team responsible for the maintenance of the underlying service catalogs\n",
 		Validators: []validator.String{
-			stringvalidator.LengthBetween(3, 100),
-			stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+			stringvalidator.LengthBetween(2, 100),
+			stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 		},
 	}
 	resp.Schema.Attributes["on_create_team"] = schema.StringAttribute{

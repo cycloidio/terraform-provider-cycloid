@@ -33,8 +33,8 @@ func OidcOrganizationSettingsResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"default_role_canonical": schema.StringAttribute{
@@ -43,8 +43,8 @@ func OidcOrganizationSettingsResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"oidc_managed": schema.BoolAttribute{

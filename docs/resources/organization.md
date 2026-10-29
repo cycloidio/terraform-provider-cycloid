@@ -60,8 +60,10 @@ resource "cycloid_organization" "some_organization" {
 ### Optional
 
 - `allow_destroy` (Boolean) Whether Terraform will allow destroying this organization. When set to false, prevents accidental data loss. Organizations are top-level entities that contain projects, environments, and components. Deleting an organization will permanently remove all contained resources.
+- `allow_org_creation` (Boolean) Whether any user can create an organization; when false (the default), only users allowed to create children on the root organization can. Only settable on the root organization.
 - `can_children_manage_oidc_mapping` (Boolean) Whether child organizations are allowed to manage their own OIDC group mappings.
 - `canonical` (String) The canonical of an organization, fill either this or name at creation.
+- `disable_signup` (Boolean) Whether signups are rejected everywhere on the platform (plain email/password, AWS Marketplace, and SSO sign-up) unless the email is already invited to the organization the account is created in. Accounts an OIDC integration with oidc_auto_create creates on a first login are not affected. Only settable on the root organization.
 - `hide_stack_version_out_of_sync` (Boolean) Whether the component and project lists hide the indicator shown when a version's commit no longer matches its reference commit.
 - `impersonation_emails` (List of String) Emails of the users allowed to impersonate other users. Only meaningful on the root organization.
 - `licence` (Attributes) Attributes related to the org licence, [docs here](https://docs.cycloid.io/reference/organizations/concepts/licencing). (see [below for nested schema](#nestedatt--licence))

@@ -33,7 +33,7 @@ func OrganizationRoleResourceSchema(ctx context.Context) schema.Schema {
 						path.MatchRoot("name"),
 						path.MatchRoot("canonical"),
 					),
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 				},
 			},
 			"canonical": schema.StringAttribute{
@@ -46,8 +46,8 @@ func OrganizationRoleResourceSchema(ctx context.Context) schema.Schema {
 						path.MatchRoot("name"),
 						path.MatchRoot("canonical"),
 					),
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"organization": schema.StringAttribute{
@@ -56,8 +56,8 @@ func OrganizationRoleResourceSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"description": schema.StringAttribute{

@@ -28,8 +28,8 @@ func StacksDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A canonical of an organization.",
 				MarkdownDescription: "A canonical of an organization.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"stacks": schema.ListNestedAttribute{

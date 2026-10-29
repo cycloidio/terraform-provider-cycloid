@@ -55,7 +55,7 @@ func InventoryValueDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of the organization where to fetch inventory value, default to the provider's organization.",
 				MarkdownDescription: "The canonical of the organization where to fetch inventory value, default to the provider's organization.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 				},
 			},
 			"value": schema.DynamicAttribute{

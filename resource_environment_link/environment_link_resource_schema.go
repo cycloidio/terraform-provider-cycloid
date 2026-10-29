@@ -34,7 +34,7 @@ func EnvironmentLinkResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 				},
 			},
 			"environment": schema.StringAttribute{

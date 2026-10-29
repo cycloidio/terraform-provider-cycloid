@@ -36,16 +36,16 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				Optional: true,
 				Computed: true,
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"credential_canonical": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"data": schema.SingleNestedAttribute{
@@ -107,8 +107,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "Team responsible for the maintenance of the underlying stacks.",
 				MarkdownDescription: "Team responsible for the maintenance of the underlying stacks.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"on_create_visibility": schema.StringAttribute{
@@ -128,8 +128,8 @@ func CatalogRepositoryResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A canonical of an organization.",
 				MarkdownDescription: "A canonical of an organization.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"owner": schema.StringAttribute{

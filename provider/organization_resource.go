@@ -96,6 +96,14 @@ func buildUpdateOrganizationOpts(org, config *organizationResourceModel) apiclie
 		}
 		opts.ImpersonationEmails = emails
 	}
+	if !org.DisableSignup.IsNull() && !org.DisableSignup.IsUnknown() {
+		v := org.DisableSignup.ValueBool()
+		opts.DisableSignup = &v
+	}
+	if !org.AllowOrgCreation.IsNull() && !org.AllowOrgCreation.IsUnknown() {
+		v := org.AllowOrgCreation.ValueBool()
+		opts.AllowOrgCreation = &v
+	}
 	return opts
 }
 
@@ -117,12 +125,28 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	// the API accepts an allowlist on the root organization only. Refuse here,
 	// before any API call, otherwise the org would be created server-side and the
 	// follow-up settings update would fail without the resource ever reaching
-	// state (an orphan the user has to import by hand)
+	// state (an orphan the user has to clean up by hand)
 	if opts := buildUpdateOrganizationOpts(&orgState, &orgConfig); len(opts.ImpersonationEmails) > 0 {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("impersonation_emails"),
 			"impersonation_emails can only be set on the root organization",
-			"Terraform cannot create the root organization. Import it (terraform import cycloid_organization.root <canonical>) to manage its allowlist.",
+			"This resource cannot manage an existing root organization: it has no import support. Set the allowlist with `cy organization update --org <root> --impersonation-emails ...` or in the console.",
+		)
+		return
+	}
+	if opts := buildUpdateOrganizationOpts(&orgState, &orgConfig); opts.DisableSignup != nil && *opts.DisableSignup {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("disable_signup"),
+			"disable_signup can only be set on the root organization",
+			"This resource cannot manage an existing root organization: it has no import support. Set it with `cy organization update --org <root> --disable-signup=true` or in the console.",
+		)
+		return
+	}
+	if opts := buildUpdateOrganizationOpts(&orgState, &orgConfig); opts.AllowOrgCreation != nil && *opts.AllowOrgCreation {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("allow_org_creation"),
+			"allow_org_creation can only be set on the root organization",
+			"This resource cannot manage an existing root organization: it has no import support. Set it with `cy organization update --org <root> --allow-org-creation=true` or in the console.",
 		)
 		return
 	}
@@ -181,7 +205,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	opts := buildUpdateOrganizationOpts(&orgState, &orgConfig)
-	if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil {
+	if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil || opts.DisableSignup != nil || opts.AllowOrgCreation != nil {
 		org, _, err = m.UpdateOrganization(canonical, name, opts)
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -484,7 +508,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 
 	if currentOrg == nil {
 		opts := buildUpdateOrganizationOpts(&orgPlan, &orgConfig)
-		if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil {
+		if opts.CanChildrenManageOidcMapping != nil || opts.HideStackVersionOutOfSync != nil || opts.ImpersonationEmails != nil || opts.DisableSignup != nil || opts.AllowOrgCreation != nil {
 			org, _, err = m.UpdateOrganization(canonical, name, opts)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -754,6 +778,10 @@ func organizationCYModelToData(ctx context.Context, orgState *organizationResour
 		emailElems = append(emailElems, types.StringValue(e))
 	}
 	orgState.ImpersonationEmails = types.ListValueMust(types.StringType, emailElems)
+	// Platform-wide switches held by the root, so the API reports them null for every
+	// other organization
+	orgState.DisableSignup = rootOnlyBoolValue(org.DisableSignup, orgState.DisableSignup)
+	orgState.AllowOrgCreation = rootOnlyBoolValue(org.AllowOrgCreation, orgState.AllowOrgCreation)
 	orgState.ID = types.Int64Value(int64(ptr.Value(org.ID)))
 	orgState.IsRoot = types.BoolPointerValue(org.IsRoot)
 	orgState.Licence = licenceValue
@@ -764,6 +792,20 @@ func organizationCYModelToData(ctx context.Context, orgState *organizationResour
 	orgState.AllowDestroy = preserveAllowDestroy
 	orgState.SoftDestroy = preserveSoftDestroy
 	return nil
+}
+
+// rootOnlyBoolValue maps a root-only setting the API reports as nil on any other
+// organization. A known planned or prior value is kept in that case, otherwise
+// `false` in HCL on a child org would come back null and Terraform would fail the
+// apply with an inconsistent result
+func rootOnlyBoolValue(api *bool, prior types.Bool) types.Bool {
+	if api != nil {
+		return types.BoolValue(*api)
+	}
+	if !prior.IsNull() && !prior.IsUnknown() {
+		return prior
+	}
+	return types.BoolNull()
 }
 
 // Keeping this for now, this is the boilerplate for upgrading the state of existing

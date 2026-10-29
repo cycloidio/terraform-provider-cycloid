@@ -38,8 +38,8 @@ func OrganizationEnvironmentResourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The organization where to create the environment. Defaults to the provider's `default_organization`.",
 				MarkdownDescription: "The organization where to create the environment. Defaults to the provider's `default_organization`.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]+[a-z0-9\-_]+[a-z0-9]+$`), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z0-9]([a-z0-9\-_]*[a-z0-9])?$`), ""),
 				},
 			},
 			"description": schema.StringAttribute{

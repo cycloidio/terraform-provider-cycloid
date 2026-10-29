@@ -71,7 +71,7 @@ func TerraformOutputDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of the organization where to fetch output, default to the provider's organization",
 				MarkdownDescription: "The canonical of the organization where to fetch output, default to the provider's organization",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
+					stringvalidator.LengthBetween(2, 100),
 				},
 			},
 			"output": schema.SingleNestedAttribute{

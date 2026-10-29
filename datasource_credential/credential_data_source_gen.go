@@ -93,8 +93,8 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of the credential to fetch, use either this or path.",
 				MarkdownDescription: "The canonical of the credential to fetch, use either this or path.",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -119,8 +119,8 @@ func CredentialDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "The canonical of the organization where is store the credential, default to the provider's organization",
 				MarkdownDescription: "The canonical of the organization where is store the credential, default to the provider's organization",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(3, 100),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-_]+[a-z0-9]+$"), ""),
+					stringvalidator.LengthBetween(2, 100),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-z0-9]([a-z0-9\\-_]*[a-z0-9])?$"), ""),
 				},
 			},
 			"owner": schema.StringAttribute{
